@@ -18,53 +18,65 @@ Re-run `git add .` after any future edit here (even uncommitted/staged is enough
 
 ## Install order
 
-### 1. Workstation (test) — i7-12700K, 32GB RAM
+**Decision: installing directly on the homeserver target, workstation test
+skipped.** `hosts/workstation/configuration.nix` is left in the flake for
+possible future use (e.g. testing config changes later without touching the
+production box), but the first real install is going straight onto the
+HP ProDesk. This means the items below that normally get shaken out on a
+disposable test box instead get discovered live:
+- `services.emby` module option name
+- `nix-minecraft`'s `paper-1_19_4` package attribute and `autoStart` option
+- Whether the pinned nixpkgs revision ships a Nextcloud package ≥34.x
 
-1. Boot the NixOS installer USB on the workstation.
-2. Partition the new SSD:
-   - EFI system partition (~512MB, vfat)
-   - btrfs root partition
-   - btrfs /home partition (you asked for these separate)
-   - No encryption (per your answer)
-3. Format and mount at `/mnt`, `/mnt/boot`, `/mnt/home`.
-4. `nixos-generate-config --root /mnt` — this **replaces**
-   `hosts/workstation/hardware-configuration.nix` with the real one for this
-   machine. Copy that generated file over the placeholder.
-5. Copy this whole `nixos-config` folder to `/mnt/etc/nixos/` (or clone it
-   from wherever you push it — GitHub, a USB stick, etc).
-6. `nixos-install --flake /mnt/etc/nixos#workstation`
-7. Reboot, log in as `kryt` / `changeme`, immediately run `passwd kryt`.
-8. Validate everything: KDE session, xrdp from another machine, Nextcloud
-   setup wizard, Emby, Pi-hole web UI (port 8083), homepage dashboard (port
-   8082), Samba share visibility from a Windows PC.
+If `nixos-install` fails partway through on any of these, that's recoverable
+(re-run after fixing the config) — but a config that installs successfully
+and then misbehaves at runtime not part of first boot is where the lack of
+prior testing bites hardest, since there's no baseline install to compare
+against.
 
-### 2. Homeserver (real target) — HP ProDesk G4 800, i5-7500T, 8GB RAM
+### Homeserver (real target) — HP ProDesk G4 800, i5-7500T, 8GB RAM
 
 The SAS DAS is **not** local to this box — it's on a separate machine
 (192.168.0.110) and this box just mounts it over CIFS, same as before. So
 there's no local data disk to preserve/reformat here; the 256GB SSD is just
 the OS disk.
 
-Before wiping the old box, copy elsewhere (don't just leave it in place):
+**Backup status (decided earlier in this migration):**
+- ✅ Nextcloud (data + DB + config) → `/mnt/server-pc/Backups/nextcloud/`
+- ✅ Pi-hole (Teleporter export) → `/mnt/server-pc/Backups/pihole/`
+- Emby, lan_pastebin, music-info-project: **fresh installs, no data carried over** (deliberate choice)
+
+**Still needed before wiping the old box:**
 - `/home/kryt/.smbcredentials` — copy this file directly to the new machine
   (scp/USB stick), never paste its contents anywhere. It's what lets the new
   box authenticate to `//192.168.0.110/hsas01`.
-- Nextcloud data + database — see the Nextcloud section below, this needs
-  its own careful migration, not a first-boot afterthought.
-- The 4 custom "homebrew" app project folders (pending, you're sending these separately).
-- Any mariadb/postgresql dumps for data not otherwise reproducible.
 
 Then:
-1. Install the 256GB SSD as the OS disk, same partition scheme as the
-   workstation (EFI + btrfs root + btrfs /home, no encryption).
-2. Boot the installer, partition/format/mount the 256GB SSD.
-3. `nixos-generate-config --root /mnt`, copy over
-   `hosts/homeserver/hardware-configuration.nix`.
-4. `nixos-install --flake /mnt/etc/nixos#homeserver`
-5. Boot, place `.smbcredentials` at `/home/kryt/.smbcredentials`
-   (`chmod 600`, `chown kryt:kryt`), then check the mount came up:
+1. Install the 256GB SSD as the OS disk: EFI system partition (~512MB, vfat)
+   + btrfs root + btrfs /home (separate, per your earlier answer), no encryption.
+2. Boot the NixOS installer USB, partition/format/mount the 256GB SSD at
+   `/mnt`, `/mnt/boot`, `/mnt/home`.
+3. `nixos-generate-config --root /mnt` — this **replaces**
+   `hosts/homeserver/hardware-configuration.nix` with the real one for this
+   machine. Copy that generated file over the placeholder.
+4. Copy this whole `nixos-config` folder to `/mnt/etc/nixos/` (or clone it
+   from wherever you pushed the git repo — GitHub, a USB stick, etc).
+5. Create the secrets files before first boot if possible (or immediately
+   after, before the services that need them start failing):
+   `/var/lib/music-info/secrets.env`, `/var/lib/pihole/secrets.env`,
+   `/var/lib/nextcloud-admin-pass` — see their respective sections below.
+6. `nixos-install --flake /mnt/etc/nixos#homeserver`
+7. Reboot, log in as `kryt` / `changeme`, immediately run `passwd kryt`.
+8. Place `.smbcredentials` at `/home/kryt/.smbcredentials` (`chmod 600`,
+   `chown kryt:kryt`), then check the mount came up:
    `systemctl status mnt-server\\x2dpc.mount` and `df -h`.
-6. Verify Samba/printer sharing is visible again from your other machines.
+9. Work through failures one service at a time —
+   `systemctl --failed` shows everything that didn't start, `journalctl -u
+   <unit>` for why. Expect to hit at least one of the three unverified items
+   listed above; fix the config, `nixos-rebuild switch --flake
+   /etc/nixos#homeserver`, repeat.
+10. Once stable: restore Nextcloud (see below) and Pi-hole (import the
+    Teleporter file via its web UI) from the DAS backups.
 
 ## What the live server dump changed vs. my original guesses
 
