@@ -114,11 +114,9 @@ Then:
 - **nix-minecraft's `autoStart` option and `paperServers.paper-1_19_4`
   package attribute** — community flake, verify on the workstation (see
   Minecraft section below).
-- **Timezone**: set to UTC as a placeholder in `modules/common.nix` —
-  change `time.timeZone`.
-- **Pi-hole password**: set a real `WEBPASSWORD` in
-  `modules/pihole-container.nix` (currently commented out, meaning
-  first-boot will generate a random one — check container logs for it).
+- **Pi-hole password**: create `/var/lib/pihole/secrets.env` (root-owned,
+  `chmod 600`) with `WEBPASSWORD=<your password>` before first boot — same
+  secrets-outside-the-store pattern as music-info and Nextcloud.
 
 ## LAN apps (homepage, lan_pastebin, math-tutor, music-info-project, typing-tutor)
 

@@ -16,8 +16,11 @@
     ];
     environment = {
       TZ = config.time.timeZone;
-      # WEBPASSWORD = "changeme"; # TODO: set a real admin password (or via environmentFiles below)
     };
+    # WEBPASSWORD comes from here, not the environment= above, so it never
+    # ends up in the Nix store or `ps`/systemd unit listings. Same pattern
+    # as music-info's secrets.env and Nextcloud's adminpassFile.
+    environmentFiles = [ "/var/lib/pihole/secrets.env" ]; # TODO: create this file (see README), chmod 600, root-owned — contents: WEBPASSWORD=<your password>
     volumes = [
       "/var/lib/pihole/etc-pihole:/etc/pihole"
       "/var/lib/pihole/etc-dnsmasq.d:/etc/dnsmasq.d"

@@ -13,8 +13,7 @@
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
-  # TODO: set your actual timezone (run `timedatectl list-timezones` to browse)
-  time.timeZone = "UTC";
+  time.timeZone = "Australia/Sydney";
 
   i18n.defaultLocale = "en_US.UTF-8";
   console.keyMap = "us";
