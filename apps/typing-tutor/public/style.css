@@ -1,0 +1,217 @@
+/* Reset and Font */
+body {
+    font-family: 'Calibri', 'Segoe UI', Tahoma, sans-serif;
+    background: #121212;
+    color: #e0e0e0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden; /* Prevents whole-page scroll */
+}
+
+/* Layout Container */
+.container {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Left Sidebar (20%) */
+.sidebar {
+    flex: 0 0 20%;
+    background: #1e1e1e;
+    border-right: 1px solid #333;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Right Main Area (80%) */
+.content {
+    flex: 0 0 80%;
+    background: #121212;
+    position: relative;
+    padding: 40px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+h2 { margin-top: 0; color: #4dabff; border-bottom: 1px solid #333; padding-bottom: 10px; }
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+label { font-weight: bold; font-size: 0.95em; color: #bbb; }
+
+input, select {
+    padding: 8px;
+    background: #2d2d2d;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 4px;
+    font-family: inherit;
+}
+
+/* Letter Grid Fixing */
+.letter-row {
+    display: flex;
+    flex-direction: row; /* Horizontal rows */
+    gap: 10px;
+    margin-bottom: 10px;
+    justify-content: flex-start;
+}
+
+.letter-item {
+    display: flex;
+    flex-direction: column; /* Letter over Checkbox */
+    align-items: center;
+    width: 20px;
+}
+
+.letter-item span {
+    font-size: 14px;
+    margin-bottom: 2px;
+}
+
+.letter-controls {
+    margin-bottom: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+#startBtn {
+    padding: 12px;
+    background: #007acc;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+#startBtn:hover { background: #005f9e; }
+
+/* Typing Area */
+#timer {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 2rem;
+    color: #ffcc00;
+}
+
+#display-area {
+    margin-top: 40px;
+    line-height: 2;
+    white-space: pre-wrap;
+    overflow-y: auto;
+    font-family: 'Courier New', Courier, monospace; /* Monospaced for typing */
+    padding: 20px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 8px;
+}
+
+.char { position: relative; }
+.char.correct { color: #888; }
+.char.incorrect { color: #ff5555; }
+
+.cursor {
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: #00ff00;
+}
+
+#results {
+    margin-top: 20px;
+    padding: 20px;
+    background: #252526;
+    border-radius: 8px;
+}
+
+/* Sidebar Button Styling */
+#viewStatsBtn {
+    margin-top: 10px;
+    padding: 10px;
+    background: #444;
+    color: white;
+    border: 1px solid #666;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+}
+#viewStatsBtn:hover { background: #555; }
+
+/* Modal Overlay */
+.modal {
+    display: none; 
+    position: fixed;
+    z-index: 1000;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.8);
+}
+
+/* Modal Box */
+.modal-content {
+    background-color: #252526;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #444;
+    width: 80%;
+    max-height: 80vh;
+    overflow-y: auto;
+    border-radius: 8px;
+    position: relative;
+}
+
+.close-btn {
+    position: absolute;
+    right: 20px; top: 10px;
+    font-size: 28px;
+    cursor: pointer;
+    color: #888;
+}
+
+.stats-tables {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.stats-tables section {
+    flex: 1;
+    min-width: 300px;
+}
+
+/* Table Styling */
+.table-wrapper {
+    background: #1e1e1e;
+    border-radius: 4px;
+    padding: 10px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+th, td {
+    text-align: left;
+    padding: 8px;
+    border-bottom: 1px solid #333;
+}
+
+th { color: #007acc; font-weight: bold; }
+tr:hover { background: #2a2a2a; }

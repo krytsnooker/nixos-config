@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Tutor</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar (20%) -->
+        <aside class="sidebar">
+            <h2>Setup</h2>
+            
+            <div class="field">
+                <label>Practice Mode</label>
+                <select id="practiceMode" onchange="toggleModeUI()">
+                    <option value="words">Word Mode</option>
+                    <option value="chars">Character Mode (60s)</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label>User Name</label>
+                <input type="text" id="userName" list="nameOptions" placeholder="Name">
+                <datalist id="nameOptions"></datalist>
+            </div>
+
+            <!-- This div hides/shows based on Practice Mode -->
+            <div id="wordSettings">
+                <div class="field">
+                    <label>Words Per Line</label>
+                    <select id="wordsPerLine"></select>
+                </div>
+
+                <div class="field">
+                    <label>Total Number of Lines</label>
+                    <select id="totalLines"></select>
+                </div>
+
+                <div class="field">
+                    <label>Visible Lines</label>
+                    <select id="visibleLines"></select>
+                </div>
+            </div>
+
+            <div class="field">
+                <label>Font Size</label>
+                <select id="fontSize"></select>
+            </div>
+
+            <div class="field">
+                <label>Allowed Letters</label>
+                <div class="letter-controls">
+                    <button type="button" onclick="toggleAllLetters(true)">All On</button>
+                    <button type="button" onclick="toggleAllLetters(false)">All Off</button>
+                </div>
+                <div id="letter-grid"></div>
+            </div>
+
+            <button id="startBtn" onclick="startSession()">Start Session</button>
+            <button id="viewStatsBtn" onclick="showStats()">View Stats History</button>
+        </aside>
+
+        <!-- Main Content (80%) -->
+        <main class="content">
+            <div id="timer">0.0s</div>
+            <div id="display-area"></div>
+            <div id="results"></div>
+        </main>
+    </div>
+<div id="statsModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeStats()">&times;</span>
+        <h1>Performance History</h1>
+        
+        <div class="stats-tables">
+            <section>
+                <h2>Word Mode</h2>
+                <div class="table-wrapper">
+                    <table id="wordStatsTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>User</th>
+                                <th>Acc</th>
+                                <th>CPS</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section>
+                <h2>Character Mode</h2>
+                <div class="table-wrapper">
+                    <table id="charStatsTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>User</th>
+                                <th>Acc</th>
+                                <th>CPS</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+</div>
+    <script src="script.js"></script>
+</body>
+</html>

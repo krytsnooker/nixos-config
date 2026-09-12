@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LAN Music Browser</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: #f0f2f5; height: 100vh; display: flex; flex-direction: column; }
+        .header { flex-shrink: 0; margin-bottom: 20px; }
+        .controls { display: flex; gap: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        select { padding: 10px; width: 250px; border-radius: 4px; border: 1px solid #ccc; }
+        .main-content { display: flex; gap: 20px; flex: 1; min-height: 0; }
+        .left-panel { flex: 1; background: white; border-radius: 8px; padding: 20px; overflow-y: auto; }
+        .right-panel { flex: 1; background: white; border-radius: 8px; padding: 20px; overflow-y: auto; display: none; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        .album-art { width: 100%; max-width: 300px; border-radius: 8px; display: block; margin: 0 auto 20px; }
+        .summary-box { margin-bottom: 25px; line-height: 1.6; font-size: 14px; }
+        .summary-title { font-weight: bold; color: #007bff; border-bottom: 1px solid #eee; margin-bottom: 8px; display: block; }
+        .line-item { font-size: 13px; padding: 4px 0; border-bottom: 1px solid #f9f9f9; }
+        .role-label { color: #888; font-weight: bold; width: 120px; display: inline-block; }
+        .entity-name { color: #007bff; cursor: pointer; }
+        .link-bar { display: flex; gap: 10px; margin-top: 20px; }
+        .link-bar a { font-size: 11px; color: #007bff; text-decoration: none; border: 1px solid #007bff; padding: 4px 8px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Music Library</h1>
+        <div class="controls">
+            <select id="artistSelect" onchange="loadAlbums()">
+                <option value="">Select Artist</option>
+                {% for artist in artists %}<option value="{{ artist[0] }}">{{ artist[0] }}</option>{% endfor %}
+            </select>
+            <select id="albumSelect" onchange="loadTracks()"><option value="">Select Album</option></select>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="left-panel">
+            <h3 id="displayAlbumTitle">Select an album</h3>
+            <table id="trackTable"><thead><tr><th>#</th><th>Title</th><th style="text-align:right">Time</th></tr></thead><tbody></tbody></table>
+        </div>
+        <div class="right-panel" id="infoPanel">
+            <img id="albumImg" class="album-art" src="">
+            <div id="albumText" class="summary-box"></div>
+            <div class="summary-box"><span class="summary-title">Companies</span><div id="companyList"></div></div>
+            <div class="summary-box"><span class="summary-title">Credits</span><div id="creditList"></div></div>
+            <div id="artistText" class="summary-box"></div>
+            <div class="link-bar">
+                <a id="mbLink" target="_blank">MusicBrainz</a>
+                <a id="wikiLink" target="_blank">Wikipedia</a>
+                <a id="embyLink" href="#" target="_blank" style="background-color: #52b54b; color: white; border: none;">Open in Emby</a>
+            </div>
+        </div>
+    </div>
+    <script>
+        async function loadAlbums() {
+            const artist = document.getElementById('artistSelect').value;
+            const albumSelect = document.getElementById('albumSelect');
+            albumSelect.innerHTML = '<option value="">Select Album</option>';
+            if (!artist) return;
+            const response = await fetch(`/get_albums/${encodeURIComponent(artist)}`);
+            (await response.json()).forEach(a => { albumSelect.innerHTML += `<option value="${a}">${a}</option>`; });
+        }
+        async function loadTracks() {
+            const artist = document.getElementById('artistSelect').value;
+            const album = document.getElementById('albumSelect').value;
+            document.getElementById('displayAlbumTitle').innerText = album;
+            const response = await fetch(`/get_tracks/${encodeURIComponent(artist)}/${encodeURIComponent(album)}`);
+            const tracks = await response.json();
+            document.querySelector('#trackTable tbody').innerHTML = tracks.map(t => `<tr><td>${t.no}</td><td>${t.title}</td><td style="text-align:right">${Math.floor(t.duration/60)}:${(t.duration%60).toString().padStart(2,'0')}</td></tr>`).join('');
+            fetchDetails(artist, album);
+        }
+        async function fetchDetails(artist, album) {
+            document.getElementById('infoPanel').style.display = 'block';
+            const res = await fetch(`/get_mb_info/${encodeURIComponent(artist)}/${encodeURIComponent(album)}`);
+            const data = await res.json();
+            document.getElementById('albumImg').src = `https://coverartarchive.org/release/${data.mbid}/front-500`;
+            document.getElementById('albumText').innerText = data.album_summary;
+            document.getElementById('artistText').innerHTML = `<span class="summary-title">About ${artist}</span>${data.artist_summary}`;
+            document.getElementById('companyList').innerHTML = data.companies.map(c => `<div class="line-item"><span class="role-label">${c.type}:</span><span class="entity-name">${c.name}</span></div>`).join('');
+            document.getElementById('creditList').innerHTML = data.credits.map(c => `<div class="line-item"><span class="role-label">${c.role}:</span><span class="entity-name">${c.name}</span></div>`).join('');
+            document.getElementById('mbLink').href = `https://musicbrainz.org/release/${data.mbid}`;
+            document.getElementById('wikiLink').href = `https://en.wikipedia.org/wiki/${artist.replace(/ /g, '_')}`;
+// Inside fetchDetails in index.html
+const embyBtn = document.getElementById('embyLink');
+
+if (data.emby_link) {
+    embyBtn.href = data.emby_link;
+    embyBtn.style.display = "inline-block";
+} else {
+    embyBtn.style.display = "none";
+}
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+server {
+    listen 80;
+    server_name cloud.intrentaka.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+   listen 443 ssl http2;
+   server_name cloud.intrentaka.com;
+
+   # ssl_certificate /etc/nginx/ssl/emby.crt;
+   # ssl_certificate_key /etc/nginx/ssl/emby.key;
+
+ssl_certificate /etc/letsencrypt/live/intrentaka.com-0001/fullchain.pem;
+ssl_certificate_key /etc/letsencrypt/live/intrentaka.com-0001/privkey.pem;
+add_header Strict-Transport-Security "max-age=15552000; includeSubDomains" always;
+
+    client_max_body_size 512M;
+
+    location / {
+        proxy_pass http://127.0.0.1:8888;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        proxy_redirect off;
+        proxy_buffering off;
+    }
+}

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Math Master</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar (Left 20%) -->
+        <aside class="sidebar">
+            <h2>Math Setup</h2>
+            <div class="field">
+                <label>Operation</label>
+                <select id="mathMode">
+                    <option value="addition">Addition (+)</option>
+                    <option value="subtraction">Subtraction (-)</option>
+                    <option value="multiplication">Multiplication (×)</option>
+                    <option value="division">Division (÷)</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>User Name</label>
+                <input type="text" id="userName" list="nameOptions" placeholder="Name">
+                <datalist id="nameOptions"></datalist>
+            </div>
+            <div class="field">
+                <label>Variables</label>
+                <select id="varCount"></select>
+            </div>
+            <div class="field">
+                <label>Font Size</label>
+                <select id="fontSize"></select>
+            </div>
+            <div class="field">
+                <label>Allowed Numbers</label>
+                <div class="letter-controls">
+                    <button onclick="toggleAll(true)">All On</button>
+                    <button onclick="toggleAll(false)">All Off</button>
+                </div>
+                <div id="number-grid"></div>
+            </div>
+            <button id="startBtn" onclick="startSession()">Start Session</button>
+            <button id="viewStatsBtn" onclick="showStats()">View Stats</button>
+        </aside>
+
+        <!-- Main Content (Right 80%) -->
+        <main class="content">
+            <div id="timer">60s</div>
+            <div id="display-area">Select options and Start</div>
+            
+            <div id="input-container" style="display:none;">
+                <div id="math-display-val">?</div>
+                <div class="numpad">
+                    <button class="num-btn" onclick="numInput(1)">1</button>
+                    <button class="num-btn" onclick="numInput(2)">2</button>
+                    <button class="num-btn" onclick="numInput(3)">3</button>
+                    <button class="num-btn" onclick="numInput(4)">4</button>
+                    <button class="num-btn" onclick="numInput(5)">5</button>
+                    <button class="num-btn" onclick="numInput(6)">6</button>
+                    <button class="num-btn" onclick="numInput(7)">7</button>
+                    <button class="num-btn" onclick="numInput(8)">8</button>
+                    <button class="num-btn" onclick="numInput(9)">9</button>
+                    <button class="num-btn btn-clear" onclick="clearInput()">C</button>
+                    <button class="num-btn" onclick="numInput(0)">0</button>
+                    <button class="num-btn btn-ok" onclick="submitInput()">OK</button>
+                </div>
+            </div>
+            
+            <div id="results"></div>
+        </main>
+    </div>
+
+    <div id="statsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeStats()">&times;</span>
+            <h1>Math Stats</h1>
+            <div style="overflow-x:auto;">
+                <table id="statsTable">
+                    <thead><tr><th>Date</th><th>User</th><th>Mode</th><th>Score</th><th>Acc</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

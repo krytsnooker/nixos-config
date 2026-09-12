@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAN Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            max-width: 1000px;
+            width: 90%;
+            text-align: center;
+        }
+        h1 { margin-bottom: 30px; font-weight: 300; letter-spacing: 2px; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            position: relative;
+            background: #1e1e1e;
+            padding: 30px 20px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.2s, background 0.2s, border 0.2s;
+            border: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            background: #252525;
+            border-color: #00a4dc;
+        }
+
+        /* This handles both Emojis and PNGs */
+        .icon-container {
+            height: 60px; /* Fixed height so cards stay aligned */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        .icon-emoji { font-size: 2.5rem; }
+        .icon-png { width: 50px; height: 50px; object-fit: contain; }
+
+        .title { font-weight: bold; font-size: 1.1rem; }
+        .url { font-size: 0.8rem; color: #888; margin-top: 8px; }
+
+        .status-dot {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #555; /* unknown, until checked */
+        }
+        .status-dot.online { background: #3ecf6e; }
+        .status-dot.offline { background: #e05252; }
+        .status-dot.pending { background: #e0b352; }
+
+        .mc-btn {
+            margin-top: 10px;
+            padding: 6px 16px;
+            font-size: 0.85rem;
+            border-radius: 6px;
+            border: 1px solid #444;
+            background: #2a2a2a;
+            color: #e0e0e0;
+            cursor: pointer;
+        }
+        .mc-btn:hover:not(:disabled) { border-color: #00a4dc; }
+        .mc-btn:disabled { opacity: 0.5; cursor: default; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>LAN SERVICES</h1>
+    <div class="grid" id="grid">
+        <a class="card" data-port="3000">
+            <span class="status-dot"></span>
+            <div class="icon-container"><span class="icon-emoji">⌨️</span></div>
+            <div class="title">Typing Tutor</div>
+            <div class="url">3000</div>
+        </a>
+
+        <a class="card" data-port="3001">
+            <span class="status-dot"></span>
+            <div class="icon-container"><span class="icon-emoji">🧮</span></div>
+            <div class="title">Math Tutor</div>
+            <div class="url">3001</div>
+        </a>
+
+        <!-- EMBY CARD WITH PNG -->
+        <a class="card" data-port="8096">
+            <span class="status-dot"></span>
+            <div class="icon-container">
+                <img src="emby-icon.png" alt="Emby" class="icon-png">
+            </div>
+            <div class="title">Emby</div>
+            <div class="url">8096</div>
+        </a>
+
+        <a class="card" data-port="5001">
+            <span class="status-dot"></span>
+            <div class="icon-container"><span class="icon-emoji">📋</span></div>
+            <div class="title">LAN Pastebin</div>
+            <div class="url">5001</div>
+        </a>
+
+        <a class="card" data-port="5010">
+            <span class="status-dot"></span>
+            <div class="icon-container"><span class="icon-emoji">🎵</span></div>
+            <div class="title">Music Database</div>
+            <div class="url">5010</div>
+        </a>
+
+        <!-- Minecraft: not a link (it's a game server, no web UI) — a
+             start/stop control talking to the mc-control API instead. -->
+        <div class="card" id="mcCard">
+            <span class="status-dot" id="mcDot"></span>
+            <div class="icon-container"><span class="icon-emoji">⛏️</span></div>
+            <div class="title">Minecraft</div>
+            <div class="url" id="mcStatusText">checking...</div>
+            <button class="mc-btn" id="mcBtn" disabled>...</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Build links from the current hostname/IP instead of a hardcoded name,
+    // so this page keeps working through hostname changes (e.g. the
+    // pd600 -> homeserver migration) or if it's ever reached by LAN IP.
+    const host = window.location.hostname;
+
+    document.querySelectorAll('.card').forEach(card => {
+        const port = card.dataset.port;
+        const url = `http://${host}:${port}`;
+        card.href = url;
+
+        const dot = card.querySelector('.status-dot');
+        // no-cors: we only care whether the request reached a server at all,
+        // not the response contents (which we can't read cross-origin anyway).
+        fetch(url, { mode: 'no-cors', signal: AbortSignal.timeout(3000) })
+            .then(() => dot.classList.add('online'))
+            .catch(() => dot.classList.add('offline'));
+    });
+
+    // --- Minecraft start/stop control ---
+    const MC_CONTROL_PORT = 5020;
+    const mcBase = `http://${host}:${MC_CONTROL_PORT}`;
+    const mcDot = document.getElementById('mcDot');
+    const mcStatusText = document.getElementById('mcStatusText');
+    const mcBtn = document.getElementById('mcBtn');
+    let mcBusy = false;
+
+    function renderMcState(state) {
+        mcDot.className = 'status-dot';
+        if (state === 'active') {
+            mcDot.classList.add('online');
+            mcStatusText.textContent = 'Running';
+            mcBtn.textContent = 'Stop';
+            mcBtn.disabled = mcBusy;
+        } else if (state === 'inactive' || state === 'failed') {
+            mcDot.classList.add('offline');
+            mcStatusText.textContent = state === 'failed' ? 'Failed' : 'Stopped';
+            mcBtn.textContent = 'Start';
+            mcBtn.disabled = mcBusy;
+        } else {
+            // activating, deactivating, reloading, unknown
+            mcDot.classList.add('pending');
+            mcStatusText.textContent = state;
+            mcBtn.disabled = true;
+        }
+    }
+
+    async function pollMcStatus() {
+        try {
+            const res = await fetch(`${mcBase}/status`, { signal: AbortSignal.timeout(4000) });
+            const data = await res.json();
+            renderMcState(data.status);
+        } catch (e) {
+            mcDot.className = 'status-dot offline';
+            mcStatusText.textContent = 'unreachable';
+            mcBtn.disabled = true;
+        }
+    }
+
+    mcBtn.addEventListener('click', async () => {
+        const action = mcBtn.textContent === 'Stop' ? 'stop' : 'start';
+        mcBusy = true;
+        mcBtn.disabled = true;
+        try {
+            await fetch(`${mcBase}/${action}`, { method: 'POST', signal: AbortSignal.timeout(10000) });
+        } catch (e) { /* poll will reflect whatever actually happened */ }
+        mcBusy = false;
+        pollMcStatus();
+    });
+
+    pollMcStatus();
+    setInterval(pollMcStatus, 5000);
+</script>
+
+</body>
+</html>
