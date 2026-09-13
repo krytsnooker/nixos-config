@@ -1,3 +1,5 @@
 __pycache__/
 *.pyc
 scripts/nixos-migration-info.txt
+nixos-config/
+*.swp
