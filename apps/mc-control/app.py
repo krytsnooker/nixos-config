@@ -10,7 +10,7 @@ from flask import Flask, jsonify
 app = Flask(__name__)
 
 SYSTEMCTL = "/run/current-system/sw/bin/systemctl"
-SUDO = "/run/current-system/sw/bin/sudo"
+SUDO = "/run/wrappers/bin/sudo"
 MC_UNIT = os.environ["MC_UNIT"]  # set by systemd; fail loudly if missing
 
 
