@@ -101,7 +101,7 @@ in
       Environment = [ "MUSIC_DB_PATH=/var/lib/music-info/music.db" "MUSIC_PATH=/mnt/server-pc/Media/Albums" ];
       EnvironmentFile = "/var/lib/music-info/secrets.env";
       WorkingDirectory = "${../apps/music-info-project}";
-      ExecStart = "${pythonEnv}/bin/python3 ${../apps/music-info-project}/music_scanner.py";
+      ExecStart = "${pythonEnv}/bin/python3 -u ${../apps/music-info-project}/music_scanner.py";
     };
   };
 
