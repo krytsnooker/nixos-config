@@ -1,64 +1,57 @@
 # music_scanner.py
 #
-# Walks MUSIC_PATH (see config.py) for audio files, reads their tags, and
-# rebuilds the `tracks` table used by app.py. This is a RECONSTRUCTION —
-# the original scanner was lost (overwritten with a copy of database.py on
-# both the live server and the exported copy) — written from the schema
-# already present in music.db and the behavior described in
-# scan_and_run.sh/run_app.sh ("Full Refresh (Scan + Run)").
+# Walks MUSIC_PATH and derives track metadata from the directory structure
+# rather than opening files. Expects: MUSIC_PATH/Artist/Album/NN - Title.ext
+# Disc subdirectories (Artist/Album/Disc N/NN - Title.ext) are also handled.
 #
 # Full wipe + rebuild on every run: `tracks` has no unique constraint, so
 # re-running without clearing first would duplicate every row.
 
 import os
+import re
 import sys
 import time
-
-from mutagen import File as MutagenFile
 
 from config import MUSIC_PATH
 from database import get_db
 
-AUDIO_EXTENSIONS = {'.mp3', '.flac', '.m4a'}
+AUDIO_EXTENSIONS = {'.mp3', '.flac', '.m4a', '.ogg', '.opus', '.wav', '.aiff'}
 PROGRESS_EVERY = 500
 
-
-def _first_tag(tags, key, default=""):
-    if not tags:
-        return default
-    values = tags.get(key)
-    if not values:
-        return default
-    return str(values[0])
+# Matches leading track numbers like: "01 - ", "1. ", "02 "
+_TRACK_RE = re.compile(r'^(\d+)[.\s-]+\s*(.+)$')
+# Disc/CD subdirectory names to treat as part of the album, not a sub-artist
+_DISC_RE = re.compile(r'^(disc|disk|cd)\s*\d+$', re.IGNORECASE)
 
 
-def _parse_track_no(raw):
-    """Handles 'tracknumber' tags like '7', '7/12', or missing entirely."""
-    if not raw:
-        return 0
-    digits = raw.split('/')[0].strip()
-    try:
-        return int(digits)
-    except ValueError:
-        return 0
+def _parse_filename(fname):
+    stem = os.path.splitext(fname)[0]
+    m = _TRACK_RE.match(stem)
+    if m:
+        return int(m.group(1)), m.group(2).strip()
+    return 0, stem.strip()
 
 
-def _read_track(path):
-    audio = MutagenFile(path, easy=True)
-    if audio is None:
-        return None
+def _parse_path(rel_path):
+    """
+    Returns (artist, album, track_no, title) from a relative path.
+    Handles both Artist/Album/file and Artist/Album/Disc N/file layouts.
+    """
+    parts = rel_path.replace('\\', '/').split('/')
+    fname = parts[-1]
+    track_no, title = _parse_filename(fname)
 
-    tags = audio.tags
-    artist = _first_tag(tags, 'artist', 'Unknown Artist')
-    album = _first_tag(tags, 'album', 'Unknown Album')
-    title = _first_tag(tags, 'title', os.path.splitext(os.path.basename(path))[0])
-    track_no = _parse_track_no(_first_tag(tags, 'tracknumber', ''))
+    if len(parts) == 3:
+        artist, album = parts[0], parts[1]
+    elif len(parts) == 4 and _DISC_RE.match(parts[2]):
+        artist, album = parts[0], parts[1]
+    elif len(parts) >= 3:
+        # Deeper nesting — use the two levels above the file
+        artist, album = parts[-3], parts[-2]
+    else:
+        artist, album = 'Unknown Artist', 'Unknown Album'
 
-    duration = 0
-    if audio.info is not None and hasattr(audio.info, 'length'):
-        duration = int(round(audio.info.length))
-
-    return (artist, album, title, track_no, duration)
+    return artist, album, track_no, title
 
 
 def scan():
@@ -68,7 +61,6 @@ def scan():
 
     start = time.time()
     scanned = 0
-    inserted = 0
     skipped = 0
     rows = []
 
@@ -80,24 +72,20 @@ def scan():
                 continue
 
             scanned += 1
-            path = os.path.join(root, fname)
+            rel = os.path.relpath(os.path.join(root, fname), MUSIC_PATH)
+
             try:
-                track = _read_track(path)
+                artist, album, track_no, title = _parse_path(rel)
+                rows.append((artist, album, title, track_no, 0))
             except Exception as e:
-                print(f"WARNING: could not read '{path}': {e}", file=sys.stderr)
-                track = None
-
-            if track is None:
+                print(f"WARNING: could not parse '{rel}': {e}", file=sys.stderr)
                 skipped += 1
-                continue
-
-            rows.append(track)
-            inserted += 1
 
             if scanned % PROGRESS_EVERY == 0:
-                print(f"  ...{scanned} files scanned, {inserted} tracks read so far")
+                print(f"  ...{scanned} files scanned so far")
 
-    print(f"Scan complete: {inserted} tracks read, {skipped} files skipped, {scanned} files examined.")
+    inserted = len(rows)
+    print(f"Scan complete: {inserted} tracks read, {skipped} skipped, {scanned} files examined.")
     print("Rebuilding tracks table...")
 
     with get_db() as conn:
