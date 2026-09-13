@@ -1,6 +1,8 @@
 { config, pkgs, lib, ... }:
 
+
 {
+  nixpkgs.config.allowUnfree = true;
   # --- Flakes ---
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
   nix.gc = {
@@ -82,6 +84,7 @@
     curl
     htop
     ripgrep
+    claude-code
   ];
 
   system.stateVersion = "24.11";

@@ -12,15 +12,17 @@
     ports = [
       "53:53/tcp"
       "53:53/udp"
-      "8083:80/tcp" # web UI on 8083 to avoid clashing with nginx on 80
+      # web UI on 8083 to avoid clashing with nginx on 80. NOTE: container's
+      # internal webserver port came back as 8080 (not the image's usual 80)
+      # after a Teleporter restore imported the old box's general settings,
+      # which had it configured that way — mapping matches that.
+      "8083:8080/tcp"
     ];
     environment = {
       TZ = config.time.timeZone;
+      FTLCONF_dns_listeningMode = "ALL";
     };
-    # WEBPASSWORD comes from here, not the environment= above, so it never
-    # ends up in the Nix store or `ps`/systemd unit listings. Same pattern
-    # as music-info's secrets.env and Nextcloud's adminpassFile.
-    environmentFiles = [ "/var/lib/pihole/secrets.env" ]; # TODO: create this file (see README), chmod 600, root-owned — contents: WEBPASSWORD=<your password>
+    environmentFiles = [ "/var/lib/pihole/secrets.env" ];
     volumes = [
       "/var/lib/pihole/etc-pihole:/etc/pihole"
       "/var/lib/pihole/etc-dnsmasq.d:/etc/dnsmasq.d"

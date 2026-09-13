@@ -19,14 +19,11 @@
       enableACME = true;
 
       locations."/" = {
+        # TEMP DIAGNOSTIC: stripped to bare minimum (no proxyWebsockets, no
+        # extraConfig) to isolate a bare "400 Bad Request" nginx is returning
+        # for every request to this location, regardless of protocol/headers.
+        # Restore proxyWebsockets + extraConfig once root cause is found.
         proxyPass = "http://127.0.0.1:8096";
-        proxyWebsockets = true; # covers the Upgrade/Connection headers Emby needs
-        extraConfig = ''
-          proxy_set_header Host $host;
-          proxy_set_header X-Real-IP $remote_addr;
-          proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-          proxy_set_header X-Forwarded-Proto $scheme;
-        '';
       };
     };
 

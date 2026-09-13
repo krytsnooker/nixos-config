@@ -149,6 +149,7 @@
 
     document.querySelectorAll('.card').forEach(card => {
         const port = card.dataset.port;
+        if (!port) return;
         const url = `http://${host}:${port}`;
         card.href = url;
 
