@@ -146,6 +146,11 @@ homepage Minecraft card via the `mc-control` API (port 5020).
 `online-mode = false` for LAN clients without Mojang accounts. Do not expose
 port 25565 externally without re-enabling online mode first.
 
+**NixOS gotcha:** `mc-control` uses `/run/wrappers/bin/sudo` (the setuid
+wrapper NixOS creates at boot), not `/run/current-system/sw/bin/sudo` which
+lacks the setuid bit. If mc-control ever returns `{"status":"unknown"}` after
+a reinstall, verify `/run/wrappers/bin/sudo` exists and is setuid root.
+
 ---
 
 ## Fresh install
