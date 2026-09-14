@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>homeserver reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0e1316;
+    --surface: #151c20;
+    --surface-2: #1c252a;
+    --surface-3: #232d33;
+    --border: #2b363c;
+    --text: #e7edf0;
+    --text-dim: #93a5ac;
+    --text-faint: #5f7178;
+    --accent: #5fd6c4;
+    --accent-dim: #3a8f81;
+    --warn: #e8b34c;
+    --warn-bg: rgba(232, 179, 76, 0.1);
+    --danger: #e07a6b;
+    --danger-bg: rgba(224, 122, 107, 0.09);
+    --shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f5;
+      --surface: #ffffff;
+      --surface-2: #edf1f0;
+      --surface-3: #e3e9e7;
+      --border: #d3dcda;
+      --text: #14201f;
+      --text-dim: #4d6260;
+      --text-faint: #8098a0;
+      --accent: #0f8a76;
+      --accent-dim: #b7e6dc;
+      --warn: #9a6a11;
+      --warn-bg: rgba(154, 106, 17, 0.08);
+      --danger: #ab3d2c;
+      --danger-bg: rgba(171, 61, 44, 0.07);
+      --shadow: 0 8px 24px rgba(20,32,31,0.08);
+    }
+  }
+
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0e1316;
+    --surface: #151c20;
+    --surface-2: #1c252a;
+    --surface-3: #232d33;
+    --border: #2b363c;
+    --text: #e7edf0;
+    --text-dim: #93a5ac;
+    --text-faint: #5f7178;
+    --accent: #5fd6c4;
+    --accent-dim: #3a8f81;
+    --warn: #e8b34c;
+    --warn-bg: rgba(232, 179, 76, 0.1);
+    --danger: #e07a6b;
+    --danger-bg: rgba(224, 122, 107, 0.09);
+    --shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+
+  html[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f4f6f5;
+    --surface: #ffffff;
+    --surface-2: #edf1f0;
+    --surface-3: #e3e9e7;
+    --border: #d3dcda;
+    --text: #14201f;
+    --text-dim: #4d6260;
+    --text-faint: #8098a0;
+    --accent: #0f8a76;
+    --accent-dim: #b7e6dc;
+    --warn: #9a6a11;
+    --warn-bg: rgba(154, 106, 17, 0.08);
+    --danger: #ab3d2c;
+    --danger-bg: rgba(171, 61, 44, 0.07);
+    --shadow: 0 8px 24px rgba(20,32,31,0.08);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  body {
+    font-family: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.55;
+    padding-inline: 20px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  code, pre, .mono, kbd {
+    font-family: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+
+  code {
+    background: var(--surface-3);
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    font-size: 0.88em;
+    color: var(--accent);
+  }
+
+  pre {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  pre code {
+    background: none;
+    padding: 0;
+    color: var(--text);
+  }
+  pre .cmt { color: var(--text-faint); }
+
+  .shell {
+    max-width: 1180px;
+    margin-inline: auto;
+    padding-block: 28px 64px;
+  }
+
+  /* ---- Header ---- */
+  header.top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+
+  .host-id { display: flex; flex-direction: column; gap: 6px; }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  h1 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: clamp(1.5rem, 3vw, 2.1rem);
+    margin: 0;
+    text-wrap: balance;
+    font-weight: 600;
+  }
+
+  .host-id p { margin: 2px 0 0; color: var(--text-dim); font-size: 0.95rem; }
+
+  .theme-toggle {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.75rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 6px;
+    padding: 7px 12px;
+    cursor: pointer;
+  }
+  .theme-toggle:hover { color: var(--text); border-color: var(--text-faint); }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 34px;
+  }
+  .stat {
+    background: var(--surface);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .stat .label {
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .stat .value {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.98rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- Layout: nav + content ---- */
+  .layout {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+
+  nav.toc {
+    position: sticky;
+    top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 0.86rem;
+  }
+  nav.toc a {
+    color: var(--text-dim);
+    padding: 6px 10px;
+    border-radius: 6px;
+    border-left: 2px solid transparent;
+  }
+  nav.toc a:hover { color: var(--text); text-decoration: none; background: var(--surface-2); }
+
+  main { min-width: 0; }
+
+  section {
+    padding-block: 30px;
+    border-bottom: 1px solid var(--border);
+  }
+  section:last-child { border-bottom: none; }
+
+  h2 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  h2 .idx { color: var(--text-faint); font-weight: 400; font-size: 0.95rem; }
+
+  h3 {
+    font-size: 0.95rem;
+    font-family: "IBM Plex Mono", monospace;
+    color: var(--text);
+    margin: 22px 0 8px;
+  }
+
+  p { max-width: 68ch; color: var(--text); }
+  p.dim { color: var(--text-dim); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    margin-block: 10px;
+  }
+  .table-wrap { overflow-x: auto; }
+  th, td {
+    text-align: left;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  th {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    font-weight: 500;
+  }
+  td.mono, td code { font-variant-numeric: tabular-nums; }
+  td.wrap { white-space: normal; }
+  tr:last-child td { border-bottom: none; }
+
+  .callout {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--text-faint);
+    background: var(--surface-2);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin-block: 14px;
+    font-size: 0.92rem;
+  }
+  .callout .tag {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-bg); }
+  .callout.warn .tag { color: var(--warn); }
+  .callout.danger { border-left-color: var(--danger); background: var(--danger-bg); }
+  .callout.danger .tag { color: var(--danger); }
+
+  ol.steps {
+    padding-left: 0;
+    list-style: none;
+    counter-reset: step;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  ol.steps li {
+    counter-increment: step;
+    position: relative;
+    padding-left: 36px;
+    min-height: 26px;
+  }
+  ol.steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--accent);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .secret-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-block: 12px;
+    background: var(--surface);
+  }
+  .secret-card .path {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.88rem;
+    color: var(--text);
+  }
+  .secret-card .perm {
+    font-size: 0.78rem;
+    color: var(--text-faint);
+    margin-left: 8px;
+  }
+
+  footer {
+    margin-top: 40px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    color: var(--text-faint);
+    font-size: 0.8rem;
+    font-family: "IBM Plex Mono", monospace;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  @media (max-width: 780px) {
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+    .layout { grid-template-columns: 1fr; }
+    nav.toc {
+      position: static;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding-bottom: 14px;
+      margin-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    nav.toc a {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td.wrap { white-space: normal; min-width: 140px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="top">
+    <div class="host-id">
+      <span class="eyebrow">NixOS host // reference</span>
+      <h1>homeserver</h1>
+      <p>HP ProDesk G4 800 &middot; i5-7500T &middot; 8&nbsp;GB RAM &middot; 256&nbsp;GB SSD &middot; NixOS 25.11</p>
+    </div>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle color theme">theme: auto</button>
+  </header>
+
+  <div class="stat-row">
+    <div class="stat"><span class="label">CPU</span><span class="value">i5-7500T</span></div>
+    <div class="stat"><span class="label">Memory</span><span class="value">8 GB</span></div>
+    <div class="stat"><span class="label">Boot disk</span><span class="value">256 GB SSD</span></div>
+    <div class="stat"><span class="label">Media store</span><span class="value">192.168.0.110 (CIFS)</span></div>
+  </div>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Sections">
+      <a href="#hardware">Hardware</a>
+      <a href="#repo">Repository layout</a>
+      <a href="#rebuilding">Rebuilding</a>
+      <a href="#snapshots">Snapshots</a>
+      <a href="#services">Services</a>
+      <a href="#secrets">Secrets</a>
+      <a href="#music">Music scanner</a>
+      <a href="#ssl">SSL / external</a>
+      <a href="#minecraft">Minecraft</a>
+      <a href="#fresh-install">Fresh install</a>
+    </nav>
+
+    <main>
+
+      <section id="hardware">
+        <h2><span class="idx">01</span> Hardware</h2>
+        <p class="dim">Media and user data live on a Windows 10 machine at <code>192.168.0.110</code> with a SAS DAS attached via HBA. This box mounts it over CIFS at <code>/mnt/server-pc</code>.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Partition</th><th>UUID</th><th>Filesystem</th><th>Mount</th></tr></thead>
+          <tbody>
+            <tr><td class="mono"><code>nvme0n1p1</code></td><td class="mono">A745-730E</td><td>vfat FAT32</td><td><code>/boot</code> (ESP)</td></tr>
+            <tr><td class="mono"><code>nvme0n1p2</code></td><td class="mono">f2ba3164-49c0-4f90-bea6-8c7ada01d308</td><td>btrfs</td><td><code>/</code></td></tr>
+            <tr><td class="mono"><code>nvme0n1p3</code></td><td class="mono">8034dca1-d1fd-41fd-bc45-941c2e1ef74c</td><td>btrfs</td><td><code>/home</code></td></tr>
+          </tbody>
+        </table>
+        </div>
+        <p class="dim">Swap: 4 GB swapfile at <code>/swapfile</code>.</p>
+        <h3>CIFS mounts</h3>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Mount point</th><th>Remote path</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td class="mono"><code>/mnt/server-pc</code></td><td class="mono"><code>//192.168.0.110/hsas01</code></td><td class="wrap">General DAS access (media, backups, music)</td></tr>
+            <tr><td class="mono"><code>/var/lib/nextcloud/data</code></td><td class="mono"><code>//192.168.0.110/hsas01/Nextcloud/data</code></td><td class="wrap">Nextcloud user data; mounted with <code>uid=991</code> so ownership checks pass</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="callout warn">
+          <span class="tag">CIFS ownership note</span>
+          CIFS mounts don't support real UNIX ownership — ownership is set at mount time via <code>uid=</code>/<code>gid=</code> options. The Nextcloud data mount must use <code>uid=991</code> (the pinned Nextcloud service user UID from <code>modules/nextcloud.nix</code>). Changing the UID in the config requires updating both places.
+        </div>
+      </section>
+
+      <section id="repo">
+        <h2><span class="idx">02</span> Repository layout</h2>
+        <pre><code>flake.nix                    <span class="cmt">— single nixosConfigurations.homeserver</span>
+hosts/homeserver/            <span class="cmt">— hardware config + per-host settings</span>
+modules/                     <span class="cmt">— NixOS modules (all loaded by every build)</span>
+pkgs/                        <span class="cmt">— custom packages (brave-origin-nightly)</span>
+apps/                        <span class="cmt">— source for custom LAN apps (canonical copy)</span></code></pre>
+      </section>
+
+      <section id="rebuilding">
+        <h2><span class="idx">03</span> Rebuilding</h2>
+        <pre><code><span class="cmt"># Apply config changes</span>
+sudo nixos-rebuild switch --flake /etc/nixos#homeserver
+
+<span class="cmt"># Test without making it the boot default</span>
+sudo nixos-rebuild test --flake /etc/nixos#homeserver
+
+<span class="cmt"># Set as next boot without touching the running system</span>
+sudo nixos-rebuild boot --flake /etc/nixos#homeserver
+
+<span class="cmt"># Roll back to previous generation</span>
+sudo nixos-rebuild switch --rollback</code></pre>
+        <p class="dim">Flakes only see git-tracked files — stage changes before rebuilding:</p>
+        <pre><code>git add &lt;file&gt;</code></pre>
+      </section>
+
+      <section id="snapshots">
+        <h2><span class="idx">04</span> Known-good snapshots</h2>
+        <p class="dim">Tag the current state whenever things are stable:</p>
+        <pre><code>git tag working-YYYY-MM-DD</code></pre>
+        <p class="dim">To restore:</p>
+        <pre><code>git checkout working-YYYY-MM-DD
+sudo nixos-rebuild switch --flake /etc/nixos#homeserver</code></pre>
+      </section>
+
+      <section id="services">
+        <h2><span class="idx">05</span> Services</h2>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Service</th><th>Port</th><th>URL</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>homepage</td><td class="mono">5000</td><td><a href="http://homeserver:5000">homeserver:5000</a></td><td class="wrap">Static, served by nginx</td></tr>
+            <tr><td>typing-tutor</td><td class="mono">3000</td><td><a href="http://homeserver:3000">homeserver:3000</a></td><td class="wrap">Node/Express</td></tr>
+            <tr><td>math-tutor</td><td class="mono">3001</td><td><a href="http://homeserver:3001">homeserver:3001</a></td><td class="wrap">Node/Express</td></tr>
+            <tr><td>lan-pastebin</td><td class="mono">5001</td><td><a href="http://homeserver:5001">homeserver:5001</a></td><td class="wrap">Flask/waitress</td></tr>
+            <tr><td>music-info</td><td class="mono">5010</td><td><a href="http://homeserver:5010">homeserver:5010</a></td><td class="wrap">Flask/waitress</td></tr>
+            <tr><td>Emby</td><td class="mono">8096 / 8920</td><td><a href="https://intrentaka.com">intrentaka.com</a></td><td class="wrap">Podman container</td></tr>
+            <tr><td>Nextcloud</td><td class="mono">443</td><td><a href="https://cloud.intrentaka.com">cloud.intrentaka.com</a></td><td class="wrap">Native NixOS service</td></tr>
+            <tr><td>Pi-hole</td><td class="mono">8083</td><td><a href="http://homeserver:8083">homeserver:8083</a></td><td class="wrap">Podman container</td></tr>
+            <tr><td>mc-control</td><td class="mono">5020</td><td>LAN only</td><td class="wrap">Flask/waitress; start/stop Minecraft via HTTP</td></tr>
+            <tr><td>Minecraft</td><td class="mono">25565</td><td>LAN only</td><td class="wrap">Manual start, not on boot</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <pre><code>systemctl --failed                 <span class="cmt"># anything that didn't start</span>
+journalctl -u &lt;service&gt; -f        <span class="cmt"># live logs for a service</span></code></pre>
+      </section>
+
+      <section id="secrets">
+        <h2><span class="idx">06</span> Secrets</h2>
+        <p class="dim">Never stored in this repo. Copy machine-to-machine (scp/USB) — never paste values into chat or logs.</p>
+
+        <div class="secret-card">
+          <div class="path">/home/kryt/.smbcredentials <span class="perm">chmod 600, owned kryt:kryt</span></div>
+          <p class="dim" style="margin:6px 0 8px;">Required for the CIFS mount.</p>
+          <pre><code>username=&lt;user&gt;
+password=&lt;password&gt;
+domain=WORKGROUP</code></pre>
+        </div>
+
+        <div class="secret-card">
+          <div class="path">/var/lib/music-info/secrets.env <span class="perm">chmod 600, owned music-info:music-info</span></div>
+          <pre><code>DISCOGS_TOKEN=&lt;your Discogs token&gt;
+EMBY_API_KEY=&lt;your Emby API key&gt;
+EMBY_BASE_URL=http://localhost:8096
+EMBY_EXTERNAL_URL=https://intrentaka.com</code></pre>
+          <p class="dim" style="margin:8px 0 0;"><code>MUSIC_PATH</code> is set in the systemd unit in <code>modules/lan-apps.nix</code>, not here.</p>
+        </div>
+
+        <div class="secret-card">
+          <div class="path">/var/lib/pihole/secrets.env <span class="perm">chmod 600, owned root:root</span></div>
+          <pre><code>WEBPASSWORD=&lt;your Pi-hole admin password&gt;</code></pre>
+        </div>
+
+        <div class="secret-card">
+          <div class="path">/var/lib/nextcloud-admin-pass <span class="perm">chmod 600, owned root:root</span></div>
+          <p class="dim" style="margin:6px 0 0;">Single line: the Nextcloud admin password.</p>
+        </div>
+
+        <div class="secret-card">
+          <div class="path">/var/lib/nextcloud/nc-secrets.php <span class="perm">chmod 400, owned nextcloud:nextcloud</span></div>
+          <p class="dim" style="margin:6px 0 8px;">JSON format (despite the <code>.php</code> extension — nextcloud34 module requirement). Must preserve the original <code>instanceid</code>, <code>passwordsalt</code>, and <code>secret</code> values from the backup; changing them invalidates all user passwords.</p>
+          <pre><code>{
+  "instanceid": "&lt;from backup config.php&gt;",
+  "passwordsalt": "&lt;from backup config.php&gt;",
+  "secret": "&lt;from backup config.php&gt;",
+  "mail_smtppassword": "&lt;Gmail app password&gt;"
+}</code></pre>
+        </div>
+      </section>
+
+      <section id="music">
+        <h2><span class="idx">07</span> Music library scanner</h2>
+        <p class="dim">Reads metadata from the directory structure (<code>Artist/Album/NN - Title.mp3</code>) and MP3/FLAC duration headers using 16 parallel CIFS workers. Scans ~27,000 tracks in ~13 minutes. Full wipe + rebuild of the <code>tracks</code> table on every run.</p>
+        <p class="dim">Rescan after adding music to the DAS:</p>
+        <pre><code>sudo systemctl start music-scanner
+journalctl -fu music-scanner       <span class="cmt"># live progress</span></code></pre>
+      </section>
+
+      <section id="ssl">
+        <h2><span class="idx">08</span> SSL / external access</h2>
+        <p class="dim">Let's Encrypt via NixOS ACME (auto-renews). Port 80 and 443 must be forwarded from the router to this machine.</p>
+        <ul style="color:var(--text-dim); padding-left: 20px;">
+          <li><code>intrentaka.com</code> / <code>www.intrentaka.com</code> &rarr; Emby (<code>localhost:8096</code>)</li>
+          <li><code>cloud.intrentaka.com</code> &rarr; Nextcloud</li>
+        </ul>
+      </section>
+
+      <section id="minecraft">
+        <h2><span class="idx">09</span> Minecraft</h2>
+        <pre><code>sudo systemctl start minecraft-server-survival
+sudo systemctl stop minecraft-server-survival</code></pre>
+        <p class="dim"><code>autoStart = false</code> — does not start at boot. Also controllable from the homepage Minecraft card via the <code>mc-control</code> API (port 5020).</p>
+        <p class="dim"><code>online-mode = false</code> for LAN clients without Mojang accounts. Do not expose port 25565 externally without re-enabling online mode first.</p>
+        <div class="callout danger">
+          <span class="tag">NixOS gotcha</span>
+          <code>mc-control</code> uses <code>/run/wrappers/bin/sudo</code> (the setuid wrapper NixOS creates at boot), not <code>/run/current-system/sw/bin/sudo</code>, which lacks the setuid bit. If <code>mc-control</code> ever returns <code>{"status":"unknown"}</code> after a reinstall, verify <code>/run/wrappers/bin/sudo</code> exists and is setuid root.
+        </div>
+      </section>
+
+      <section id="fresh-install">
+        <h2><span class="idx">10</span> Fresh install</h2>
+        <ol class="steps">
+          <li>Partition 256GB SSD: 512MB EFI (vfat) + btrfs root + btrfs <code>/home</code></li>
+          <li>Mount at <code>/mnt</code>, <code>/mnt/boot</code>, <code>/mnt/home</code></li>
+          <li><code>nixos-generate-config --root /mnt</code> — overwrites <code>hosts/homeserver/hardware-configuration.nix</code></li>
+          <li>Clone this repo to <code>/mnt/etc/nixos/</code></li>
+          <li>Create all secrets files listed above</li>
+          <li><code>nixos-install --flake /mnt/etc/nixos#homeserver</code></li>
+          <li>Reboot &rarr; <code>passwd kryt</code> &rarr; place <code>.smbcredentials</code></li>
+          <li>Verify CIFS mount: <code>systemctl status 'mnt-server\x2dpc.mount'</code></li>
+          <li>Run music scanner: <code>sudo systemctl start music-scanner</code></li>
+          <li>Restore Nextcloud and Pi-hole from DAS backups at <code>/mnt/server-pc/Backups/</code></li>
+        </ol>
+      </section>
+
+    </main>
+  </div>
+
+  <footer>
+    <span>homeserver &middot; NixOS 25.11 config reference</span>
+    <span id="genDate"></span>
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById('themeToggle');
+    var stored = null;
+    try { stored = localStorage.getItem('hs-theme'); } catch (e) {}
+    if (stored === 'dark' || stored === 'light') {
+      root.setAttribute('data-theme', stored);
+    }
+    function label() {
+      var mode = root.getAttribute('data-theme');
+      btn.textContent = 'theme: ' + (mode ? mode : 'auto');
+    }
+    label();
+    btn.addEventListener('click', function () {
+      var current = root.getAttribute('data-theme');
+      var next = current === 'dark' ? 'light' : (current === 'light' ? null : 'dark');
+      if (next) {
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem('hs-theme', next); } catch (e) {}
+      } else {
+        root.removeAttribute('data-theme');
+        try { localStorage.removeItem('hs-theme'); } catch (e) {}
+      }
+      label();
+    });
+
+    var d = new Date();
+    document.getElementById('genDate').textContent =
+      'reference generated ' + d.toISOString().slice(0, 10);
+  })();
+</script>
+
+</body>
+</html>

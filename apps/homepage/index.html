@@ -1,220 +1,381 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LAN Dashboard</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #121212;
-            color: #e0e0e0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-        }
-        .container {
-            max-width: 1000px;
-            width: 90%;
-            text-align: center;
-        }
-        h1 { margin-bottom: 30px; font-weight: 300; letter-spacing: 2px; }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 20px;
-        }
-        .card {
-            position: relative;
-            background: #1e1e1e;
-            padding: 30px 20px;
-            border-radius: 12px;
-            text-decoration: none;
-            color: inherit;
-            transition: transform 0.2s, background 0.2s, border 0.2s;
-            border: 1px solid #333;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .card:hover {
-            transform: translateY(-5px);
-            background: #252525;
-            border-color: #00a4dc;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>homeserver</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0e1316;
+    --surface: #151c20;
+    --surface-2: #1c252a;
+    --border: #2b363c;
+    --text: #e7edf0;
+    --text-dim: #93a5ac;
+    --text-faint: #5f7178;
+    --accent: #5fd6c4;
+  }
 
-        /* This handles both Emojis and PNGs */
-        .icon-container {
-            height: 60px; /* Fixed height so cards stay aligned */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 15px;
-        }
-        .icon-emoji { font-size: 2.5rem; }
-        .icon-png { width: 50px; height: 50px; object-fit: contain; }
+  @media (prefers-color-scheme: light) {
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f5;
+      --surface: #ffffff;
+      --surface-2: #edf1f0;
+      --border: #d3dcda;
+      --text: #14201f;
+      --text-dim: #4d6260;
+      --text-faint: #8098a0;
+      --accent: #0f8a76;
+    }
+  }
 
-        .title { font-weight: bold; font-size: 1.1rem; }
-        .url { font-size: 0.8rem; color: #888; margin-top: 8px; }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0e1316; --surface: #151c20; --surface-2: #1c252a;
+    --border: #2b363c; --text: #e7edf0; --text-dim: #93a5ac;
+    --text-faint: #5f7178; --accent: #5fd6c4;
+  }
 
-        .status-dot {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #555; /* unknown, until checked */
-        }
-        .status-dot.online { background: #3ecf6e; }
-        .status-dot.offline { background: #e05252; }
-        .status-dot.pending { background: #e0b352; }
+  html[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f4f6f5; --surface: #ffffff; --surface-2: #edf1f0;
+    --border: #d3dcda; --text: #14201f; --text-dim: #4d6260;
+    --text-faint: #8098a0; --accent: #0f8a76;
+  }
 
-        .mc-btn {
-            margin-top: 10px;
-            padding: 6px 16px;
-            font-size: 0.85rem;
-            border-radius: 6px;
-            border: 1px solid #444;
-            background: #2a2a2a;
-            color: #e0e0e0;
-            cursor: pointer;
-        }
-        .mc-btn:hover:not(:disabled) { border-color: #00a4dc; }
-        .mc-btn:disabled { opacity: 0.5; cursor: default; }
-    </style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+
+  body {
+    font-family: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+    line-height: 1.5;
+    padding: 32px 24px 64px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell { max-width: 1080px; margin: 0 auto; }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+
+  h1 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: clamp(1.4rem, 3vw, 1.9rem);
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .theme-toggle {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.75rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 6px;
+    padding: 7px 12px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .theme-toggle:hover { color: var(--text); border-color: var(--text-faint); }
+
+  .section-label {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin: 0 0 12px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 10px;
+    margin-bottom: 36px;
+  }
+
+  .card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 16px 16px;
+    text-decoration: none;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    transition: border-color 0.15s, background 0.15s;
+    cursor: pointer;
+  }
+  .card:hover { border-color: var(--accent); background: var(--surface-2); }
+  .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .status-dot {
+    position: absolute;
+    top: 13px;
+    right: 13px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+  .status-dot.online  { background: #4caf82; }
+  .status-dot.offline { background: #e07a6b; }
+  .status-dot.pending { background: #e8b34c; }
+
+  .card-icon {
+    font-size: 1.75rem;
+    line-height: 1;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .card-icon img { width: 30px; height: 30px; object-fit: contain; }
+
+  .card-title { font-weight: 600; font-size: 0.95rem; }
+
+  .card-sub {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.74rem;
+    color: var(--text-faint);
+  }
+
+  .mc-btn {
+    margin-top: 10px;
+    padding: 5px 0;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.78rem;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text-dim);
+    cursor: pointer;
+    width: 100%;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .mc-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
+  .mc-btn:disabled { opacity: 0.4; cursor: default; }
+
+  .card.ref-card { border-style: dashed; }
+  .card.ref-card:hover { border-style: solid; }
+
+  footer {
+    margin-top: 48px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.74rem;
+    color: var(--text-faint);
+  }
+
+  @media (max-width: 500px) {
+    .grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
 </head>
 <body>
+<div class="shell">
 
-<div class="container">
-    <h1>LAN SERVICES</h1>
-    <div class="grid" id="grid">
-        <a class="card" data-port="3000">
-            <span class="status-dot"></span>
-            <div class="icon-container"><span class="icon-emoji">⌨️</span></div>
-            <div class="title">Typing Tutor</div>
-            <div class="url">3000</div>
-        </a>
-
-        <a class="card" data-port="3001">
-            <span class="status-dot"></span>
-            <div class="icon-container"><span class="icon-emoji">🧮</span></div>
-            <div class="title">Math Tutor</div>
-            <div class="url">3001</div>
-        </a>
-
-        <!-- EMBY CARD WITH PNG -->
-        <a class="card" data-port="8096">
-            <span class="status-dot"></span>
-            <div class="icon-container">
-                <img src="emby-icon.png" alt="Emby" class="icon-png">
-            </div>
-            <div class="title">Emby</div>
-            <div class="url">8096</div>
-        </a>
-
-        <a class="card" data-port="5001">
-            <span class="status-dot"></span>
-            <div class="icon-container"><span class="icon-emoji">📋</span></div>
-            <div class="title">LAN Pastebin</div>
-            <div class="url">5001</div>
-        </a>
-
-        <a class="card" data-port="5010">
-            <span class="status-dot"></span>
-            <div class="icon-container"><span class="icon-emoji">🎵</span></div>
-            <div class="title">Music Database</div>
-            <div class="url">5010</div>
-        </a>
-
-        <!-- Minecraft: not a link (it's a game server, no web UI) — a
-             start/stop control talking to the mc-control API instead. -->
-        <div class="card" id="mcCard">
-            <span class="status-dot" id="mcDot"></span>
-            <div class="icon-container"><span class="icon-emoji">⛏️</span></div>
-            <div class="title">Minecraft</div>
-            <div class="url" id="mcStatusText">checking...</div>
-            <button class="mc-btn" id="mcBtn" disabled>...</button>
-        </div>
+  <header>
+    <div>
+      <div class="eyebrow">NixOS 25.11 &middot; LAN</div>
+      <h1>homeserver</h1>
     </div>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle colour theme">theme: auto</button>
+  </header>
+
+  <p class="section-label">Services</p>
+  <div class="grid">
+
+    <a class="card" data-check="https://intrentaka.com" href="https://intrentaka.com" target="_blank" rel="noopener">
+      <span class="status-dot"></span>
+      <div class="card-icon"><img src="emby-icon.png" alt="Emby"></div>
+      <div class="card-title">Emby</div>
+      <div class="card-sub">intrentaka.com</div>
+    </a>
+
+    <a class="card" data-check="https://cloud.intrentaka.com" href="https://cloud.intrentaka.com" target="_blank" rel="noopener">
+      <span class="status-dot"></span>
+      <div class="card-icon">☁️</div>
+      <div class="card-title">Nextcloud</div>
+      <div class="card-sub">cloud.intrentaka.com</div>
+    </a>
+
+    <a class="card" data-port="8083">
+      <span class="status-dot"></span>
+      <div class="card-icon">🛡️</div>
+      <div class="card-title">Pi-hole</div>
+      <div class="card-sub">:8083</div>
+    </a>
+
+    <a class="card" data-port="5010">
+      <span class="status-dot"></span>
+      <div class="card-icon">🎵</div>
+      <div class="card-title">Music</div>
+      <div class="card-sub">:5010</div>
+    </a>
+
+    <a class="card" data-port="5001">
+      <span class="status-dot"></span>
+      <div class="card-icon">📋</div>
+      <div class="card-title">Pastebin</div>
+      <div class="card-sub">:5001</div>
+    </a>
+
+    <a class="card" data-port="3000">
+      <span class="status-dot"></span>
+      <div class="card-icon">⌨️</div>
+      <div class="card-title">Typing Tutor</div>
+      <div class="card-sub">:3000</div>
+    </a>
+
+    <a class="card" data-port="3001">
+      <span class="status-dot"></span>
+      <div class="card-icon">🧮</div>
+      <div class="card-title">Math Tutor</div>
+      <div class="card-sub">:3001</div>
+    </a>
+
+    <div class="card" id="mcCard">
+      <span class="status-dot" id="mcDot"></span>
+      <div class="card-icon">⛏️</div>
+      <div class="card-title">Minecraft</div>
+      <div class="card-sub" id="mcStatusText">checking…</div>
+      <button class="mc-btn" id="mcBtn" disabled>…</button>
+    </div>
+
+  </div>
+
+  <p class="section-label">Reference</p>
+  <div class="grid">
+    <a class="card ref-card" href="/reference.html">
+      <div class="card-icon">📄</div>
+      <div class="card-title">Config reference</div>
+      <div class="card-sub">hardware · services · secrets</div>
+    </a>
+  </div>
+
+  <footer>homeserver &middot; NixOS 25.11 config reference at <a href="/reference.html" style="color:var(--accent)">reference.html</a></footer>
+
 </div>
-
 <script>
-    // Build links from the current hostname/IP instead of a hardcoded name,
-    // so this page keeps working through hostname changes (e.g. the
-    // pd600 -> homeserver migration) or if it's ever reached by LAN IP.
-    const host = window.location.hostname;
-
-    document.querySelectorAll('.card').forEach(card => {
-        const port = card.dataset.port;
-        if (!port) return;
-        const url = `http://${host}:${port}`;
-        card.href = url;
-
-        const dot = card.querySelector('.status-dot');
-        // no-cors: we only care whether the request reached a server at all,
-        // not the response contents (which we can't read cross-origin anyway).
-        fetch(url, { mode: 'no-cors', signal: AbortSignal.timeout(3000) })
-            .then(() => dot.classList.add('online'))
-            .catch(() => dot.classList.add('offline'));
-    });
-
-    // --- Minecraft start/stop control ---
-    const MC_CONTROL_PORT = 5020;
-    const mcBase = `http://${host}:${MC_CONTROL_PORT}`;
-    const mcDot = document.getElementById('mcDot');
-    const mcStatusText = document.getElementById('mcStatusText');
-    const mcBtn = document.getElementById('mcBtn');
-    let mcBusy = false;
-
-    function renderMcState(state) {
-        mcDot.className = 'status-dot';
-        if (state === 'active') {
-            mcDot.classList.add('online');
-            mcStatusText.textContent = 'Running';
-            mcBtn.textContent = 'Stop';
-            mcBtn.disabled = mcBusy;
-        } else if (state === 'inactive' || state === 'failed') {
-            mcDot.classList.add('offline');
-            mcStatusText.textContent = state === 'failed' ? 'Failed' : 'Stopped';
-            mcBtn.textContent = 'Start';
-            mcBtn.disabled = mcBusy;
-        } else {
-            // activating, deactivating, reloading, unknown
-            mcDot.classList.add('pending');
-            mcStatusText.textContent = state;
-            mcBtn.disabled = true;
-        }
+  // Theme toggle (same logic as reference doc)
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById('themeToggle');
+    var stored = null;
+    try { stored = localStorage.getItem('hs-theme'); } catch (e) {}
+    if (stored === 'dark' || stored === 'light') root.setAttribute('data-theme', stored);
+    function label() {
+      var m = root.getAttribute('data-theme');
+      btn.textContent = 'theme: ' + (m || 'auto');
     }
-
-    async function pollMcStatus() {
-        try {
-            const res = await fetch(`${mcBase}/status`, { signal: AbortSignal.timeout(4000) });
-            const data = await res.json();
-            renderMcState(data.status);
-        } catch (e) {
-            mcDot.className = 'status-dot offline';
-            mcStatusText.textContent = 'unreachable';
-            mcBtn.disabled = true;
-        }
-    }
-
-    mcBtn.addEventListener('click', async () => {
-        const action = mcBtn.textContent === 'Stop' ? 'stop' : 'start';
-        mcBusy = true;
-        mcBtn.disabled = true;
-        try {
-            await fetch(`${mcBase}/${action}`, { method: 'POST', signal: AbortSignal.timeout(10000) });
-        } catch (e) { /* poll will reflect whatever actually happened */ }
-        mcBusy = false;
-        pollMcStatus();
+    label();
+    btn.addEventListener('click', function () {
+      var c = root.getAttribute('data-theme');
+      var n = c === 'dark' ? 'light' : c === 'light' ? null : 'dark';
+      if (n) { root.setAttribute('data-theme', n); try { localStorage.setItem('hs-theme', n); } catch (e) {} }
+      else { root.removeAttribute('data-theme'); try { localStorage.removeItem('hs-theme'); } catch (e) {} }
+      label();
     });
+  })();
 
+  var host = window.location.hostname;
+
+  // Port-based cards: build href and check reachability
+  document.querySelectorAll('.card[data-port]').forEach(function (card) {
+    var url = 'http://' + host + ':' + card.dataset.port;
+    card.href = url;
+    var dot = card.querySelector('.status-dot');
+    fetch(url, { mode: 'no-cors', signal: AbortSignal.timeout(3000) })
+      .then(function () { dot.classList.add('online'); })
+      .catch(function () { dot.classList.add('offline'); });
+  });
+
+  // URL-based cards (Emby, Nextcloud): check the given URL directly
+  document.querySelectorAll('.card[data-check]').forEach(function (card) {
+    var dot = card.querySelector('.status-dot');
+    fetch(card.dataset.check, { mode: 'no-cors', signal: AbortSignal.timeout(3000) })
+      .then(function () { dot.classList.add('online'); })
+      .catch(function () { dot.classList.add('offline'); });
+  });
+
+  // Minecraft start/stop
+  var mcBase = 'http://' + host + ':5020';
+  var mcDot  = document.getElementById('mcDot');
+  var mcText = document.getElementById('mcStatusText');
+  var mcBtn  = document.getElementById('mcBtn');
+  var mcBusy = false;
+
+  function renderMcState(state) {
+    mcDot.className = 'status-dot';
+    if (state === 'active') {
+      mcDot.classList.add('online');
+      mcText.textContent = 'Running';
+      mcBtn.textContent = 'Stop';
+      mcBtn.disabled = mcBusy;
+    } else if (state === 'inactive' || state === 'failed') {
+      mcDot.classList.add('offline');
+      mcText.textContent = state === 'failed' ? 'Failed' : 'Stopped';
+      mcBtn.textContent = 'Start';
+      mcBtn.disabled = mcBusy;
+    } else {
+      mcDot.classList.add('pending');
+      mcText.textContent = state;
+      mcBtn.disabled = true;
+    }
+  }
+
+  async function pollMcStatus() {
+    try {
+      var res = await fetch(mcBase + '/status', { signal: AbortSignal.timeout(4000) });
+      renderMcState((await res.json()).status);
+    } catch (e) {
+      mcDot.className = 'status-dot offline';
+      mcText.textContent = 'unreachable';
+      mcBtn.disabled = true;
+    }
+  }
+
+  mcBtn.addEventListener('click', async function () {
+    var action = mcBtn.textContent === 'Stop' ? 'stop' : 'start';
+    mcBusy = true; mcBtn.disabled = true;
+    try { await fetch(mcBase + '/' + action, { method: 'POST', signal: AbortSignal.timeout(10000) }); } catch (e) {}
+    mcBusy = false;
     pollMcStatus();
-    setInterval(pollMcStatus, 5000);
-</script>
+  });
 
+  pollMcStatus();
+  setInterval(pollMcStatus, 5000);
+</script>
 </body>
 </html>

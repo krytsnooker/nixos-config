@@ -1,7 +1,7 @@
 { lib, stdenv, fetchurl, dpkg, autoPatchelfHook, makeWrapper,
   glib, nss, nspr, at-spi2-atk, at-spi2-core, atk,
   dbus, cups, expat, xorg, libxkbcommon, alsa-lib,
-  mesa, cairo, pango, systemd, gcc }:
+  mesa, libGL, cairo, pango, systemd, gcc }:
 
 stdenv.mkDerivation rec {
   pname = "brave-origin-nightly";
@@ -17,7 +17,7 @@ stdenv.mkDerivation rec {
   buildInputs = [
     glib nss nspr atk at-spi2-atk at-spi2-core
     dbus cups expat xorg.libxcb libxkbcommon alsa-lib
-    mesa xorg.libX11 xorg.libXext cairo pango
+    mesa libGL xorg.libX11 xorg.libXext cairo pango
     systemd xorg.libXcomposite xorg.libXdamage
     xorg.libXfixes xorg.libXrandr gcc.cc.lib
   ];
@@ -39,7 +39,9 @@ stdenv.mkDerivation rec {
     cp -r opt/brave.com/brave-origin-nightly/. "$appdir/"
 
     mkdir -p $out/share/applications
-    cp usr/share/applications/brave-origin-nightly.desktop $out/share/applications/ || true
+    cp usr/share/applications/brave-origin-nightly.desktop $out/share/applications/
+    substituteInPlace $out/share/applications/brave-origin-nightly.desktop \
+      --replace-fail "Exec=/usr/bin/brave-origin-nightly" "Exec=$out/bin/brave-origin-nightly"
 
     mkdir -p $out/share/man/man1
     cp usr/share/man/man1/brave-origin-nightly.1.gz $out/share/man/man1/ || true
@@ -47,13 +49,15 @@ stdenv.mkDerivation rec {
     mkdir -p $out/bin
     makeWrapper "$appdir/brave" "$out/bin/brave-origin-nightly" \
       --set CHROME_VERSION_EXTRA nightly \
-      --set GNOME_DISABLE_CRASH_DIALOG SET_BY_GOOGLE_CHROME
+      --set GNOME_DISABLE_CRASH_DIALOG SET_BY_GOOGLE_CHROME \
+      --add-flags "--password-store=basic" \
+      --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ libGL mesa ]}
 
     runHook postInstall
   '';
 
   meta = with lib; {
-    description = "Brave Origin — privacy-focused browser by Brave Software";
+    description = "Brave Origin privacy-focused browser";
     homepage = "https://brave.com/origin/";
     license = licenses.mpl20;
     sourceProvenance = [ sourceTypes.binaryNativeCode ];
