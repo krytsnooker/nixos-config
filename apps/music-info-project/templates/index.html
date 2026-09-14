@@ -1,95 +1,146 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>LAN Music Browser</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: #f0f2f5; height: 100vh; display: flex; flex-direction: column; }
-        .header { flex-shrink: 0; margin-bottom: 20px; }
-        .controls { display: flex; gap: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        select { padding: 10px; width: 250px; border-radius: 4px; border: 1px solid #ccc; }
-        .main-content { display: flex; gap: 20px; flex: 1; min-height: 0; }
-        .left-panel { flex: 1; background: white; border-radius: 8px; padding: 20px; overflow-y: auto; }
-        .right-panel { flex: 1; background: white; border-radius: 8px; padding: 20px; overflow-y: auto; display: none; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
-        .album-art { width: 100%; max-width: 300px; border-radius: 8px; display: block; margin: 0 auto 20px; }
-        .summary-box { margin-bottom: 25px; line-height: 1.6; font-size: 14px; }
-        .summary-title { font-weight: bold; color: #007bff; border-bottom: 1px solid #eee; margin-bottom: 8px; display: block; }
-        .line-item { font-size: 13px; padding: 4px 0; border-bottom: 1px solid #f9f9f9; }
-        .role-label { color: #888; font-weight: bold; width: 120px; display: inline-block; }
-        .entity-name { color: #007bff; cursor: pointer; }
-        .link-bar { display: flex; gap: 10px; margin-top: 20px; }
-        .link-bar a { font-size: 11px; color: #007bff; text-decoration: none; border: 1px solid #007bff; padding: 4px 8px; border-radius: 3px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Music Info Library</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e1316; --surface: #151c20; --surface-2: #1c252a; --surface-3: #232d33;
+    --border: #2b363c; --text: #e7edf0; --text-dim: #93a5ac; --text-faint: #5f7178;
+    --accent: #5fd6c4;
+  }
+  * { box-sizing: border-box; }
+  html { height: 100%; }
+  body { font-family: "IBM Plex Sans", "Segoe UI", sans-serif; margin: 0; padding: 16px 20px; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; -webkit-font-smoothing: antialiased; }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .back-nav { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--accent); display: inline-block; margin-bottom: 10px; }
+
+  .top-header { flex-shrink: 0; padding-bottom: 16px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+  h1 { font-family: "IBM Plex Mono", monospace; font-size: 1.4rem; font-weight: 600; margin: 0 0 12px; }
+
+  .controls { display: flex; gap: 12px; flex-wrap: wrap; }
+  select {
+    padding: 8px 12px; width: 260px; background: var(--surface); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; outline: none;
+  }
+  select:focus { border-color: var(--accent); }
+
+  .main-content { display: flex; gap: 16px; flex: 1; min-height: 0; }
+
+  .left-panel {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px; overflow-y: auto;
+  }
+  .right-panel {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px; overflow-y: auto; display: none;
+  }
+
+  h3 { font-family: "IBM Plex Mono", monospace; font-size: 0.95rem; font-weight: 600; margin: 0 0 14px; color: var(--text); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th, td { padding: 9px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+  th { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); font-weight: 500; }
+  td:last-child { text-align: right; font-family: "IBM Plex Mono", monospace; color: var(--text-dim); }
+  tr:hover td { background: var(--surface-2); }
+
+  .album-art { width: 100%; max-width: 260px; border-radius: 8px; display: block; margin: 0 auto 18px; border: 1px solid var(--border); }
+
+  .summary-box { margin-bottom: 20px; line-height: 1.6; font-size: 0.88rem; color: var(--text-dim); }
+  .summary-title { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); border-bottom: 1px solid var(--border); margin-bottom: 8px; display: block; padding-bottom: 4px; }
+
+  .line-item { font-size: 0.83rem; padding: 5px 0; border-bottom: 1px solid var(--border); display: flex; gap: 8px; }
+  .role-label { font-family: "IBM Plex Mono", monospace; color: var(--text-faint); font-size: 0.75rem; width: 110px; flex-shrink: 0; }
+  .entity-name { color: var(--text); }
+
+  .link-bar { display: flex; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+  .link-bar a {
+    font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--accent);
+    border: 1px solid var(--accent); padding: 5px 10px; border-radius: 5px;
+  }
+  .link-bar a:hover { background: var(--surface-2); text-decoration: none; }
+  .link-bar a.emby-link { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .link-bar a.emby-link:hover { opacity: 0.88; }
+</style>
 </head>
 <body>
-    <div class="header">
-        <h1>Music Library</h1>
-        <div class="controls">
-            <select id="artistSelect" onchange="loadAlbums()">
-                <option value="">Select Artist</option>
-                {% for artist in artists %}<option value="{{ artist[0] }}">{{ artist[0] }}</option>{% endfor %}
-            </select>
-            <select id="albumSelect" onchange="loadTracks()"><option value="">Select Album</option></select>
-        </div>
+  <div class="top-header">
+    <a class="back-nav" href="http://homeserver:5000">← homeserver</a>
+    <div class="eyebrow">LAN service</div>
+    <h1>Music Info Library</h1>
+    <div class="controls">
+      <select id="artistSelect" onchange="loadAlbums()">
+        <option value="">Select artist</option>
+        {% for artist in artists %}<option value="{{ artist[0] }}">{{ artist[0] }}</option>{% endfor %}
+      </select>
+      <select id="albumSelect" onchange="loadTracks()"><option value="">Select album</option></select>
     </div>
-    <div class="main-content">
-        <div class="left-panel">
-            <h3 id="displayAlbumTitle">Select an album</h3>
-            <table id="trackTable"><thead><tr><th>#</th><th>Title</th><th style="text-align:right">Time</th></tr></thead><tbody></tbody></table>
-        </div>
-        <div class="right-panel" id="infoPanel">
-            <img id="albumImg" class="album-art" src="">
-            <div id="albumText" class="summary-box"></div>
-            <div class="summary-box"><span class="summary-title">Companies</span><div id="companyList"></div></div>
-            <div class="summary-box"><span class="summary-title">Credits</span><div id="creditList"></div></div>
-            <div id="artistText" class="summary-box"></div>
-            <div class="link-bar">
-                <a id="mbLink" target="_blank">MusicBrainz</a>
-                <a id="wikiLink" target="_blank">Wikipedia</a>
-                <a id="embyLink" href="#" target="_blank" style="background-color: #52b54b; color: white; border: none;">Open in Emby</a>
-            </div>
-        </div>
-    </div>
-    <script>
-        async function loadAlbums() {
-            const artist = document.getElementById('artistSelect').value;
-            const albumSelect = document.getElementById('albumSelect');
-            albumSelect.innerHTML = '<option value="">Select Album</option>';
-            if (!artist) return;
-            const response = await fetch(`/get_albums/${encodeURIComponent(artist)}`);
-            (await response.json()).forEach(a => { albumSelect.innerHTML += `<option value="${a}">${a}</option>`; });
-        }
-        async function loadTracks() {
-            const artist = document.getElementById('artistSelect').value;
-            const album = document.getElementById('albumSelect').value;
-            document.getElementById('displayAlbumTitle').innerText = album;
-            const response = await fetch(`/get_tracks/${encodeURIComponent(artist)}/${encodeURIComponent(album)}`);
-            const tracks = await response.json();
-            document.querySelector('#trackTable tbody').innerHTML = tracks.map(t => `<tr><td>${t.no}</td><td>${t.title}</td><td style="text-align:right">${Math.floor(t.duration/60)}:${(t.duration%60).toString().padStart(2,'0')}</td></tr>`).join('');
-            fetchDetails(artist, album);
-        }
-        async function fetchDetails(artist, album) {
-            document.getElementById('infoPanel').style.display = 'block';
-            const res = await fetch(`/get_mb_info/${encodeURIComponent(artist)}/${encodeURIComponent(album)}`);
-            const data = await res.json();
-            document.getElementById('albumImg').src = `https://coverartarchive.org/release/${data.mbid}/front-500`;
-            document.getElementById('albumText').innerText = data.album_summary;
-            document.getElementById('artistText').innerHTML = `<span class="summary-title">About ${artist}</span>${data.artist_summary}`;
-            document.getElementById('companyList').innerHTML = data.companies.map(c => `<div class="line-item"><span class="role-label">${c.type}:</span><span class="entity-name">${c.name}</span></div>`).join('');
-            document.getElementById('creditList').innerHTML = data.credits.map(c => `<div class="line-item"><span class="role-label">${c.role}:</span><span class="entity-name">${c.name}</span></div>`).join('');
-            document.getElementById('mbLink').href = `https://musicbrainz.org/release/${data.mbid}`;
-            document.getElementById('wikiLink').href = `https://en.wikipedia.org/wiki/${artist.replace(/ /g, '_')}`;
-// Inside fetchDetails in index.html
-const embyBtn = document.getElementById('embyLink');
+  </div>
 
-if (data.emby_link) {
-    embyBtn.href = data.emby_link;
-    embyBtn.style.display = "inline-block";
-} else {
-    embyBtn.style.display = "none";
-}
-        }
-    </script>
+  <div class="main-content">
+    <div class="left-panel">
+      <h3 id="displayAlbumTitle">Select an album</h3>
+      <table id="trackTable">
+        <thead><tr><th>#</th><th>Title</th><th style="text-align:right">Time</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="right-panel" id="infoPanel">
+      <img id="albumImg" class="album-art" src="">
+      <div id="albumText" class="summary-box"></div>
+      <div class="summary-box"><span class="summary-title">Companies</span><div id="companyList"></div></div>
+      <div class="summary-box"><span class="summary-title">Credits</span><div id="creditList"></div></div>
+      <div id="artistText" class="summary-box"></div>
+      <div class="link-bar">
+        <a id="mbLink" target="_blank">MusicBrainz</a>
+        <a id="wikiLink" target="_blank">Wikipedia</a>
+        <a id="embyLink" href="#" target="_blank" class="emby-link" style="display:none">Open in Emby</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function loadAlbums() {
+      const artist = document.getElementById('artistSelect').value;
+      const albumSelect = document.getElementById('albumSelect');
+      albumSelect.innerHTML = '<option value="">Select album</option>';
+      if (!artist) return;
+      const response = await fetch(`/get_albums/${encodeURIComponent(artist)}`);
+      (await response.json()).forEach(a => { albumSelect.innerHTML += `<option value="${a}">${a}</option>`; });
+    }
+    async function loadTracks() {
+      const artist = document.getElementById('artistSelect').value;
+      const album = document.getElementById('albumSelect').value;
+      document.getElementById('displayAlbumTitle').innerText = album;
+      const response = await fetch(`/get_tracks/${encodeURIComponent(artist)}/${encodeURIComponent(album)}`);
+      const tracks = await response.json();
+      document.querySelector('#trackTable tbody').innerHTML = tracks.map(t => `<tr><td>${t.no}</td><td>${t.title}</td><td>${Math.floor(t.duration/60)}:${(t.duration%60).toString().padStart(2,'0')}</td></tr>`).join('');
+      fetchDetails(artist, album);
+    }
+    async function fetchDetails(artist, album) {
+      document.getElementById('infoPanel').style.display = 'block';
+      const res = await fetch(`/get_mb_info/${encodeURIComponent(artist)}/${encodeURIComponent(album)}`);
+      const data = await res.json();
+      document.getElementById('albumImg').src = `https://coverartarchive.org/release/${data.mbid}/front-500`;
+      document.getElementById('albumText').innerText = data.album_summary;
+      document.getElementById('artistText').innerHTML = `<span class="summary-title">About ${artist}</span>${data.artist_summary}`;
+      document.getElementById('companyList').innerHTML = data.companies.map(c => `<div class="line-item"><span class="role-label">${c.type}</span><span class="entity-name">${c.name}</span></div>`).join('');
+      document.getElementById('creditList').innerHTML = data.credits.map(c => `<div class="line-item"><span class="role-label">${c.role}</span><span class="entity-name">${c.name}</span></div>`).join('');
+      document.getElementById('mbLink').href = `https://musicbrainz.org/release/${data.mbid}`;
+      document.getElementById('wikiLink').href = `https://en.wikipedia.org/wiki/${artist.replace(/ /g, '_')}`;
+      const embyBtn = document.getElementById('embyLink');
+      if (data.emby_link) { embyBtn.href = data.emby_link; embyBtn.style.display = 'inline-block'; }
+      else { embyBtn.style.display = 'none'; }
+    }
+  </script>
 </body>
 </html>

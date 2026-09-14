@@ -10,244 +10,88 @@
 <style>
   :root {
     color-scheme: dark;
-    --bg: #0e1316;
-    --surface: #151c20;
-    --surface-2: #1c252a;
-    --surface-3: #232d33;
-    --border: #2b363c;
-    --text: #e7edf0;
-    --text-dim: #93a5ac;
-    --text-faint: #5f7178;
-    --accent: #5fd6c4;
-    --shadow: 0 8px 24px rgba(0,0,0,0.35);
+    --bg: #0e1316; --surface: #151c20; --surface-2: #1c252a; --surface-3: #232d33;
+    --border: #2b363c; --text: #e7edf0; --text-dim: #93a5ac; --text-faint: #5f7178;
+    --accent: #5fd6c4; --shadow: 0 8px 24px rgba(0,0,0,0.35);
   }
-
   @media (prefers-color-scheme: light) {
     :root {
       color-scheme: light;
-      --bg: #f4f6f5;
-      --surface: #ffffff;
-      --surface-2: #edf1f0;
-      --surface-3: #e3e9e7;
-      --border: #d3dcda;
-      --text: #14201f;
-      --text-dim: #4d6260;
-      --text-faint: #8098a0;
-      --accent: #0f8a76;
-      --shadow: 0 8px 24px rgba(20,32,31,0.08);
+      --bg: #f4f6f5; --surface: #ffffff; --surface-2: #edf1f0; --surface-3: #e3e9e7;
+      --border: #d3dcda; --text: #14201f; --text-dim: #4d6260; --text-faint: #8098a0;
+      --accent: #0f8a76; --shadow: 0 8px 24px rgba(20,32,31,0.08);
     }
   }
-
   html[data-theme="dark"] {
     color-scheme: dark;
     --bg: #0e1316; --surface: #151c20; --surface-2: #1c252a; --surface-3: #232d33;
     --border: #2b363c; --text: #e7edf0; --text-dim: #93a5ac; --text-faint: #5f7178;
     --accent: #5fd6c4; --shadow: 0 8px 24px rgba(0,0,0,0.35);
   }
-
   html[data-theme="light"] {
     color-scheme: light;
     --bg: #f4f6f5; --surface: #ffffff; --surface-2: #edf1f0; --surface-3: #e3e9e7;
     --border: #d3dcda; --text: #14201f; --text-dim: #4d6260; --text-faint: #8098a0;
     --accent: #0f8a76; --shadow: 0 8px 24px rgba(20,32,31,0.08);
   }
-
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text); }
-
-  body {
-    font-family: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
-    line-height: 1.55;
-    padding-inline: 20px;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  .shell {
-    max-width: 1080px;
-    margin-inline: auto;
-    padding-block: 28px 64px;
-  }
-
+  body { font-family: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif; line-height: 1.55; padding-inline: 20px; -webkit-font-smoothing: antialiased; }
+  .shell { max-width: 1080px; margin-inline: auto; padding-block: 28px 64px; }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
   a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  code { font-family: "IBM Plex Mono", monospace; background: var(--surface-3); padding: 0.1em 0.4em; border-radius: 4px; font-size: 0.88em; color: var(--accent); }
 
-  code {
-    font-family: "IBM Plex Mono", monospace;
-    background: var(--surface-3);
-    padding: 0.1em 0.4em;
-    border-radius: 4px;
-    font-size: 0.88em;
-    color: var(--accent);
-  }
-
-  /* ---- Header ---- */
   header.top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 20px;
-    flex-wrap: wrap;
-    padding-bottom: 22px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 32px;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 20px; flex-wrap: wrap; padding-bottom: 22px;
+    border-bottom: 1px solid var(--border); margin-bottom: 32px;
   }
-
-  .eyebrow {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.72rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 4px;
-  }
-
-  h1 {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: clamp(1.5rem, 3vw, 2.1rem);
-    font-weight: 600;
-    margin: 0;
-  }
-
-  .theme-toggle {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.75rem;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    color: var(--text-dim);
-    border-radius: 6px;
-    padding: 7px 12px;
-    cursor: pointer;
-    flex-shrink: 0;
-  }
+  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+  h1 { font-family: "IBM Plex Mono", monospace; font-size: clamp(1.5rem, 3vw, 2.1rem); font-weight: 600; margin: 0; }
+  .theme-toggle { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim); border-radius: 6px; padding: 7px 12px; cursor: pointer; flex-shrink: 0; }
   .theme-toggle:hover { color: var(--text); border-color: var(--text-faint); }
 
-  /* ---- Section headings — identical to reference doc ---- */
-  h2 {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 1.15rem;
-    font-weight: 600;
-    margin: 0 0 16px;
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
-  }
+  h2 { font-family: "IBM Plex Mono", monospace; font-size: 1.15rem; font-weight: 600; margin: 0 0 16px; display: flex; align-items: baseline; gap: 10px; }
   h2 .idx { color: var(--text-faint); font-weight: 400; font-size: 0.95rem; }
 
-  section {
-    padding-block: 28px;
-    border-bottom: 1px solid var(--border);
-  }
+  section { padding-block: 28px; border-bottom: 1px solid var(--border); }
   section:last-child { border-bottom: none; }
 
-  /* ---- Service grid ---- */
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-    gap: 10px;
-  }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
 
   .card {
-    position: relative;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 18px 16px 14px;
-    text-decoration: none;
-    color: var(--text);
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-    transition: border-color 0.15s, background 0.15s;
-    cursor: pointer;
+    position: relative; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 18px 16px 14px; text-decoration: none; color: var(--text);
+    display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+    height: 160px;
+    transition: border-color 0.15s, background 0.15s; cursor: pointer;
   }
   .card:hover { border-color: var(--accent); background: var(--surface-2); text-decoration: none; }
   .card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-  .status-dot {
-    position: absolute;
-    top: 13px;
-    right: 13px;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--border);
-    transition: background 0.3s;
-  }
+  .status-dot { position: absolute; top: 13px; right: 13px; width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: background 0.3s; }
   .status-dot.online  { background: #4caf82; }
   .status-dot.offline { background: #e07a6b; }
   .status-dot.pending { background: #e8b34c; }
 
-  .card-icon {
-    font-size: 1.6rem;
-    line-height: 1;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
-  }
+  .card-icon { font-size: 1.6rem; line-height: 1; height: 32px; display: flex; align-items: center; margin-bottom: 8px; }
   .card-icon img { width: 28px; height: 28px; object-fit: contain; }
 
-  .card-title {
-    font-family: "IBM Plex Mono", monospace;
-    font-weight: 600;
-    font-size: 0.92rem;
-  }
+  .card-title { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 0.92rem; }
+  .card-sub { font-family: "IBM Plex Mono", monospace; font-size: 0.75em; background: var(--surface-3); color: var(--accent); padding: 0.15em 0.5em; border-radius: 4px; margin-top: 2px; }
 
-  .card-sub {
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.75em;
-    background: var(--surface-3);
-    color: var(--accent);
-    padding: 0.15em 0.5em;
-    border-radius: 4px;
-    margin-top: 2px;
-  }
-
-  /* Minecraft start/stop */
-  .mc-btn {
-    margin-top: 10px;
-    padding: 5px 0;
-    font-family: "IBM Plex Mono", monospace;
-    font-size: 0.78rem;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: var(--surface-2);
-    color: var(--text-dim);
-    cursor: pointer;
-    width: 100%;
-    transition: border-color 0.15s, color 0.15s;
-  }
+  .mc-btn { margin-top: auto; padding: 5px 0; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim); cursor: pointer; width: 100%; transition: border-color 0.15s, color 0.15s; }
   .mc-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
   .mc-btn:disabled { opacity: 0.4; cursor: default; }
 
-  /* Reference card — accent left border like reference doc callouts */
-  .card.ref-card {
-    border-left: 3px solid var(--accent);
-  }
+  .card.ref-card { border-left: 3px solid var(--accent); }
 
-  /* ---- Footer — identical to reference doc ---- */
-  footer {
-    margin-top: 40px;
-    padding-top: 18px;
-    border-top: 1px solid var(--border);
-    color: var(--text-faint);
-    font-size: 0.8rem;
-    font-family: "IBM Plex Mono", monospace;
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
+  footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--text-faint); font-size: 0.8rem; font-family: "IBM Plex Mono", monospace; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 
-  @media (max-width: 780px) {
-    .grid { grid-template-columns: repeat(2, 1fr); }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    * { transition: none !important; }
-  }
+  @media (max-width: 780px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
@@ -274,22 +118,22 @@
 
       <a class="card" data-check="https://cloud.intrentaka.com" href="https://cloud.intrentaka.com" target="_blank" rel="noopener">
         <span class="status-dot"></span>
-        <div class="card-icon">☁️</div>
+        <div class="card-icon"><img src="nextcloud-logo.svg" alt="Nextcloud"></div>
         <div class="card-title">Nextcloud</div>
         <div class="card-sub">cloud.intrentaka.com</div>
       </a>
 
-      <a class="card" data-port="8083">
+      <a class="card" data-port="8083" data-path="/admin">
         <span class="status-dot"></span>
-        <div class="card-icon">🛡️</div>
+        <div class="card-icon"><img src="pihole-logo.svg" alt="Pi-hole"></div>
         <div class="card-title">Pi-hole</div>
-        <div class="card-sub">:8083</div>
+        <div class="card-sub">:8083/admin</div>
       </a>
 
       <a class="card" data-port="5010">
         <span class="status-dot"></span>
         <div class="card-icon">🎵</div>
-        <div class="card-title">Music</div>
+        <div class="card-title">Music Info Library</div>
         <div class="card-sub">:5010</div>
       </a>
 
@@ -349,10 +193,7 @@
     var stored = null;
     try { stored = localStorage.getItem('hs-theme'); } catch (e) {}
     if (stored === 'dark' || stored === 'light') root.setAttribute('data-theme', stored);
-    function label() {
-      var m = root.getAttribute('data-theme');
-      btn.textContent = 'theme: ' + (m || 'auto');
-    }
+    function label() { btn.textContent = 'theme: ' + (root.getAttribute('data-theme') || 'auto'); }
     label();
     btn.addEventListener('click', function () {
       var c = root.getAttribute('data-theme');
@@ -366,10 +207,10 @@
   var host = window.location.hostname;
 
   document.querySelectorAll('.card[data-port]').forEach(function (card) {
-    var url = 'http://' + host + ':' + card.dataset.port;
-    card.href = url;
+    var base = 'http://' + host + ':' + card.dataset.port;
+    card.href = base + (card.dataset.path || '');
     var dot = card.querySelector('.status-dot');
-    fetch(url, { mode: 'no-cors', signal: AbortSignal.timeout(3000) })
+    fetch(base, { mode: 'no-cors', signal: AbortSignal.timeout(3000) })
       .then(function () { dot.classList.add('online'); })
       .catch(function () { dot.classList.add('offline'); });
   });
@@ -390,19 +231,11 @@
   function renderMcState(state) {
     mcDot.className = 'status-dot';
     if (state === 'active') {
-      mcDot.classList.add('online');
-      mcText.textContent = 'running';
-      mcBtn.textContent = 'Stop';
-      mcBtn.disabled = mcBusy;
+      mcDot.classList.add('online'); mcText.textContent = 'running'; mcBtn.textContent = 'Stop'; mcBtn.disabled = mcBusy;
     } else if (state === 'inactive' || state === 'failed') {
-      mcDot.classList.add('offline');
-      mcText.textContent = state === 'failed' ? 'failed' : 'stopped';
-      mcBtn.textContent = 'Start';
-      mcBtn.disabled = mcBusy;
+      mcDot.classList.add('offline'); mcText.textContent = state === 'failed' ? 'failed' : 'stopped'; mcBtn.textContent = 'Start'; mcBtn.disabled = mcBusy;
     } else {
-      mcDot.classList.add('pending');
-      mcText.textContent = state;
-      mcBtn.disabled = true;
+      mcDot.classList.add('pending'); mcText.textContent = state; mcBtn.disabled = true;
     }
   }
 
@@ -411,9 +244,7 @@
       var res = await fetch(mcBase + '/status', { signal: AbortSignal.timeout(4000) });
       renderMcState((await res.json()).status);
     } catch (e) {
-      mcDot.className = 'status-dot offline';
-      mcText.textContent = 'unreachable';
-      mcBtn.disabled = true;
+      mcDot.className = 'status-dot offline'; mcText.textContent = 'unreachable'; mcBtn.disabled = true;
     }
   }
 
@@ -421,8 +252,7 @@
     var action = mcBtn.textContent === 'Stop' ? 'stop' : 'start';
     mcBusy = true; mcBtn.disabled = true;
     try { await fetch(mcBase + '/' + action, { method: 'POST', signal: AbortSignal.timeout(10000) }); } catch (e) {}
-    mcBusy = false;
-    pollMcStatus();
+    mcBusy = false; pollMcStatus();
   });
 
   pollMcStatus();
