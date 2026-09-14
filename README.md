@@ -142,9 +142,6 @@ forwarded from the router to this machine.
 - `intrentaka.com` / `www.intrentaka.com` → Emby (`localhost:8096`)
 - `cloud.intrentaka.com` → Nextcloud
 
-**Known issue:** the nginx proxy for `intrentaka.com` currently has
-`proxyWebsockets` disabled while a `400 Bad Request` is being diagnosed.
-Restore it in `modules/nginx.nix` once resolved.
 
 ---
 

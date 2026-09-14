@@ -49,11 +49,6 @@
     ];
   };
 
-  # TODO after first boot (do NOT put credentials in this repo/config):
-  #   sudo mkdir -p /mnt/server-pc
-  #   sudo cp /home/kryt/.smbcredentials <this new box>:/home/kryt/.smbcredentials   # copy machine-to-machine, not via chat
-  #   sudo chown kryt:kryt /home/kryt/.smbcredentials
-  #   sudo chmod 600 /home/kryt/.smbcredentials
 
   # --- Samba on this box itself ---
   # See modules/samba.nix — this machine doesn't serve any custom share

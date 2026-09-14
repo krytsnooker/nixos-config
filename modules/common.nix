@@ -32,8 +32,6 @@
     uid = 1000;
     description = "kryt";
     extraGroups = [ "wheel" "networkmanager" "video" "audio" "render" "sambashare" ];
-    # Set a password after first boot with: passwd kryt
-    initialPassword = "changeme";
   };
   users.groups.kryt.gid = 1000;
 
