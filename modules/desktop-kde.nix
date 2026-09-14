@@ -1,5 +1,8 @@
 { config, pkgs, lib, ... }:
 
+let
+  brave-origin-nightly = pkgs.callPackage ../pkgs/brave-origin-nightly.nix { };
+in
 {
   # Old box used lightdm + (presumably) a lighter desktop. Using SDDM + Plasma 6
   # here since that's the NixOS-native, best-supported pairing for KDE.
@@ -13,9 +16,19 @@
 
   # Default apps — edit this list freely.
   environment.systemPackages = with pkgs; [
+    brave-origin-nightly
     firefox
     vscode
   ];
+
+  # chrome-sandbox must be setuid root for Chromium-based browsers to use
+  # the kernel namespace sandbox (seccomp/namespaces).
+  security.wrappers.brave-origin-nightly-sandbox = {
+    source = "${brave-origin-nightly}/opt/brave.com/brave-origin-nightly/chrome-sandbox";
+    owner = "root";
+    group = "root";
+    setuid = true;
+  };
 
   # Sound (Plasma 6 default stack)
   security.rtkit.enable = true;
