@@ -19,11 +19,8 @@
       enableACME = true;
 
       locations."/" = {
-        # TEMP DIAGNOSTIC: stripped to bare minimum (no proxyWebsockets, no
-        # extraConfig) to isolate a bare "400 Bad Request" nginx is returning
-        # for every request to this location, regardless of protocol/headers.
-        # Restore proxyWebsockets + extraConfig once root cause is found.
         proxyPass = "http://127.0.0.1:8096";
+        proxyWebsockets = true;
       };
     };
 
