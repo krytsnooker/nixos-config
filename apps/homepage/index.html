@@ -85,6 +85,8 @@
   .mc-btn { margin-top: auto; padding: 5px 0; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim); cursor: pointer; width: 100%; transition: border-color 0.15s, color 0.15s; }
   .mc-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
   .mc-btn:disabled { opacity: 0.4; cursor: default; }
+  .mc-settings { display: block; text-align: center; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--text-faint); margin-top: 5px; text-decoration: none; }
+  .mc-settings:hover { color: var(--accent); text-decoration: none; }
 
   .card.ref-card { border-left: 3px solid var(--accent); }
 
@@ -164,6 +166,7 @@
         <div class="card-title">Minecraft</div>
         <div class="card-sub" id="mcStatusText">checking…</div>
         <button class="mc-btn" id="mcBtn" disabled>…</button>
+        <a class="mc-settings" id="mcSettingsLink" href="#">settings →</a>
       </div>
 
     </div>
@@ -223,6 +226,7 @@
   });
 
   var mcBase = 'http://' + host + ':5020';
+  document.getElementById('mcSettingsLink').href = mcBase + '/';
   var mcDot  = document.getElementById('mcDot');
   var mcText = document.getElementById('mcStatusText');
   var mcBtn  = document.getElementById('mcBtn');

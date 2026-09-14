@@ -1,12 +1,36 @@
 { config, pkgs, lib, inputs, ... }:
 
 let
-  # Single source of truth for the unit name — shared between the server
-  # definition below, the sudo rule, and mc-control's environment, so they
-  # can't drift out of sync with each other.
   mcServerName = "survival";
-  mcUnit = "minecraft-server-${mcServerName}.service";
-  pythonEnv = pkgs.python3.withPackages (ps: with ps; [ flask waitress ]);
+  mcUnit       = "minecraft-server-${mcServerName}.service";
+  mcDataDir    = "/var/lib/minecraft/${mcServerName}";
+  propsFile    = "${mcDataDir}/server.properties";
+  pythonEnv    = pkgs.python3.withPackages (ps: with ps; [ flask waitress ]);
+
+  backupScript = pkgs.writeShellScript "mc-backup" ''
+    set -euo pipefail
+
+    src="/var/lib/minecraft/${mcServerName}/"
+    dst="/mnt/server-pc/Backups/minecraft"
+
+    # Skip silently if the DAS isn't mounted
+    if ! ${pkgs.util-linux}/bin/mountpoint -q /mnt/server-pc; then
+      echo "mc-backup: /mnt/server-pc not mounted, skipping" >&2
+      exit 0
+    fi
+
+    today=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
+    ${pkgs.coreutils}/bin/mkdir -p "$dst/$today"
+    ${pkgs.rsync}/bin/rsync -a --delete "$src" "$dst/$today/"
+
+    # Retain the 7 most recent daily backups; remove the rest
+    ${pkgs.findutils}/bin/find "$dst" -maxdepth 1 -type d -name '????-??-??' \
+      | ${pkgs.coreutils}/bin/sort \
+      | ${pkgs.coreutils}/bin/head -n -7 \
+      | ${pkgs.findutils}/bin/xargs -r ${pkgs.coreutils}/bin/rm -rf
+
+    echo "mc-backup: done ($today)"
+  '';
 in
 {
   nixpkgs.overlays = [ inputs.nix-minecraft.overlays.default ];
@@ -18,49 +42,52 @@ in
 
     servers.${mcServerName} = {
       enable = true;
-      autoStart = false; # on-demand only, triggered via the homepage button (mc-control)
+      autoStart = false;
       package = pkgs.paperServers.paper-1_19_4;
-      jvmOpts = "-Xms1G -Xmx3G"; # capped — see the RAM budget discussion, don't let this crowd out Emby/Nextcloud
+      jvmOpts = "-Xms1G -Xmx3G";
       serverProperties = {
-        online-mode = false; # required for offline/cracked-style clients (e.g. via PollyMC) — no Mojang account check
+        # Infrastructure settings only — pinned here so nixos-rebuild can't
+        # accidentally flip them. User-managed settings live in
+        # /var/lib/mc-control/settings.json and are applied by mc-control
+        # on every start.
+        online-mode = false;
         server-port = 25565;
-        white-list = false;
-        motd = "Home LAN Server";
       };
     };
   };
 
-  # --- mc-control: lets the homepage start/stop the server on demand ---
-  # Fixed user (not DynamicUser) because the sudo rule below needs a stable
-  # username to grant permission to.
+  # --- mc-control: web UI for starting/stopping and configuring the server ---
   users.groups.mcctl = { };
   users.users.mcctl = {
     isSystemUser = true;
     group = "mcctl";
   };
 
-  # The ONLY elevated thing mcctl can do: these three exact commands on this
-  # one unit. Not a general systemctl grant, not root, nothing else.
   security.sudo.extraRules = [
     {
       users = [ "mcctl" ];
       commands = [
-        { command = "/run/current-system/sw/bin/systemctl start ${mcUnit}"; options = [ "NOPASSWD" ]; }
-        { command = "/run/current-system/sw/bin/systemctl stop ${mcUnit}"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl start ${mcUnit}";     options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl stop ${mcUnit}";      options = [ "NOPASSWD" ]; }
         { command = "/run/current-system/sw/bin/systemctl is-active ${mcUnit}"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/cat ${propsFile}";              options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/tee ${propsFile}";              options = [ "NOPASSWD" ]; }
       ];
     }
   ];
 
   systemd.services.mc-control = {
-    description = "Minecraft start/stop API for the LAN homepage";
-    after = [ "network.target" ];
+    description = "Minecraft management web UI";
+    after    = [ "network.target" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
-      User = "mcctl";
+      User  = "mcctl";
       Group = "mcctl";
+      StateDirectory = "mc-control";
       Environment = [
         "MC_UNIT=${mcUnit}"
+        "MC_DATA_DIR=${mcDataDir}"
+        "MC_STATE_DIR=/var/lib/mc-control"
         "MC_CONTROL_PORT=5020"
       ];
       ExecStart = "${pythonEnv}/bin/python3 ${../apps/mc-control}/app.py";
@@ -68,11 +95,24 @@ in
     };
   };
 
-  # 25565: Minecraft. LAN-only in practice because this port is never in the
-  # nginx/ACME reverse-proxy list and was never forwarded on the router —
-  # this firewall rule just allows LAN traffic to reach it locally, it
-  # doesn't by itself expose it to the internet (that boundary is the
-  # router's port-forward table, which this config can't see or control).
-  # 5020: mc-control API.
+  # --- mc-backup: daily world backup to the DAS ---
+  systemd.services.mc-backup = {
+    description = "Minecraft world backup to DAS";
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${backupScript}";
+    };
+  };
+
+  systemd.timers.mc-backup = {
+    description = "Daily Minecraft world backup";
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "*-*-* 03:00:00";
+      # If the machine was off at 3 AM, run the backup on next boot
+      Persistent = true;
+    };
+  };
+
   networking.firewall.allowedTCPPorts = [ 25565 5020 ];
 }
