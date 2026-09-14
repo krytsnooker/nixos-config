@@ -3,15 +3,20 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     nix-minecraft.url = "github:Infinidoge/nix-minecraft";
     nix-minecraft.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, nix-minecraft, ... }@inputs:
+  outputs = { self, nixpkgs, nixpkgs-unstable, nix-minecraft, ... }@inputs:
+    let
+      system = "x86_64-linux";
+      unstablePkgs = nixpkgs-unstable.legacyPackages.${system};
+    in
     {
       nixosConfigurations.homeserver = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
-        specialArgs = { inherit inputs; };
+        specialArgs = { inherit inputs unstablePkgs; };
         modules = [
           ./hosts/homeserver/configuration.nix
           ./modules/common.nix

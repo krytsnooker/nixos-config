@@ -1,13 +1,14 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, unstablePkgs, ... }:
 
 {
   services.nextcloud = {
     enable = true;
-    package = pkgs.nextcloud33;
+    package = unstablePkgs.nextcloud34;
     hostName = "cloud.intrentaka.com";
-    https = true; # controls PHP-FPM's HTTPS flag + module's own HSTS header — NOT forceSSL/enableACME, that's set explicitly below
+    https = true;
     database.createLocally = true;
     configureRedis = true;
+    secretFile = "/var/lib/nextcloud/nc-secrets.php";
     config = {
       dbtype = "mysql";
       adminuser = "admin";
@@ -15,16 +16,35 @@
     };
     settings = {
       trusted_proxies = [ "127.0.0.1" ];
+      "overwrite.cli.url" = "https://cloud.intrentaka.com";
+      overwriteprotocol = "https";
+      maintenance_window_start = 1;
+      mail_from_address = "krytsnooker";
+      mail_smtpmode = "smtp";
+      mail_domain = "gmail.com";
+      mail_smtphost = "smtp.gmail.com";
+      mail_smtpport = 587;
+      mail_smtpauth = true;
+      mail_smtpname = "krytsnooker@gmail.com";
     };
   };
 
-  # The module creates services.nginx.virtualHosts.${hostName} itself but
-  # does NOT enable SSL/ACME on it automatically (confirmed by reading the
-  # actual module source) — set explicitly here, merged into that same vhost.
+  # Pin the UID so the CIFS mount uid= option stays in sync across rebuilds
+  users.users.nextcloud.uid = 991;
+  users.users.nextcloud.extraGroups = [ "sambashare" ];
+
+  # Nextcloud services must wait for the data CIFS mount before starting
+  systemd.services.nextcloud-setup = {
+    after = [ "var-lib-nextcloud-data.mount" ];
+    requires = [ "var-lib-nextcloud-data.mount" ];
+  };
+  systemd.services.phpfpm-nextcloud = {
+    after = [ "var-lib-nextcloud-data.mount" ];
+    requires = [ "var-lib-nextcloud-data.mount" ];
+  };
+
   services.nginx.virtualHosts."cloud.intrentaka.com" = {
     forceSSL = true;
     enableACME = true;
-    extraConfig = ''
-    '';
   };
 }

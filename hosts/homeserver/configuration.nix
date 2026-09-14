@@ -30,6 +30,25 @@
     ];
   };
 
+  # Dedicated CIFS mount for Nextcloud user data.
+  # uid=991 makes files appear owned by the nextcloud service user so
+  # Nextcloud's ownership checks pass. UID is pinned in modules/nextcloud.nix.
+  fileSystems."/var/lib/nextcloud/data" = {
+    device = "//192.168.0.110/hsas01/Nextcloud/data";
+    fsType = "cifs";
+    options = [
+      "credentials=/home/kryt/.smbcredentials"
+      "uid=991"
+      "gid=125"
+      "file_mode=0660"
+      "dir_mode=0770"
+      "iocharset=utf8"
+      "_netdev"
+      "x-systemd.automount"
+      "nofail"
+    ];
+  };
+
   # TODO after first boot (do NOT put credentials in this repo/config):
   #   sudo mkdir -p /mnt/server-pc
   #   sudo cp /home/kryt/.smbcredentials <this new box>:/home/kryt/.smbcredentials   # copy machine-to-machine, not via chat
