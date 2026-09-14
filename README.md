@@ -7,13 +7,25 @@ SAS DAS attached via HBA. This box mounts it over CIFS at `/mnt/server-pc`.
 
 ---
 
+## Hardware
+
+| Partition | UUID | Filesystem | Mount |
+|---|---|---|---|
+| nvme0n1p1 | A745-730E | vfat FAT32 | /boot (ESP) |
+| nvme0n1p2 | f2ba3164-49c0-4f90-bea6-8c7ada01d308 | btrfs | / |
+| nvme0n1p3 | 8034dca1-d1fd-41fd-bc45-941c2e1ef74c | btrfs | /home |
+
+Swap: 4 GB swapfile at `/swapfile`.
+
+---
+
 ## Repository layout
 
 ```
-flake.nix                    — two hosts: workstation (test) + homeserver (live)
+flake.nix                    — single nixosConfigurations.homeserver
 hosts/homeserver/            — hardware config + per-host settings
-hosts/workstation/           — test host, kept for future config validation
-modules/                     — shared NixOS modules (all hosts)
+modules/                     — NixOS modules (all loaded by every build)
+pkgs/                        — custom packages (brave-origin-nightly)
 apps/                        — source for custom LAN apps (canonical copy)
 ```
 
@@ -27,6 +39,9 @@ sudo nixos-rebuild switch --flake /etc/nixos#homeserver
 
 # Test without making it the boot default
 sudo nixos-rebuild test --flake /etc/nixos#homeserver
+
+# Set as next boot without touching the running system
+sudo nixos-rebuild boot --flake /etc/nixos#homeserver
 
 # Roll back to previous generation
 sudo nixos-rebuild switch --rollback
