@@ -5,7 +5,7 @@
   virtualisation.oci-containers.backend = "podman";
 
   virtualisation.oci-containers.containers.emby = {
-    image = "emby/embyserver:latest";
+    image = "emby/embyserver@sha256:3aafff933d3f28d23ed0bc201022abe71c0aa80deb17177566c726b9bbc686c6";
     ports = [ "8096:8096/tcp" "8920:8920/tcp" ];
     volumes = [
       "/var/lib/emby/config:/config"

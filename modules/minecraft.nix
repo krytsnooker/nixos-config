@@ -11,13 +11,6 @@ in
 {
   nixpkgs.overlays = [ inputs.nix-minecraft.overlays.default ];
 
-  # NOTE: nix-minecraft is a community flake (Infinidoge/nix-minecraft), not
-  # mainline nixpkgs — it's what makes an old pinned version like 1.19.4
-  # available at all (mainline nixpkgs only ships whatever single version is
-  # current). Verify the exact package attribute name
-  # (pkgs.paperServers.paper-1_19_4) and the "autoStart" option still match
-  # on the workstation before relying on this — community flake APIs shift
-  # more often than mainline nixpkgs.
   services.minecraft-servers = {
     enable = true;
     eula = true;
