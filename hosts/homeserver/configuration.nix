@@ -31,14 +31,14 @@
   };
 
   # Dedicated CIFS mount for Nextcloud user data.
-  # uid=991 makes files appear owned by the nextcloud service user so
-  # Nextcloud's ownership checks pass. UID is pinned in modules/nextcloud.nix.
+  # uid= is derived from homeserver.nextcloudUid (declared in modules/nextcloud.nix)
+  # so the service UID and the mount option stay in sync automatically.
   fileSystems."/var/lib/nextcloud/data" = {
     device = "//192.168.0.110/hsas01/Nextcloud/data";
     fsType = "cifs";
     options = [
       "credentials=/home/kryt/.smbcredentials"
-      "uid=991"
+      "uid=${toString config.homeserver.nextcloudUid}"
       "gid=125"
       "file_mode=0660"
       "dir_mode=0770"

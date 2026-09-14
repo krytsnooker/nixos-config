@@ -21,6 +21,10 @@
     environment = {
       TZ = config.time.timeZone;
       FTLCONF_dns_listeningMode = "ALL";
+      # Explicitly pin the internal web UI port so a Teleporter restore (which
+      # imports the old box's general settings) can't silently flip it back to
+      # 80 and break the 8083:8080 host mapping. Env vars override FTL config.
+      FTLCONF_webserver_port = "8080";
     };
     environmentFiles = [ "/var/lib/pihole/secrets.env" ];
     volumes = [
