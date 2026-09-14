@@ -465,7 +465,7 @@
         </div>
         <div class="callout warn">
           <span class="tag">CIFS ownership note</span>
-          CIFS mounts don't support real UNIX ownership — ownership is set at mount time via <code>uid=</code>/<code>gid=</code> options. The Nextcloud data mount must use <code>uid=991</code> (the pinned Nextcloud service user UID from <code>modules/nextcloud.nix</code>). Changing the UID in the config requires updating both places.
+          CIFS mounts don't support real UNIX ownership — ownership is set at mount time via <code>uid=</code>/<code>gid=</code> options. The Nextcloud data mount <code>uid=</code> is derived from <code>homeserver.nextcloudUid</code> (declared in <code>modules/nextcloud.nix</code>, default 991) — change it there and both the service user UID and the mount option update together.
         </div>
       </section>
 
@@ -517,7 +517,7 @@ sudo nixos-rebuild switch --flake /etc/nixos#homeserver</code></pre>
             <tr><td>music-info-library</td><td class="mono">5010</td><td><a href="http://homeserver:5010">homeserver:5010</a></td><td class="wrap">Flask/waitress</td></tr>
             <tr><td>Emby</td><td class="mono">8096 / 8920</td><td><a href="https://intrentaka.com">intrentaka.com</a></td><td class="wrap">Podman container</td></tr>
             <tr><td>Nextcloud</td><td class="mono">443</td><td><a href="https://cloud.intrentaka.com">cloud.intrentaka.com</a></td><td class="wrap">Native NixOS service</td></tr>
-            <tr><td>Pi-hole</td><td class="mono">8083</td><td><a href="http://homeserver:8083/admin">homeserver:8083/admin</a></td><td class="wrap">Podman container</td></tr>
+            <tr><td>Pi-hole</td><td class="mono">8083</td><td><a href="http://homeserver:8083/admin">homeserver:8083/admin</a></td><td class="wrap">Podman container; internal port pinned to 8080 via <code>FTLCONF_webserver_port</code> (Teleporter restores would otherwise flip it back to 80)</td></tr>
             <tr><td>mc-control</td><td class="mono">5020</td><td>LAN only</td><td class="wrap">Flask/waitress; start/stop Minecraft via HTTP</td></tr>
             <tr><td>Minecraft</td><td class="mono">25565</td><td>LAN only</td><td class="wrap">Manual start, not on boot</td></tr>
           </tbody>
