@@ -58,10 +58,16 @@ in
 
   # --- mc-control: web UI for starting/stopping and configuring the server ---
   users.groups.mcctl = { };
+  users.groups.mcplugins = { };
   users.users.mcctl = {
     isSystemUser = true;
     group = "mcctl";
+    extraGroups = [ "mcplugins" "minecraft" ];
   };
+
+  systemd.tmpfiles.rules = [
+    "d /var/lib/minecraft/${mcServerName}/plugins 0775 minecraft mcplugins -"
+  ];
 
   security.sudo.extraRules = [
     {

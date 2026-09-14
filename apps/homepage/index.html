@@ -82,11 +82,6 @@
   .card-title { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 0.92rem; }
   .card-sub { font-family: "IBM Plex Mono", monospace; font-size: 0.75em; background: var(--surface-3); color: var(--accent); padding: 0.15em 0.5em; border-radius: 4px; margin-top: 2px; }
 
-  .mc-btn { margin-top: auto; padding: 5px 0; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim); cursor: pointer; width: 100%; transition: border-color 0.15s, color 0.15s; }
-  .mc-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
-  .mc-btn:disabled { opacity: 0.4; cursor: default; }
-  .mc-settings { display: block; text-align: center; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--text-faint); margin-top: 5px; text-decoration: none; }
-  .mc-settings:hover { color: var(--accent); text-decoration: none; }
 
   .card.ref-card { border-left: 3px solid var(--accent); }
 
@@ -160,14 +155,12 @@
         <div class="card-sub">:3001</div>
       </a>
 
-      <div class="card" id="mcCard">
+      <a class="card" id="mcCard" href="#">
         <span class="status-dot" id="mcDot"></span>
         <div class="card-icon">⛏️</div>
         <div class="card-title">Minecraft</div>
         <div class="card-sub" id="mcStatusText">checking…</div>
-        <button class="mc-btn" id="mcBtn" disabled>…</button>
-        <a class="mc-settings" id="mcSettingsLink" href="#">settings →</a>
-      </div>
+      </a>
 
     </div>
   </section>
@@ -226,38 +219,28 @@
   });
 
   var mcBase = 'http://' + host + ':5020';
-  document.getElementById('mcSettingsLink').href = mcBase + '/';
+  document.getElementById('mcCard').href = mcBase + '/';
   var mcDot  = document.getElementById('mcDot');
   var mcText = document.getElementById('mcStatusText');
-  var mcBtn  = document.getElementById('mcBtn');
-  var mcBusy = false;
-
-  function renderMcState(state) {
-    mcDot.className = 'status-dot';
-    if (state === 'active') {
-      mcDot.classList.add('online'); mcText.textContent = 'running'; mcBtn.textContent = 'Stop'; mcBtn.disabled = mcBusy;
-    } else if (state === 'inactive' || state === 'failed') {
-      mcDot.classList.add('offline'); mcText.textContent = state === 'failed' ? 'failed' : 'stopped'; mcBtn.textContent = 'Start'; mcBtn.disabled = mcBusy;
-    } else {
-      mcDot.classList.add('pending'); mcText.textContent = state; mcBtn.disabled = true;
-    }
-  }
 
   async function pollMcStatus() {
     try {
       var res = await fetch(mcBase + '/status', { signal: AbortSignal.timeout(4000) });
-      renderMcState((await res.json()).status);
+      var state = (await res.json()).status;
+      mcDot.className = 'status-dot';
+      if (state === 'active') {
+        mcDot.classList.add('online');  mcText.textContent = 'running';
+      } else if (state === 'inactive') {
+        mcDot.classList.add('offline'); mcText.textContent = 'stopped';
+      } else if (state === 'failed') {
+        mcDot.classList.add('offline'); mcText.textContent = 'failed';
+      } else {
+        mcDot.classList.add('pending'); mcText.textContent = state;
+      }
     } catch (e) {
-      mcDot.className = 'status-dot offline'; mcText.textContent = 'unreachable'; mcBtn.disabled = true;
+      mcDot.className = 'status-dot offline'; mcText.textContent = 'unreachable';
     }
   }
-
-  mcBtn.addEventListener('click', async function () {
-    var action = mcBtn.textContent === 'Stop' ? 'stop' : 'start';
-    mcBusy = true; mcBtn.disabled = true;
-    try { await fetch(mcBase + '/' + action, { method: 'POST', signal: AbortSignal.timeout(10000) }); } catch (e) {}
-    mcBusy = false; pollMcStatus();
-  });
 
   pollMcStatus();
   setInterval(pollMcStatus, 5000);

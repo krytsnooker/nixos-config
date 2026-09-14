@@ -17,40 +17,67 @@
     --shadow: 0 8px 24px rgba(0,0,0,0.35);
   }
   @media (prefers-color-scheme: light) {
-    :root {
-      color-scheme: light;
-      --bg: #f4f6f5; --surface: #ffffff; --surface-2: #edf1f0; --surface-3: #e3e9e7;
-      --border: #d3dcda; --text: #14201f; --text-dim: #4d6260; --text-faint: #8098a0;
-      --accent: #0f8a76; --warn: #9a6a11; --warn-bg: rgba(154,106,17,0.08);
-      --danger: #ab3d2c; --ok: #1a7a4a;
-      --shadow: 0 8px 24px rgba(20,32,31,0.08);
-    }
+    :root { color-scheme: light; --bg: #f4f6f5; --surface: #ffffff; --surface-2: #edf1f0; --surface-3: #e3e9e7; --border: #d3dcda; --text: #14201f; --text-dim: #4d6260; --text-faint: #8098a0; --accent: #0f8a76; --warn: #9a6a11; --warn-bg: rgba(154,106,17,0.08); --danger: #ab3d2c; --ok: #1a7a4a; --shadow: 0 8px 24px rgba(20,32,31,0.08); }
   }
   html[data-theme="dark"]  { color-scheme: dark;  --bg: #0e1316; --surface: #151c20; --surface-2: #1c252a; --surface-3: #232d33; --border: #2b363c; --text: #e7edf0; --text-dim: #93a5ac; --text-faint: #5f7178; --accent: #5fd6c4; --warn: #e8b34c; --warn-bg: rgba(232,179,76,0.10); --danger: #e07a6b; --ok: #4caf82; --shadow: 0 8px 24px rgba(0,0,0,0.35); }
   html[data-theme="light"] { color-scheme: light; --bg: #f4f6f5; --surface: #ffffff; --surface-2: #edf1f0; --surface-3: #e3e9e7; --border: #d3dcda; --text: #14201f; --text-dim: #4d6260; --text-faint: #8098a0; --accent: #0f8a76; --warn: #9a6a11; --warn-bg: rgba(154,106,17,0.08); --danger: #ab3d2c; --ok: #1a7a4a; --shadow: 0 8px 24px rgba(20,32,31,0.08); }
 
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--text); }
-  body { font-family: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif; line-height: 1.55; padding-inline: 20px; -webkit-font-smoothing: antialiased; }
-  .shell { max-width: 720px; margin-inline: auto; padding-block: 28px 80px; }
+  body { font-family: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif; line-height: 1.55; -webkit-font-smoothing: antialiased; }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
   a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  code { font-family: "IBM Plex Mono", monospace; background: var(--surface-3); padding: 0.1em 0.4em; border-radius: 4px; font-size: 0.88em; color: var(--accent); }
 
-  header.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; padding-bottom: 22px; border-bottom: 1px solid var(--border); margin-bottom: 32px; }
-  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
-  h1 { font-family: "IBM Plex Mono", monospace; font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 600; margin: 0; }
-  .host-sub { color: var(--text-dim); font-size: 0.88rem; margin: 4px 0 0; font-family: "IBM Plex Mono", monospace; }
-  .theme-toggle { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-dim); border-radius: 6px; padding: 7px 12px; cursor: pointer; flex-shrink: 0; }
+  /* ── Layout ──────────────────────────────────────────────────────────────── */
+  .layout { display: grid; grid-template-columns: 210px 1fr; min-height: 100vh; }
+
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 24px 0;
+  }
+
+  .sidebar-brand { padding: 0 20px 18px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .back-link { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--text-faint); display: inline-block; margin-bottom: 14px; }
+  .back-link:hover { color: var(--accent); text-decoration: none; }
+  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 5px; }
+  .sidebar-title { font-family: "IBM Plex Mono", monospace; font-size: 1.05rem; font-weight: 600; }
+  .sidebar-sub { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--text-faint); margin-top: 4px; }
+
+  .nav-list { list-style: none; margin: 0; padding: 0 8px; flex: 1; }
+  .nav-list li { margin: 2px 0; }
+  .nav-link { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; padding: 8px 12px; border-radius: 6px; color: var(--text-faint); transition: color 0.15s, background 0.15s; }
+  .nav-link:hover { color: var(--text-dim); background: var(--surface-2); text-decoration: none; }
+  .nav-link.active { color: var(--accent); background: var(--surface-2); }
+
+  .sidebar-footer { margin-top: auto; padding: 16px 20px 0; border-top: 1px solid var(--border); }
+  .theme-toggle { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; background: none; border: 1px solid var(--border); color: var(--text-faint); border-radius: 6px; padding: 7px 10px; cursor: pointer; width: 100%; text-align: left; }
   .theme-toggle:hover { color: var(--text); border-color: var(--text-faint); }
 
-  section { padding-block: 28px; border-bottom: 1px solid var(--border); }
-  section:last-child { border-bottom: none; }
-  h2 { font-family: "IBM Plex Mono", monospace; font-size: 1rem; font-weight: 600; margin: 0 0 18px; color: var(--text-faint); letter-spacing: 0.06em; text-transform: uppercase; }
+  .content { padding: 36px 44px 80px; min-width: 0; max-width: 780px; }
 
-  /* Status bar */
-  .status-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  section { padding-block: 32px; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  h2 { font-family: "IBM Plex Mono", monospace; font-size: 1rem; font-weight: 600; margin: 0 0 20px; color: var(--text-faint); letter-spacing: 0.06em; text-transform: uppercase; }
+
+  footer { padding-top: 24px; color: var(--text-faint); font-size: 0.8rem; font-family: "IBM Plex Mono", monospace; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  /* ── Connect ─────────────────────────────────────────────────────────────── */
+  .connect-box { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .address { font-family: "IBM Plex Mono", monospace; font-size: 1.05rem; font-weight: 500; flex: 1; letter-spacing: 0.02em; }
+  .copy-btn { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim); cursor: pointer; white-space: nowrap; transition: border-color 0.15s, color 0.15s; flex-shrink: 0; }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .copy-btn.copied { border-color: var(--ok); color: var(--ok); }
+
+  /* ── Status ──────────────────────────────────────────────────────────────── */
+  .status-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
   .status-pill { display: flex; align-items: center; gap: 8px; font-family: "IBM Plex Mono", monospace; font-size: 0.95rem; }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); flex-shrink: 0; transition: background 0.3s; }
   .dot.online  { background: var(--ok); }
@@ -63,187 +90,444 @@
   .btn.primary { border-color: var(--accent); color: var(--accent); }
   .btn.primary:hover:not(:disabled) { background: var(--accent); color: var(--bg); }
 
-  /* Warning banner */
-  .callout { display: none; border: 1px solid var(--warn); border-left: 3px solid var(--warn); background: var(--warn-bg); border-radius: 0 6px 6px 0; padding: 10px 14px; font-size: 0.85rem; color: var(--warn); margin-bottom: 20px; font-family: "IBM Plex Mono", monospace; }
-  .callout.show { display: block; }
+  .stats { display: grid; grid-template-columns: max-content 1fr; gap: 7px 18px; font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; }
+  .stat-label { color: var(--text-faint); }
+  .stat-value { color: var(--text-dim); }
+  .stat-value.players-online { color: var(--ok); }
 
-  /* Form */
-  .field-group { display: grid; gap: 18px; margin-bottom: 0; }
-  .field { display: flex; flex-direction: column; gap: 6px; }
-  .field-row { display: grid; gap: 18px; }
+  /* ── Settings ────────────────────────────────────────────────────────────── */
+  .callout { display: none; border: 1px solid var(--warn); border-left: 3px solid var(--warn); background: var(--warn-bg); border-radius: 0 6px 6px 0; padding: 10px 14px; font-size: 0.85rem; color: var(--warn); margin-bottom: 22px; font-family: "IBM Plex Mono", monospace; }
+  .callout.show { display: block; }
+  .no-file { display: none; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; color: var(--text-faint); padding: 10px 0; }
+  .no-file.show { display: block; }
+
+  .group { display: grid; gap: 14px; padding: 20px 0; border-top: 1px solid var(--border); }
+  .group:first-of-type { border-top: none; padding-top: 0; }
+  .group-label { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 2px; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field-row { display: grid; gap: 14px; }
+  .field-row.cols-4 { grid-template-columns: repeat(4, 1fr); }
   .field-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
   .field-row.cols-2 { grid-template-columns: repeat(2, 1fr); }
-  label { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--text-faint); letter-spacing: 0.06em; text-transform: uppercase; }
-  input[type="text"], input[type="number"], select {
-    font-family: "IBM Plex Mono", monospace; font-size: 0.88rem;
-    background: var(--surface-2); border: 1px solid var(--border); color: var(--text);
-    border-radius: 6px; padding: 9px 12px; width: 100%;
-    transition: border-color 0.15s;
-  }
+  label { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--text-faint); letter-spacing: 0.05em; text-transform: uppercase; }
+  .field-note { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--text-faint); margin: 0; }
+  input[type="text"], input[type="number"], select { font-family: "IBM Plex Mono", monospace; font-size: 0.88rem; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 8px 11px; width: 100%; transition: border-color 0.15s; }
   input:focus, select:focus { border-color: var(--accent); outline: none; }
   input:disabled, select:disabled { opacity: 0.5; }
 
-  /* Toggle checkboxes */
-  .toggle-row { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 4px; }
-  .toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; color: var(--text-dim); user-select: none; }
-  .toggle input[type="checkbox"] { appearance: none; width: 36px; height: 20px; border-radius: 10px; background: var(--surface-3); border: 1px solid var(--border); cursor: pointer; position: relative; flex-shrink: 0; transition: background 0.2s; }
+  .toggle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .toggle { display: flex; align-items: center; gap: 9px; cursor: pointer; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; color: var(--text-dim); user-select: none; }
+  .toggle input[type="checkbox"] { appearance: none; width: 34px; height: 18px; border-radius: 9px; background: var(--surface-3); border: 1px solid var(--border); cursor: pointer; position: relative; flex-shrink: 0; transition: background 0.2s; }
   .toggle input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
-  .toggle input[type="checkbox"]::after { content: ""; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--text-faint); transition: left 0.2s, background 0.2s; }
-  .toggle input[type="checkbox"]:checked::after { left: 19px; background: var(--bg); }
+  .toggle input[type="checkbox"]::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--text-faint); transition: left 0.2s, background 0.2s; }
+  .toggle input[type="checkbox"]:checked::after { left: 18px; background: var(--bg); }
 
-  /* Read-only info */
   .info-row { display: flex; gap: 24px; flex-wrap: wrap; }
   .info-item { font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; color: var(--text-faint); }
   .info-item span { color: var(--text-dim); }
 
-  /* File-not-found notice */
-  .no-file { display: none; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; color: var(--text-faint); padding: 10px 0; }
-  .no-file.show { display: block; }
-
-  /* Action buttons */
   .actions { display: flex; gap: 10px; margin-top: 28px; flex-wrap: wrap; }
 
-  /* Toast */
-  #toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
-    background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
-    padding: 10px 20px; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem;
-    color: var(--text-dim); opacity: 0; transition: opacity 0.2s, transform 0.2s;
-    pointer-events: none; white-space: nowrap;
-  }
-  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* ── Plugins ─────────────────────────────────────────────────────────────── */
+  .input-row { display: flex; gap: 8px; }
+  .input-row input { flex: 1; }
+
+  .search-tabs { display: flex; gap: 0; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
+  .search-tab { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; padding: 7px 16px; border: none; background: none; color: var(--text-faint); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s, border-color 0.15s; }
+  .search-tab:hover { color: var(--text-dim); }
+  .search-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  #searchResults { min-width: 0; overflow: hidden; }
+  .result-list { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; width: 100%; }
+  .result-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; min-width: 0; overflow: hidden; }
+  .result-icon { width: 32px; height: 32px; border-radius: 5px; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
+  .result-icon-placeholder { width: 32px; height: 32px; border-radius: 5px; background: var(--surface-3); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+  .result-body { flex: 1; min-width: 0; }
+  .result-title { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .result-desc { font-size: 0.8rem; color: var(--text-dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .result-meta { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; color: var(--text-faint); margin-top: 3px; }
+
+  .plugin-list { display: flex; flex-direction: column; gap: 6px; }
+  .plugin-item { display: flex; align-items: center; gap: 10px; font-family: "IBM Plex Mono", monospace; font-size: 0.83rem; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; }
+  .plugin-name { flex: 1; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .empty-note { font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; color: var(--text-faint); }
+
+  .hosts-list { display: flex; flex-wrap: wrap; gap: 8px; min-height: 30px; }
+  .host-chip { display: inline-flex; align-items: center; gap: 5px; font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 4px 8px 4px 12px; color: var(--text-dim); }
+  .host-chip-remove { background: none; border: none; cursor: pointer; color: var(--text-faint); font-size: 1rem; line-height: 1; padding: 0 1px; display: flex; align-items: center; }
+  .host-chip-remove:hover { color: var(--danger); }
+
+  /* ── Toast ───────────────────────────────────────────────────────────────── */
+  #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; color: var(--text-dim); opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none; display: flex; align-items: center; gap: 12px; z-index: 50; }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
   #toast.ok  { border-color: var(--ok);     color: var(--ok); }
   #toast.err { border-color: var(--danger); color: var(--danger); }
+  .toast-copy { background: none; border: 1px solid currentColor; border-radius: 4px; color: inherit; cursor: pointer; font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; padding: 2px 7px; opacity: 0.7; flex-shrink: 0; }
+  .toast-copy:hover { opacity: 1; }
 
-  footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--text-faint); font-size: 0.8rem; font-family: "IBM Plex Mono", monospace; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  /* ── Modal ───────────────────────────────────────────────────────────────── */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 100; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 24px 26px; max-width: 400px; width: calc(100% - 40px); box-shadow: var(--shadow); }
+  .modal-title { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 0.95rem; margin: 0 0 10px; }
+  .modal-body { font-size: 0.85rem; color: var(--text-dim); line-height: 1.6; margin-bottom: 22px; }
+  .modal-host { font-family: "IBM Plex Mono", monospace; color: var(--accent); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
-  @media (max-width: 540px) {
-    .field-row.cols-3, .field-row.cols-2 { grid-template-columns: 1fr; }
+  /* ── Responsive ──────────────────────────────────────────────────────────── */
+  @media (max-width: 720px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 16px 20px 0; }
+    .sidebar-brand { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .back-link { margin-bottom: 8px; }
+    .nav-list { display: flex; overflow-x: auto; padding: 10px 0 4px; scrollbar-width: none; gap: 4px; }
+    .nav-list::-webkit-scrollbar { display: none; }
+    .nav-list li { flex-shrink: 0; }
+    .sidebar-footer { display: none; }
+    .content { padding: 24px 20px 60px; }
+  }
+  @media (max-width: 600px) {
+    .field-row.cols-4, .field-row.cols-3, .field-row.cols-2 { grid-template-columns: 1fr 1fr; }
+    .field-row.cols-4 { grid-template-columns: repeat(2, 1fr); }
+    .result-item { flex-wrap: wrap; }
+  }
+  @media (max-width: 400px) {
+    .field-row.cols-4, .field-row.cols-3, .field-row.cols-2 { grid-template-columns: 1fr; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
-<div class="shell">
+<div class="layout">
 
-  <header class="top">
-    <div>
-      <a href="/" style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--accent);text-decoration:none;display:inline-block;margin-bottom:8px;">← homeserver</a>
-      <div class="eyebrow">NixOS // mc-control</div>
-      <h1>Minecraft Server</h1>
-      <p class="host-sub">survival &middot; paper-1_19_4 &middot; :25565</p>
+  <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <a class="back-link" id="homeLink" href="#">← homeserver</a>
+      <div class="eyebrow">mc-control</div>
+      <div class="sidebar-title">Minecraft</div>
+      <div class="sidebar-sub">survival &middot; paper-1_19_4</div>
     </div>
-    <button class="theme-toggle" id="themeToggle" type="button">theme: auto</button>
-  </header>
+    <nav>
+      <ul class="nav-list">
+        <li><a class="nav-link active" href="#connect">Connect</a></li>
+        <li><a class="nav-link" href="#status">Status</a></li>
+        <li><a class="nav-link" href="#settings">Settings</a></li>
+        <li><a class="nav-link" href="#plugins">Plugins</a></li>
+      </ul>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle colour theme">theme: auto</button>
+    </div>
+  </aside>
 
-  <section id="statusSection">
-    <h2>Status</h2>
-    <div class="status-bar">
-      <div class="status-pill">
-        <span class="dot" id="dot"></span>
-        <span id="statusText">checking…</span>
+  <!-- ── Main content ─────────────────────────────────────────────────────── -->
+  <main class="content">
+
+    <!-- Connect -->
+    <section id="connect">
+      <h2>Connect</h2>
+      <div class="connect-box">
+        <span class="address" id="serverAddress">—</span>
+        <button class="copy-btn" id="copyBtn" type="button">Copy</button>
       </div>
-      <button class="btn danger" id="stopBtn"  disabled>Stop</button>
-      <button class="btn"        id="startBtn" disabled>Start</button>
-    </div>
-  </section>
+    </section>
 
-  <section id="settingsSection">
-    <h2>Settings</h2>
-
-    <div class="callout" id="restartNote">
-      Restart required — changes take effect when the server next starts
-    </div>
-
-    <div class="no-file" id="noFileNote">
-      server.properties not found — start the server once to generate it, then reload this page.
-    </div>
-
-    <div class="field-group" id="formFields">
-
-      <div class="field">
-        <label for="f-motd">Message of the Day</label>
-        <input type="text" id="f-motd" name="motd" maxlength="59" placeholder="Home LAN Server">
+    <!-- Status -->
+    <section id="status">
+      <h2>Status</h2>
+      <div class="status-bar">
+        <div class="status-pill">
+          <span class="dot" id="dot"></span>
+          <span id="statusText">checking…</span>
+        </div>
+        <button class="btn danger" id="stopBtn"  disabled>Stop</button>
+        <button class="btn"        id="startBtn" disabled>Start</button>
       </div>
-
-      <div class="field-row cols-3">
-        <div class="field">
-          <label for="f-max-players">Max Players</label>
-          <input type="number" id="f-max-players" name="max-players" min="1" max="100">
-        </div>
-        <div class="field">
-          <label for="f-difficulty">Difficulty</label>
-          <select id="f-difficulty" name="difficulty">
-            <option value="peaceful">peaceful</option>
-            <option value="easy">easy</option>
-            <option value="normal">normal</option>
-            <option value="hard">hard</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="f-gamemode">Default Gamemode</label>
-          <select id="f-gamemode" name="gamemode">
-            <option value="survival">survival</option>
-            <option value="creative">creative</option>
-            <option value="adventure">adventure</option>
-            <option value="spectator">spectator</option>
-          </select>
-        </div>
+      <div class="stats" id="stats">
+        <span class="stat-label">uptime</span>     <span class="stat-value" id="statUptime">—</span>
+        <span class="stat-label">players</span>    <span class="stat-value" id="statPlayers">—</span>
+        <span class="stat-label">world</span>      <span class="stat-value" id="statWorld">—</span>
+        <span class="stat-label">world type</span> <span class="stat-value" id="statWorldType">—</span>
+        <span class="stat-label">game mode</span>  <span class="stat-value" id="statGamemode">—</span>
+        <span class="stat-label">difficulty</span> <span class="stat-value" id="statDifficulty">—</span>
       </div>
+    </section>
 
-      <div class="field-row cols-2">
-        <div class="field">
-          <label for="f-view-distance">View Distance (chunks)</label>
-          <input type="number" id="f-view-distance" name="view-distance" min="2" max="32">
-        </div>
-        <div class="field">
-          <label for="f-spawn-protection">Spawn Protection (radius)</label>
-          <input type="number" id="f-spawn-protection" name="spawn-protection" min="0" max="100">
-        </div>
+    <!-- Settings -->
+    <section id="settings">
+      <h2>Settings</h2>
+
+      <div class="callout" id="restartNote">
+        Restart required — changes take effect when the server next starts
+      </div>
+      <div class="no-file" id="noFileNote">
+        server.properties not found — start the server once to generate it, then reload this page.
       </div>
 
-      <div>
-        <label style="display:block;margin-bottom:10px;">Options</label>
-        <div class="toggle-row">
-          <label class="toggle">
-            <input type="checkbox" id="f-pvp" name="pvp">
-            PvP enabled
-          </label>
-          <label class="toggle">
-            <input type="checkbox" id="f-whitelist" name="white-list">
-            Whitelist enabled
-          </label>
+      <div id="formFields">
+
+        <!-- World -->
+        <div class="group">
+          <div class="group-label">World</div>
+
+          <div class="field-row cols-2">
+            <div class="field">
+              <label for="f-level-name">World Name</label>
+              <input type="text" id="f-level-name" name="level-name" placeholder="world">
+              <p class="field-note">Changing this loads/creates a different folder — existing world is not deleted.</p>
+            </div>
+            <div class="field">
+              <label for="f-level-seed">Seed</label>
+              <input type="text" id="f-level-seed" name="level-seed" placeholder="(random)">
+              <p class="field-note">Only applies to newly generated worlds.</p>
+            </div>
+          </div>
+
+          <div class="field-row cols-2">
+            <div class="field">
+              <label for="f-level-type">World Type</label>
+              <select id="f-level-type" name="level-type">
+                <option value="minecraft:normal">normal</option>
+                <option value="minecraft:flat">flat</option>
+                <option value="minecraft:large_biomes">large biomes</option>
+                <option value="minecraft:amplified">amplified</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="toggle-grid">
+            <label class="toggle"><input type="checkbox" id="f-generate-structures" name="generate-structures"> Generate structures</label>
+            <label class="toggle"><input type="checkbox" id="f-allow-nether"        name="allow-nether">        Allow nether</label>
+          </div>
+        </div>
+
+        <!-- Gameplay -->
+        <div class="group">
+          <div class="group-label">Gameplay</div>
+
+          <div class="field-row cols-2">
+            <div class="field">
+              <label for="f-gamemode">Default Gamemode</label>
+              <select id="f-gamemode" name="gamemode">
+                <option value="survival">survival</option>
+                <option value="creative">creative</option>
+                <option value="adventure">adventure</option>
+                <option value="spectator">spectator</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="f-difficulty">Difficulty</label>
+              <select id="f-difficulty" name="difficulty">
+                <option value="peaceful">peaceful</option>
+                <option value="easy">easy</option>
+                <option value="normal">normal</option>
+                <option value="hard">hard</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="toggle-grid">
+            <label class="toggle"><input type="checkbox" id="f-force-gamemode"       name="force-gamemode">       Force gamemode on join</label>
+            <label class="toggle"><input type="checkbox" id="f-hardcore"             name="hardcore">             Hardcore mode</label>
+            <label class="toggle"><input type="checkbox" id="f-pvp"                  name="pvp">                  PvP</label>
+            <label class="toggle"><input type="checkbox" id="f-allow-flight"         name="allow-flight">         Allow flight</label>
+            <label class="toggle"><input type="checkbox" id="f-spawn-animals"        name="spawn-animals">        Spawn animals</label>
+            <label class="toggle"><input type="checkbox" id="f-spawn-monsters"       name="spawn-monsters">       Spawn monsters</label>
+            <label class="toggle"><input type="checkbox" id="f-spawn-npcs"           name="spawn-npcs">           Spawn NPCs</label>
+            <label class="toggle"><input type="checkbox" id="f-enable-command-block" name="enable-command-block"> Command blocks</label>
+          </div>
+        </div>
+
+        <!-- Players -->
+        <div class="group">
+          <div class="group-label">Players</div>
+
+          <div class="field">
+            <label for="f-motd">Message of the Day</label>
+            <input type="text" id="f-motd" name="motd" maxlength="59" placeholder="Home LAN Server">
+          </div>
+
+          <div class="field-row cols-3">
+            <div class="field">
+              <label for="f-max-players">Max Players</label>
+              <input type="number" id="f-max-players" name="max-players" min="1" max="100">
+            </div>
+            <div class="field">
+              <label for="f-player-idle-timeout">Idle Timeout (min)</label>
+              <input type="number" id="f-player-idle-timeout" name="player-idle-timeout" min="0">
+              <p class="field-note">0 = disabled</p>
+            </div>
+            <div class="field">
+              <label for="f-op-permission-level">Op Level</label>
+              <select id="f-op-permission-level" name="op-permission-level">
+                <option value="1">1 — spawn protection</option>
+                <option value="2">2 — most commands</option>
+                <option value="3">3 — ban / kick / op</option>
+                <option value="4">4 — /stop</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="toggle-grid">
+            <label class="toggle"><input type="checkbox" id="f-white-list"        name="white-list">        Whitelist</label>
+            <label class="toggle"><input type="checkbox" id="f-enforce-whitelist" name="enforce-whitelist"> Enforce whitelist</label>
+          </div>
+        </div>
+
+        <!-- Rendering -->
+        <div class="group">
+          <div class="group-label">Rendering</div>
+
+          <div class="field-row cols-4">
+            <div class="field">
+              <label for="f-view-distance">View Distance</label>
+              <input type="number" id="f-view-distance" name="view-distance" min="2" max="32">
+              <p class="field-note">chunks</p>
+            </div>
+            <div class="field">
+              <label for="f-simulation-distance">Simulation Distance</label>
+              <input type="number" id="f-simulation-distance" name="simulation-distance" min="2" max="32">
+              <p class="field-note">chunks</p>
+            </div>
+            <div class="field">
+              <label for="f-spawn-protection">Spawn Protection</label>
+              <input type="number" id="f-spawn-protection" name="spawn-protection" min="0">
+              <p class="field-note">radius (0 = off)</p>
+            </div>
+            <div class="field">
+              <label for="f-max-world-size">Max World Size</label>
+              <input type="number" id="f-max-world-size" name="max-world-size" min="1" max="29999984">
+              <p class="field-note">blocks from 0,0</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Performance -->
+        <div class="group">
+          <div class="group-label">Performance</div>
+
+          <div class="field-row cols-2">
+            <div class="field">
+              <label for="f-network-compression-threshold">Network Compression</label>
+              <input type="number" id="f-network-compression-threshold" name="network-compression-threshold" min="-1">
+              <p class="field-note">bytes; -1 = disabled</p>
+            </div>
+            <div class="field">
+              <label for="f-max-tick-time">Max Tick Time (ms)</label>
+              <input type="number" id="f-max-tick-time" name="max-tick-time" min="-1">
+              <p class="field-note">watchdog; -1 = disabled</p>
+            </div>
+          </div>
+
+          <div class="toggle-grid">
+            <label class="toggle"><input type="checkbox" id="f-sync-chunk-writes"    name="sync-chunk-writes">    Sync chunk writes</label>
+            <label class="toggle"><input type="checkbox" id="f-use-native-transport" name="use-native-transport"> Native transport (Linux)</label>
+          </div>
+        </div>
+
+        <!-- Resource Pack -->
+        <div class="group">
+          <div class="group-label">Resource Pack</div>
+
+          <div class="field">
+            <label for="f-resource-pack">URL</label>
+            <input type="text" id="f-resource-pack" name="resource-pack" placeholder="https://…">
+          </div>
+
+          <div class="field-row cols-2">
+            <div class="field">
+              <label for="f-resource-pack-sha1">SHA-1 Hash</label>
+              <input type="text" id="f-resource-pack-sha1" name="resource-pack-sha1" placeholder="(optional)">
+            </div>
+            <div class="field">
+              <label for="f-resource-pack-prompt">Prompt Message</label>
+              <input type="text" id="f-resource-pack-prompt" name="resource-pack-prompt" placeholder="(optional)">
+            </div>
+          </div>
+
+          <div class="toggle-grid">
+            <label class="toggle"><input type="checkbox" id="f-require-resource-pack" name="require-resource-pack"> Require resource pack</label>
+          </div>
+        </div>
+
+        <!-- Server Info (read-only) -->
+        <div class="group">
+          <div class="group-label">Server Info</div>
+          <div class="info-row">
+            <span class="info-item">online-mode: <span id="info-online-mode">—</span></span>
+            <span class="info-item">server-port: <span id="info-server-port">—</span></span>
+          </div>
+        </div>
+
+      </div><!-- /formFields -->
+
+      <div class="actions">
+        <button class="btn primary" id="saveBtn"    disabled>Save Settings</button>
+        <button class="btn"         id="restartBtn" disabled>Save &amp; Restart</button>
+      </div>
+    </section>
+
+    <!-- Plugins -->
+    <section id="plugins">
+      <h2>Plugins</h2>
+
+      <!-- Search -->
+      <div class="group">
+        <div class="group-label">Search</div>
+        <div class="search-tabs">
+          <button class="search-tab active" id="tabModrinth"   type="button">Modrinth</button>
+          <button class="search-tab"        id="tabCurseForge" type="button">CurseForge</button>
+        </div>
+        <div class="input-row">
+          <input type="text" id="pluginSearch" placeholder="e.g. EssentialsX, WorldEdit, LuckPerms…">
+          <button class="btn" id="searchBtn">Search</button>
+        </div>
+        <div id="searchResults"></div>
+      </div>
+
+      <!-- Installed -->
+      <div class="group">
+        <div class="group-label">Installed</div>
+        <div id="installedPlugins"><span class="empty-note">Loading…</span></div>
+      </div>
+
+      <!-- URL install -->
+      <div class="group">
+        <div class="group-label">Install from URL</div>
+        <div class="input-row">
+          <input type="text" id="pluginUrl" placeholder="https://cdn.modrinth.com/…/plugin.jar">
+          <button class="btn" id="urlInstallBtn">Install</button>
         </div>
       </div>
 
-      <div>
-        <label style="display:block;margin-bottom:8px;">Server Info</label>
-        <div class="info-row">
-          <span class="info-item">online-mode: <span id="info-online-mode">—</span></span>
-          <span class="info-item">server-port: <span id="info-server-port">—</span></span>
+      <!-- Allowed hosts -->
+      <div class="group">
+        <div class="group-label">Allowed Download Hosts</div>
+        <div id="hostsList" class="hosts-list"></div>
+        <div class="input-row" style="margin-top:10px">
+          <input type="text" id="newHostInput" placeholder="example.com">
+          <button class="btn" id="addHostBtn">Add Host</button>
         </div>
       </div>
 
-    </div>
+      <div class="callout show" style="margin-bottom:0">
+        Plugin changes take effect on next server restart.
+      </div>
+    </section>
 
-    <div class="actions">
-      <button class="btn primary" id="saveBtn"    disabled>Save Settings</button>
-      <button class="btn"         id="restartBtn" disabled>Save &amp; Restart</button>
-    </div>
-  </section>
+    <footer>
+      <span>mc-control &middot; NixOS 25.11</span>
+      <a href="#" id="refLink" style="color:var(--text-faint)">config reference</a>
+    </footer>
 
-  <footer>
-    <span>mc-control &middot; NixOS 25.11</span>
-    <a href="/reference.html" style="color:var(--text-faint)">config reference</a>
-  </footer>
-
+  </main>
 </div>
 
 <div id="toast"></div>
 
 <script>
 (function () {
-  // ── Theme toggle ───────────────────────────────────────────────────────────
+  // ── Theme ──────────────────────────────────────────────────────────────────
   var root = document.documentElement;
   var themeBtn = document.getElementById('themeToggle');
   var stored = null;
@@ -259,21 +543,113 @@
     updateThemeLabel();
   });
 
+  // ── Dynamic links ──────────────────────────────────────────────────────────
+  var base = window.location.origin;
+  document.getElementById('homeLink').href = 'http://' + window.location.hostname + ':5000/';
+  document.getElementById('refLink').href  = 'http://' + window.location.hostname + ':5000/reference.html';
+
+  // ── Sidebar nav active tracking ────────────────────────────────────────────
+  var navLinks = document.querySelectorAll('.nav-link');
+  var sections = document.querySelectorAll('.content section[id]');
+
+  var sectionObserver = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        var id = entry.target.id;
+        navLinks.forEach(function (link) {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-15% 0px -70% 0px' });
+
+  sections.forEach(function (s) { sectionObserver.observe(s); });
+
   // ── Toast ──────────────────────────────────────────────────────────────────
-  var toastEl = document.getElementById('toast');
+  var toastEl    = document.getElementById('toast');
   var toastTimer = null;
   function toast(msg, type) {
-    toastEl.textContent = msg;
+    toastEl.innerHTML = '';
+    var span = document.createElement('span');
+    span.textContent = msg;
+    toastEl.appendChild(span);
+    if (type === 'err') {
+      var cb = document.createElement('button');
+      cb.className = 'toast-copy';
+      cb.textContent = 'copy';
+      cb.addEventListener('click', function () {
+        navigator.clipboard.writeText(msg).then(function () { cb.textContent = '✓'; });
+      });
+      toastEl.appendChild(cb);
+    }
     toastEl.className = 'show ' + (type || '');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toastEl.className = ''; }, 3000);
+    toastTimer = setTimeout(function () { toastEl.className = ''; }, type === 'err' ? 8000 : 3500);
   }
 
-  // ── State ──────────────────────────────────────────────────────────────────
-  var base = window.location.origin; // same host:port as this page
-  var busy = false;
-  var currentStatus = 'unknown';
+  // ── Modal helpers ──────────────────────────────────────────────────────────
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
 
+  function promptAddHost(hostname) {
+    return new Promise(function (resolve) {
+      var backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop';
+      backdrop.innerHTML =
+        '<div class="modal">' +
+          '<p class="modal-title">Host not in allowed list</p>' +
+          '<p class="modal-body">The download URL is from <span class="modal-host">' + escHtml(hostname) + '</span>, ' +
+          'which is not in your allowed hosts list.<br><br>Add it and retry the install?</p>' +
+          '<div class="modal-actions">' +
+            '<button class="btn" id="mCancel">Cancel</button>' +
+            '<button class="btn primary" id="mConfirm">Add &amp; Retry</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(backdrop);
+      backdrop.querySelector('#mConfirm').addEventListener('click', function () { backdrop.remove(); resolve(true); });
+      backdrop.querySelector('#mCancel').addEventListener('click',  function () { backdrop.remove(); resolve(false); });
+      backdrop.addEventListener('click', function (e) { if (e.target === backdrop) { backdrop.remove(); resolve(false); } });
+    });
+  }
+
+  function confirmModal(title, body, confirmLabel, confirmClass) {
+    return new Promise(function (resolve) {
+      var backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop';
+      backdrop.innerHTML =
+        '<div class="modal">' +
+          '<p class="modal-title">' + escHtml(title) + '</p>' +
+          '<p class="modal-body">' + escHtml(body) + '</p>' +
+          '<div class="modal-actions">' +
+            '<button class="btn" id="mCancel">Cancel</button>' +
+            '<button class="btn ' + (confirmClass || '') + '" id="mConfirm">' + escHtml(confirmLabel || 'Confirm') + '</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(backdrop);
+      backdrop.querySelector('#mConfirm').addEventListener('click', function () { backdrop.remove(); resolve(true); });
+      backdrop.querySelector('#mCancel').addEventListener('click',  function () { backdrop.remove(); resolve(false); });
+      backdrop.addEventListener('click', function (e) { if (e.target === backdrop) { backdrop.remove(); resolve(false); } });
+    });
+  }
+
+  // ── Copy address ───────────────────────────────────────────────────────────
+  var copyBtn   = document.getElementById('copyBtn');
+  var addrEl    = document.getElementById('serverAddress');
+  var copyTimer = null;
+  copyBtn.addEventListener('click', function () {
+    var addr = addrEl.textContent;
+    if (!addr || addr === '—') return;
+    navigator.clipboard.writeText(addr).then(function () {
+      copyBtn.textContent = 'Copied!';
+      copyBtn.classList.add('copied');
+      clearTimeout(copyTimer);
+      copyTimer = setTimeout(function () { copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 2000);
+    });
+  });
+
+  // ── Status + stats ─────────────────────────────────────────────────────────
+  var busy      = false;
   var dot       = document.getElementById('dot');
   var statusTxt = document.getElementById('statusText');
   var stopBtn   = document.getElementById('stopBtn');
@@ -281,44 +657,27 @@
   var saveBtn   = document.getElementById('saveBtn');
   var restartBtn= document.getElementById('restartBtn');
   var note      = document.getElementById('restartNote');
-  var noFile    = document.getElementById('noFileNote');
-  var fields    = document.getElementById('formFields');
 
-  function setControlsDisabled(val) {
-    stopBtn.disabled = val || true; // managed by renderStatus
-    startBtn.disabled = val || true;
-    saveBtn.disabled = val;
-    restartBtn.disabled = val;
+  function clearLiveStats() {
+    document.getElementById('statUptime').textContent  = '—';
+    document.getElementById('statPlayers').textContent = '—';
+    document.getElementById('statWorld').textContent   = '—';
+    document.getElementById('statPlayers').className   = 'stat-value';
   }
 
   function renderStatus(s) {
-    currentStatus = s;
     dot.className = 'dot';
     if (s === 'active') {
-      dot.classList.add('online');
-      statusTxt.textContent = 'running';
-      stopBtn.disabled  = busy;
-      startBtn.disabled = true;
+      dot.classList.add('online');  statusTxt.textContent = 'running';
+      stopBtn.disabled = busy; startBtn.disabled = true;
       note.classList.add('show');
-    } else if (s === 'inactive') {
-      dot.classList.add('offline');
-      statusTxt.textContent = 'stopped';
-      stopBtn.disabled  = true;
-      startBtn.disabled = busy;
+    } else if (s === 'inactive' || s === 'failed') {
+      dot.classList.add('offline'); statusTxt.textContent = s === 'failed' ? 'failed' : 'stopped';
+      stopBtn.disabled = true; startBtn.disabled = busy;
       note.classList.remove('show');
-    } else if (s === 'failed') {
-      dot.classList.add('offline');
-      statusTxt.textContent = 'failed';
-      stopBtn.disabled  = true;
-      startBtn.disabled = busy;
-      note.classList.remove('show');
-    } else if (s === 'activating' || s === 'deactivating') {
-      dot.classList.add('pending');
-      statusTxt.textContent = s;
-      stopBtn.disabled = true; startBtn.disabled = true;
+      clearLiveStats();
     } else {
-      dot.classList.add('pending');
-      statusTxt.textContent = s;
+      dot.classList.add('pending'); statusTxt.textContent = s;
       stopBtn.disabled = true; startBtn.disabled = true;
     }
   }
@@ -328,18 +687,84 @@
       var res = await fetch(base + '/status', { signal: AbortSignal.timeout(4000) });
       renderStatus((await res.json()).status);
     } catch (e) {
-      dot.className = 'dot offline';
-      statusTxt.textContent = 'unreachable';
+      dot.className = 'dot offline'; statusTxt.textContent = 'unreachable';
       stopBtn.disabled = true; startBtn.disabled = true;
     }
   }
 
-  // ── Load config ────────────────────────────────────────────────────────────
-  function setField(id, val) {
-    var el = document.getElementById(id);
-    if (!el) return;
-    if (el.type === 'checkbox') el.checked = val === 'true';
+  async function loadInfo() {
+    try {
+      var res = await fetch(base + '/info', { signal: AbortSignal.timeout(6000) });
+      var d = await res.json();
+      if (d.address) addrEl.textContent = d.address;
+      if (d.uptime) {
+        document.getElementById('statUptime').textContent = d.uptime;
+        document.getElementById('statWorld').textContent  = d.world || '—';
+        var pEl = document.getElementById('statPlayers');
+        if (d.players) {
+          var txt = d.players.online + ' / ' + d.players.max;
+          if (d.players.names && d.players.names.length) txt += '  (' + d.players.names.join(', ') + ')';
+          pEl.textContent = txt;
+          pEl.className = 'stat-value' + (d.players.online > 0 ? ' players-online' : '');
+        } else {
+          pEl.textContent = '—'; pEl.className = 'stat-value';
+        }
+      }
+    } catch (e) {}
+  }
+
+  // ── Config form ────────────────────────────────────────────────────────────
+  var FIELDS = {
+    'level-name':                    { id: 'f-level-name',                    type: 'text' },
+    'level-seed':                    { id: 'f-level-seed',                    type: 'text' },
+    'level-type':                    { id: 'f-level-type',                    type: 'select' },
+    'generate-structures':           { id: 'f-generate-structures',           type: 'bool' },
+    'allow-nether':                  { id: 'f-allow-nether',                  type: 'bool' },
+    'gamemode':                      { id: 'f-gamemode',                      type: 'select' },
+    'difficulty':                    { id: 'f-difficulty',                    type: 'select' },
+    'force-gamemode':                { id: 'f-force-gamemode',                type: 'bool' },
+    'hardcore':                      { id: 'f-hardcore',                      type: 'bool' },
+    'pvp':                           { id: 'f-pvp',                           type: 'bool' },
+    'allow-flight':                  { id: 'f-allow-flight',                  type: 'bool' },
+    'spawn-animals':                 { id: 'f-spawn-animals',                 type: 'bool' },
+    'spawn-monsters':                { id: 'f-spawn-monsters',                type: 'bool' },
+    'spawn-npcs':                    { id: 'f-spawn-npcs',                    type: 'bool' },
+    'enable-command-block':          { id: 'f-enable-command-block',          type: 'bool' },
+    'motd':                          { id: 'f-motd',                          type: 'text' },
+    'max-players':                   { id: 'f-max-players',                   type: 'text' },
+    'player-idle-timeout':           { id: 'f-player-idle-timeout',           type: 'text' },
+    'white-list':                    { id: 'f-white-list',                    type: 'bool' },
+    'enforce-whitelist':             { id: 'f-enforce-whitelist',             type: 'bool' },
+    'op-permission-level':           { id: 'f-op-permission-level',           type: 'select' },
+    'view-distance':                 { id: 'f-view-distance',                 type: 'text' },
+    'simulation-distance':           { id: 'f-simulation-distance',           type: 'text' },
+    'spawn-protection':              { id: 'f-spawn-protection',              type: 'text' },
+    'max-world-size':                { id: 'f-max-world-size',                type: 'text' },
+    'network-compression-threshold': { id: 'f-network-compression-threshold', type: 'text' },
+    'max-tick-time':                 { id: 'f-max-tick-time',                 type: 'text' },
+    'sync-chunk-writes':             { id: 'f-sync-chunk-writes',             type: 'bool' },
+    'use-native-transport':          { id: 'f-use-native-transport',          type: 'bool' },
+    'resource-pack':                 { id: 'f-resource-pack',                 type: 'text' },
+    'resource-pack-sha1':            { id: 'f-resource-pack-sha1',            type: 'text' },
+    'resource-pack-prompt':          { id: 'f-resource-pack-prompt',          type: 'text' },
+    'require-resource-pack':         { id: 'f-require-resource-pack',         type: 'bool' },
+  };
+
+  function setField(key, val) {
+    var f = FIELDS[key]; if (!f) return;
+    var el = document.getElementById(f.id); if (!el) return;
+    if (f.type === 'bool') el.checked = (val === 'true' || val === true);
     else el.value = val;
+  }
+
+  function collectSettings() {
+    var out = {};
+    Object.keys(FIELDS).forEach(function (key) {
+      var f = FIELDS[key];
+      var el = document.getElementById(f.id); if (!el) return;
+      out[key] = f.type === 'bool' ? (el.checked ? 'true' : 'false') : el.value;
+    });
+    return out;
   }
 
   async function loadConfig() {
@@ -347,115 +772,293 @@
       var res = await fetch(base + '/config', { signal: AbortSignal.timeout(5000) });
       var data = await res.json();
       if (!data.file_exists) {
-        noFile.classList.add('show');
-        fields.style.opacity = '0.4';
-        saveBtn.disabled = true;
-        restartBtn.disabled = true;
+        document.getElementById('noFileNote').classList.add('show');
+        document.getElementById('formFields').style.opacity = '0.4';
+        saveBtn.disabled = true; restartBtn.disabled = true;
         return;
       }
-      var s = data.settings;
-      setField('f-motd',             s['motd']);
-      setField('f-max-players',      s['max-players']);
-      setField('f-difficulty',       s['difficulty']);
-      setField('f-gamemode',         s['gamemode']);
-      setField('f-view-distance',    s['view-distance']);
-      setField('f-spawn-protection', s['spawn-protection']);
-      setField('f-pvp',              s['pvp']);
-      setField('f-whitelist',        s['white-list']);
+      Object.keys(data.settings).forEach(function (k) { setField(k, data.settings[k]); });
       var ro = data.readonly || {};
       document.getElementById('info-online-mode').textContent = ro['online-mode'] || '—';
       document.getElementById('info-server-port').textContent = ro['server-port']  || '—';
-      saveBtn.disabled = false;
-      restartBtn.disabled = false;
-    } catch (e) {
-      toast('Failed to load config', 'err');
-    }
-  }
+      saveBtn.disabled = false; restartBtn.disabled = false;
 
-  function collectSettings() {
-    return {
-      'motd':             document.getElementById('f-motd').value,
-      'max-players':      document.getElementById('f-max-players').value,
-      'difficulty':       document.getElementById('f-difficulty').value,
-      'gamemode':         document.getElementById('f-gamemode').value,
-      'view-distance':    document.getElementById('f-view-distance').value,
-      'spawn-protection': document.getElementById('f-spawn-protection').value,
-      'pvp':              document.getElementById('f-pvp').checked ? 'true' : 'false',
-      'white-list':       document.getElementById('f-whitelist').checked ? 'true' : 'false',
-    };
+      // Populate status section config fields
+      var s = data.settings;
+      document.getElementById('statWorldType').textContent = (s['level-type'] || '—').replace('minecraft:', '');
+      document.getElementById('statGamemode').textContent  = s['gamemode']   || '—';
+      document.getElementById('statDifficulty').textContent = s['difficulty'] || '—';
+    } catch (e) { toast('Failed to load config', 'err'); }
   }
 
   // ── Button handlers ────────────────────────────────────────────────────────
   stopBtn.addEventListener('click', async function () {
-    busy = true; renderStatus(currentStatus);
-    statusTxt.textContent = 'stopping…';
-    dot.className = 'dot pending';
-    stopBtn.disabled = true;
+    busy = true; stopBtn.disabled = true; dot.className = 'dot pending'; statusTxt.textContent = 'stopping…';
     try {
-      var res = await fetch(base + '/stop', { method: 'POST', signal: AbortSignal.timeout(95000) });
-      var d = await res.json();
-      if (!d.ok) { toast('Stop failed: ' + (d.error || '?'), 'err'); }
+      var d = await (await fetch(base + '/stop', { method: 'POST', signal: AbortSignal.timeout(95000) })).json();
+      if (!d.ok) toast('Stop failed: ' + (d.error || '?'), 'err');
     } catch (e) { toast('Stop request failed', 'err'); }
-    busy = false;
-    await pollStatus();
+    busy = false; await pollStatus(); await loadInfo();
   });
 
   startBtn.addEventListener('click', async function () {
-    busy = true; renderStatus(currentStatus);
-    statusTxt.textContent = 'starting…';
-    dot.className = 'dot pending';
-    startBtn.disabled = true;
+    busy = true; startBtn.disabled = true; dot.className = 'dot pending'; statusTxt.textContent = 'starting…';
     try {
-      var res = await fetch(base + '/start', { method: 'POST', signal: AbortSignal.timeout(15000) });
-      var d = await res.json();
-      if (!d.ok) { toast('Start failed: ' + (d.error || '?'), 'err'); }
+      var d = await (await fetch(base + '/start', { method: 'POST', signal: AbortSignal.timeout(15000) })).json();
+      if (!d.ok) toast('Start failed: ' + (d.error || '?'), 'err');
     } catch (e) { toast('Start request failed', 'err'); }
-    busy = false;
-    await pollStatus();
+    busy = false; await pollStatus(); await loadInfo();
   });
 
   saveBtn.addEventListener('click', async function () {
     saveBtn.disabled = true;
     try {
-      var res = await fetch(base + '/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings: collectSettings() }),
-        signal: AbortSignal.timeout(8000),
-      });
-      var d = await res.json();
-      if (d.ok) toast('Settings saved', 'ok');
-      else      toast('Save failed: ' + (d.error || '?'), 'err');
+      var d = await (await fetch(base + '/config', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({settings: collectSettings()}), signal: AbortSignal.timeout(8000),
+      })).json();
+      if (d.ok) { toast('Settings saved', 'ok'); await loadConfig(); }
+      else      { toast('Save failed: ' + (d.error || '?'), 'err'); }
     } catch (e) { toast('Save request failed', 'err'); }
     saveBtn.disabled = false;
   });
 
   restartBtn.addEventListener('click', async function () {
-    restartBtn.disabled = true;
-    saveBtn.disabled = true;
-    statusTxt.textContent = 'restarting…';
-    dot.className = 'dot pending';
+    restartBtn.disabled = true; saveBtn.disabled = true;
+    dot.className = 'dot pending'; statusTxt.textContent = 'restarting…';
     stopBtn.disabled = true; startBtn.disabled = true;
     try {
-      var res = await fetch(base + '/config/restart', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings: collectSettings() }),
-        signal: AbortSignal.timeout(120000),
-      });
-      var d = await res.json();
-      if (d.ok) toast('Settings saved, server restarted', 'ok');
-      else      toast('Restart failed: ' + (d.error || '?'), 'err');
+      var d = await (await fetch(base + '/config/restart', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({settings: collectSettings()}), signal: AbortSignal.timeout(120000),
+      })).json();
+      if (d.ok) { toast('Settings saved, server restarted', 'ok'); await loadConfig(); }
+      else      { toast('Restart failed: ' + (d.error || '?'), 'err'); }
     } catch (e) { toast('Restart request failed', 'err'); }
-    restartBtn.disabled = false;
-    saveBtn.disabled = false;
-    await pollStatus();
+    restartBtn.disabled = false; saveBtn.disabled = false;
+    await pollStatus(); await loadInfo();
   });
+
+  // ── Plugins ────────────────────────────────────────────────────────────────
+  var pluginSearchEl  = document.getElementById('pluginSearch');
+  var searchBtn       = document.getElementById('searchBtn');
+  var searchResultsEl = document.getElementById('searchResults');
+  var tabModrinth     = document.getElementById('tabModrinth');
+  var tabCurseForge   = document.getElementById('tabCurseForge');
+  var searchSource    = 'modrinth';
+  var installedEl     = document.getElementById('installedPlugins');
+  var pluginUrlEl     = document.getElementById('pluginUrl');
+  var urlInstallBtn   = document.getElementById('urlInstallBtn');
+  var newHostEl       = document.getElementById('newHostInput');
+  var addHostBtn      = document.getElementById('addHostBtn');
+  var hostsListEl     = document.getElementById('hostsList');
+  var allowedHosts    = [];
+
+  function fmtDownloads(n) {
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+    if (n >= 1000)    return Math.round(n / 1000) + 'k';
+    return String(n);
+  }
+
+  async function loadInstalled() {
+    try {
+      var d = await (await fetch(base + '/plugins', { signal: AbortSignal.timeout(5000) })).json();
+      var plugins = d.plugins || [];
+      if (!plugins.length) {
+        installedEl.innerHTML = '<span class="empty-note">No plugins installed</span>';
+        return;
+      }
+      installedEl.innerHTML = '';
+      var list = document.createElement('div');
+      list.className = 'plugin-list';
+      plugins.forEach(function (name) {
+        var item = document.createElement('div');
+        item.className = 'plugin-item';
+        item.innerHTML = '<span class="plugin-name">' + escHtml(name) + '</span>' +
+          '<button class="btn danger" style="padding:4px 12px;font-size:0.76rem">Delete</button>';
+        item.querySelector('button').addEventListener('click', async function () {
+          if (!await confirmModal('Delete plugin', 'Delete ' + name + '? This cannot be undone.', 'Delete', 'danger')) return;
+          var btn = this; btn.disabled = true;
+          try {
+            var r = await (await fetch(base + '/plugins/' + encodeURIComponent(name), { method: 'DELETE' })).json();
+            if (r.ok) { toast('Deleted ' + name, 'ok'); loadInstalled(); }
+            else { toast('Delete failed: ' + (r.error || '?'), 'err'); btn.disabled = false; }
+          } catch (e) { toast('Delete failed', 'err'); btn.disabled = false; }
+        });
+        list.appendChild(item);
+      });
+      installedEl.appendChild(list);
+    } catch (e) {
+      installedEl.innerHTML = '<span class="empty-note">Failed to load</span>';
+    }
+  }
+
+  async function loadHosts() {
+    try {
+      var d = await (await fetch(base + '/plugins/allowed-hosts', { signal: AbortSignal.timeout(4000) })).json();
+      allowedHosts = d.hosts || [];
+      renderHosts();
+    } catch (e) {}
+  }
+
+  function renderHosts() {
+    hostsListEl.innerHTML = '';
+    if (!allowedHosts.length) {
+      hostsListEl.innerHTML = '<span class="empty-note">No hosts — installs will be blocked</span>';
+      return;
+    }
+    allowedHosts.forEach(function (h, i) {
+      var chip = document.createElement('span');
+      chip.className = 'host-chip';
+      chip.innerHTML = escHtml(h) + '<button class="host-chip-remove" aria-label="Remove">&times;</button>';
+      chip.querySelector('button').addEventListener('click', function () {
+        allowedHosts.splice(i, 1);
+        saveHosts();
+      });
+      hostsListEl.appendChild(chip);
+    });
+  }
+
+  async function saveHosts() {
+    try {
+      await fetch(base + '/plugins/allowed-hosts', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({hosts: allowedHosts}),
+      });
+      renderHosts();
+    } catch (e) { toast('Failed to save hosts', 'err'); }
+  }
+
+  addHostBtn.addEventListener('click', function () {
+    var h = newHostEl.value.trim().toLowerCase();
+    if (!h) return;
+    if (allowedHosts.includes(h)) { toast('Already in list', ''); return; }
+    allowedHosts.push(h);
+    newHostEl.value = '';
+    saveHosts();
+  });
+  newHostEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') addHostBtn.click(); });
+
+  async function doFetch(url, btn, originalLabel, onSuccess) {
+    btn.disabled = true; btn.textContent = 'Downloading…';
+    try {
+      var d = await (await fetch(base + '/plugins/fetch', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({url: url}), signal: AbortSignal.timeout(35000),
+      })).json();
+      if (d.ok) {
+        onSuccess(d);
+      } else if (d.blocked_host) {
+        btn.disabled = false; btn.textContent = originalLabel;
+        if (await promptAddHost(d.blocked_host)) {
+          if (!allowedHosts.includes(d.blocked_host)) {
+            allowedHosts.push(d.blocked_host);
+            await saveHosts();
+          }
+          doFetch(url, btn, originalLabel, onSuccess);
+        }
+      } else {
+        toast('Install failed: ' + (d.error || '?'), 'err');
+        btn.disabled = false; btn.textContent = originalLabel;
+      }
+    } catch (e) {
+      toast('Install request failed', 'err');
+      btn.disabled = false; btn.textContent = originalLabel;
+    }
+  }
+
+  urlInstallBtn.addEventListener('click', function () {
+    var url = pluginUrlEl.value.trim();
+    if (!url) return;
+    doFetch(url, urlInstallBtn, 'Install', function (d) {
+      toast('Installed ' + d.filename, 'ok'); pluginUrlEl.value = ''; loadInstalled();
+      urlInstallBtn.textContent = 'Install'; urlInstallBtn.disabled = false;
+    });
+  });
+
+  tabModrinth.addEventListener('click', function () {
+    searchSource = 'modrinth';
+    tabModrinth.classList.add('active'); tabCurseForge.classList.remove('active');
+    searchResultsEl.innerHTML = '';
+  });
+  tabCurseForge.addEventListener('click', function () {
+    searchSource = 'curseforge';
+    tabCurseForge.classList.add('active'); tabModrinth.classList.remove('active');
+    searchResultsEl.innerHTML = '';
+  });
+
+  searchBtn.addEventListener('click', doSearch);
+  pluginSearchEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') doSearch(); });
+
+  async function doSearch() {
+    var q = pluginSearchEl.value.trim();
+    if (!q) return;
+    searchBtn.disabled = true;
+    searchResultsEl.innerHTML = '<span class="empty-note">Searching…</span>';
+    try {
+      var endpoint     = searchSource === 'curseforge' ? '/plugins/cf-search'   : '/plugins/search';
+      var resolvePrefix = searchSource === 'curseforge' ? '/plugins/cf-resolve/' : '/plugins/resolve/';
+      var d = await (await fetch(base + endpoint + '?' + new URLSearchParams({q: q}), { signal: AbortSignal.timeout(12000) })).json();
+      if (d.no_key) {
+        searchResultsEl.innerHTML = '<span class="empty-note">CurseForge API key not configured — create <code>/var/lib/mc-control/curseforge.env</code></span>';
+      } else if (d.error && !d.results.length) {
+        searchResultsEl.innerHTML = '<span class="empty-note">Search error: ' + escHtml(d.error) + '</span>';
+      } else if (!d.results.length) {
+        searchResultsEl.innerHTML = '<span class="empty-note">No results</span>';
+      } else {
+        renderSearchResults(d.results, resolvePrefix);
+      }
+    } catch (e) { searchResultsEl.innerHTML = '<span class="empty-note">Search failed</span>'; }
+    searchBtn.disabled = false;
+  }
+
+  function renderSearchResults(results, resolvePrefix) {
+    searchResultsEl.innerHTML = '';
+    var list = document.createElement('div');
+    list.className = 'result-list';
+    results.forEach(function (r) {
+      var item = document.createElement('div');
+      item.className = 'result-item';
+      var iconHtml = r.icon_url
+        ? '<img class="result-icon" src="' + escHtml(r.icon_url) + '" alt="" loading="lazy" onerror="this.style.display=\'none\'">'
+        : '<div class="result-icon-placeholder">🧩</div>';
+      var metaHtml = fmtDownloads(r.downloads) + ' downloads';
+      if (r.website_url) {
+        metaHtml += ' &middot; <a href="' + escHtml(r.website_url) + '" target="_blank" rel="noopener" style="color:var(--accent)">view ↗</a>';
+      }
+      item.innerHTML = iconHtml +
+        '<div class="result-body">' +
+          '<div class="result-title">' + escHtml(r.title)       + '</div>' +
+          '<div class="result-desc">'  + escHtml(r.description) + '</div>' +
+          '<div class="result-meta">'  + metaHtml               + '</div>' +
+        '</div>' +
+        '<button class="btn" style="padding:6px 14px;font-size:0.78rem;flex-shrink:0">Install</button>';
+      var installBtn = item.querySelector('button');
+      installBtn.addEventListener('click', async function () {
+        installBtn.disabled = true; installBtn.textContent = 'Resolving…';
+        try {
+          var rv = await (await fetch(base + resolvePrefix + encodeURIComponent(r.id), { signal: AbortSignal.timeout(12000) })).json();
+          if (!rv.ok) { toast(rv.error || 'No compatible version', 'err'); installBtn.disabled = false; installBtn.textContent = 'Install'; return; }
+          doFetch(rv.url, installBtn, 'Install', function () {
+            toast('Installed ' + r.title + ' ' + rv.version, 'ok');
+            loadInstalled(); installBtn.textContent = '✓ Installed';
+          });
+          return;
+        } catch (e) { toast('Install failed', 'err'); installBtn.disabled = false; installBtn.textContent = 'Install'; }
+      });
+      list.appendChild(item);
+    });
+    searchResultsEl.appendChild(list);
+  }
 
   // ── Init ───────────────────────────────────────────────────────────────────
   pollStatus();
+  loadInfo();
   loadConfig();
+  loadInstalled();
+  loadHosts();
   setInterval(pollStatus, 6000);
+  setInterval(loadInfo,   12000);
 })();
 </script>
 </body>

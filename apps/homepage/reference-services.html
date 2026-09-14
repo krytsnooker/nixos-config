@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>homeserver · services</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0e1316; --surface: #151c20; --surface-2: #1c252a; --surface-3: #232d33;
+    --border: #2b363c; --text: #e7edf0; --text-dim: #93a5ac; --text-faint: #5f7178;
+    --accent: #5fd6c4; --warn: #e8b34c; --warn-bg: rgba(232,179,76,0.10);
+    --danger: #e07a6b; --danger-bg: rgba(224,122,107,0.09);
+    --shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  @media (prefers-color-scheme: light) {
+    :root { color-scheme: light; --bg: #f4f6f5; --surface: #ffffff; --surface-2: #edf1f0; --surface-3: #e3e9e7; --border: #d3dcda; --text: #14201f; --text-dim: #4d6260; --text-faint: #8098a0; --accent: #0f8a76; --warn: #9a6a11; --warn-bg: rgba(154,106,17,0.08); --danger: #ab3d2c; --danger-bg: rgba(171,61,44,0.07); --shadow: 0 8px 24px rgba(20,32,31,0.08); }
+  }
+  html[data-theme="dark"]  { color-scheme: dark;  --bg: #0e1316; --surface: #151c20; --surface-2: #1c252a; --surface-3: #232d33; --border: #2b363c; --text: #e7edf0; --text-dim: #93a5ac; --text-faint: #5f7178; --accent: #5fd6c4; --warn: #e8b34c; --warn-bg: rgba(232,179,76,0.10); --danger: #e07a6b; --danger-bg: rgba(224,122,107,0.09); --shadow: 0 8px 24px rgba(0,0,0,0.35); }
+  html[data-theme="light"] { color-scheme: light; --bg: #f4f6f5; --surface: #ffffff; --surface-2: #edf1f0; --surface-3: #e3e9e7; --border: #d3dcda; --text: #14201f; --text-dim: #4d6260; --text-faint: #8098a0; --accent: #0f8a76; --warn: #9a6a11; --warn-bg: rgba(154,106,17,0.08); --danger: #ab3d2c; --danger-bg: rgba(171,61,44,0.07); --shadow: 0 8px 24px rgba(20,32,31,0.08); }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body { font-family: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  code, kbd { font-family: "IBM Plex Mono", monospace; background: var(--surface-3); padding: 0.1em 0.4em; border-radius: 4px; font-size: 0.88em; color: var(--accent); }
+  pre { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; margin: 10px 0; }
+  pre code { background: none; padding: 0; color: var(--text); font-size: inherit; }
+  pre .cmt { color: var(--text-faint); }
+
+  /* ── Layout ──────────────────────────────────────────────────────────────── */
+  .layout { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+
+  .sidebar {
+    background: var(--surface); border-right: 1px solid var(--border);
+    position: sticky; top: 0; height: 100vh; overflow-y: auto;
+    display: flex; flex-direction: column; padding: 24px 0;
+  }
+  .sidebar-brand { padding: 0 20px 18px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+  .back-link { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--text-faint); display: inline-block; margin-bottom: 14px; }
+  .back-link:hover { color: var(--accent); text-decoration: none; }
+  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+  .sidebar-title { font-family: "IBM Plex Mono", monospace; font-size: 0.95rem; font-weight: 600; }
+
+  .nav-section-head { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); padding: 12px 20px 6px; }
+  .nav-list { list-style: none; margin: 0; padding: 0 8px; }
+  .nav-list li { margin: 2px 0; }
+  .nav-link { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; padding: 7px 12px; border-radius: 6px; color: var(--text-faint); transition: color 0.15s, background 0.15s; }
+  .nav-link:hover { color: var(--text-dim); background: var(--surface-2); text-decoration: none; }
+  .nav-link.active { color: var(--accent); background: var(--surface-2); }
+  .nav-sep { height: 1px; background: var(--border); margin: 14px 12px; }
+  .nav-other { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; padding: 7px 12px; color: var(--text-faint); border-radius: 6px; margin: 0 8px; }
+  .nav-other:hover { color: var(--text-dim); background: var(--surface-2); text-decoration: none; }
+
+  .sidebar-footer { margin-top: auto; padding: 16px 20px 0; border-top: 1px solid var(--border); }
+  .theme-toggle { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; background: none; border: 1px solid var(--border); color: var(--text-faint); border-radius: 6px; padding: 7px 10px; cursor: pointer; width: 100%; text-align: left; }
+  .theme-toggle:hover { color: var(--text); border-color: var(--text-faint); }
+
+  /* ── Content ─────────────────────────────────────────────────────────────── */
+  .content { padding: 36px 48px 80px; min-width: 0; max-width: 960px; }
+
+  .page-header { padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 36px; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
+  .page-header-text .eyebrow { margin-bottom: 6px; }
+  h1 { font-family: "IBM Plex Mono", monospace; font-size: clamp(1.4rem, 2.5vw, 2rem); font-weight: 600; margin: 0 0 4px; }
+  .page-header p { margin: 4px 0 0; color: var(--text-dim); font-size: 0.92rem; }
+  .page-theme { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; background: none; border: 1px solid var(--border); color: var(--text-faint); border-radius: 6px; padding: 7px 12px; cursor: pointer; flex-shrink: 0; }
+  .page-theme:hover { color: var(--text); border-color: var(--text-faint); }
+
+  section { padding-block: 32px; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+
+  .svc-header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+  h2 { font-family: "IBM Plex Mono", monospace; font-size: 1.1rem; font-weight: 600; margin: 0; }
+  .svc-port { font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; color: var(--accent); background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; padding: 3px 9px; }
+  .svc-url { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--text-faint); }
+
+  h3 { font-family: "IBM Plex Mono", monospace; font-size: 0.92rem; font-weight: 600; color: var(--text); margin: 22px 0 8px; }
+  p { max-width: 72ch; color: var(--text-dim); margin: 8px 0; }
+  ul { color: var(--text-dim); padding-left: 20px; }
+  li { margin-bottom: 4px; }
+
+  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 6px 20px; font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; margin: 12px 0; }
+  .kv-label { color: var(--text-faint); }
+  .kv-value { color: var(--text-dim); }
+
+  .table-wrap { overflow-x: auto; margin-block: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  th { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); font-weight: 500; white-space: nowrap; }
+  td { color: var(--text-dim); }
+  td code { font-size: 0.82em; }
+  td.mono { font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; color: var(--text); white-space: nowrap; }
+  td.wrap { white-space: normal; }
+  tr:last-child td { border-bottom: none; }
+
+  .callout { border: 1px solid var(--border); border-left: 3px solid var(--text-faint); background: var(--surface-2); border-radius: 0 8px 8px 0; padding: 12px 16px; margin-block: 16px; font-size: 0.88rem; color: var(--text-dim); }
+  .callout .tag { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; display: block; margin-bottom: 5px; color: var(--text-faint); }
+  .callout.warn { border-left-color: var(--warn); background: var(--warn-bg); }
+  .callout.warn .tag { color: var(--warn); }
+  .callout.danger { border-left-color: var(--danger); background: var(--danger-bg); }
+  .callout.danger .tag { color: var(--danger); }
+
+  footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--text-faint); font-size: 0.8rem; font-family: "IBM Plex Mono", monospace; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  /* ── Responsive ──────────────────────────────────────────────────────────── */
+  @media (max-width: 780px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 16px 20px 0; }
+    .sidebar-brand { border-bottom: none; margin-bottom: 0; padding-bottom: 8px; }
+    .back-link { margin-bottom: 8px; }
+    .nav-section-head { padding: 8px 4px 4px; }
+    .nav-list { display: flex; overflow-x: auto; padding: 4px 0; gap: 4px; scrollbar-width: none; }
+    .nav-list::-webkit-scrollbar { display: none; }
+    .nav-list li { flex-shrink: 0; }
+    .nav-sep { display: none; }
+    .nav-other { margin: 4px 0; padding: 7px 4px; }
+    .sidebar-footer { display: none; }
+    .content { padding: 24px 20px 60px; }
+    td.wrap { white-space: normal; min-width: 140px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <a class="back-link" href="/">← homeserver</a>
+      <div class="eyebrow">Reference</div>
+      <div class="sidebar-title">Services</div>
+    </div>
+    <nav>
+      <a class="nav-other" href="/reference.html">← NixOS Config</a>
+      <div class="nav-sep"></div>
+      <div class="nav-section-head">Services</div>
+      <ul class="nav-list">
+        <li><a class="nav-link" href="#homepage">homepage</a></li>
+        <li><a class="nav-link" href="#typing-tutor">typing-tutor</a></li>
+        <li><a class="nav-link" href="#math-tutor">math-tutor</a></li>
+        <li><a class="nav-link" href="#lan-pastebin">lan-pastebin</a></li>
+        <li><a class="nav-link" href="#music-info">music-info</a></li>
+        <li><a class="nav-link" href="#emby">Emby</a></li>
+        <li><a class="nav-link" href="#nextcloud">Nextcloud</a></li>
+        <li><a class="nav-link" href="#pihole">Pi-hole</a></li>
+        <li><a class="nav-link" href="#mc-control">mc-control</a></li>
+        <li><a class="nav-link" href="#minecraft">Minecraft</a></li>
+      </ul>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="theme-toggle" id="themeToggle" type="button">theme: auto</button>
+    </div>
+  </aside>
+
+  <!-- ── Content ─────────────────────────────────────────────────────────── -->
+  <main class="content">
+
+    <div class="page-header">
+      <div class="page-header-text">
+        <div class="eyebrow">NixOS 25.11 &middot; services reference</div>
+        <h1>Services</h1>
+        <p>homeserver &middot; HP ProDesk G4 800</p>
+      </div>
+      <button class="page-theme" id="themeToggleTop" type="button">theme: auto</button>
+    </div>
+
+    <!-- homepage -->
+    <section id="homepage">
+      <div class="svc-header">
+        <h2>homepage</h2>
+        <span class="svc-port">:5000</span>
+        <a class="svc-url" href="http://homeserver.lan:5000" target="_blank">homeserver.lan:5000</a>
+      </div>
+      <p>Static HTML site served by nginx. Landing page for all LAN services. Includes this reference documentation.</p>
+      <div class="kv">
+        <span class="kv-label">source</span>  <span class="kv-value"><code>apps/homepage/</code></span>
+        <span class="kv-label">config</span>   <span class="kv-value"><code>modules/nginx.nix</code></span>
+        <span class="kv-label">files</span>    <span class="kv-value"><code>index.html</code>, <code>reference.html</code>, <code>reference-services.html</code>, icons</span>
+      </div>
+      <p>To update content: edit files in <code>apps/homepage/</code>, commit, then <code>nixos-rebuild switch</code>. nginx reads files from the nix store path at rebuild time.</p>
+      <pre><code>journalctl -u nginx -f</code></pre>
+    </section>
+
+    <!-- typing-tutor -->
+    <section id="typing-tutor">
+      <div class="svc-header">
+        <h2>typing-tutor</h2>
+        <span class="svc-port">:3000</span>
+        <a class="svc-url" href="http://homeserver.lan:3000" target="_blank">homeserver.lan:3000</a>
+      </div>
+      <p>Typing practice application. Node.js / Express.</p>
+      <div class="kv">
+        <span class="kv-label">source</span>   <span class="kv-value"><code>apps/typing-tutor/</code></span>
+        <span class="kv-label">config</span>    <span class="kv-value"><code>modules/lan-apps.nix</code></span>
+        <span class="kv-label">service</span>   <span class="kv-value"><code>typing-tutor.service</code></span>
+        <span class="kv-label">runtime</span>   <span class="kv-value">Node.js (nixpkgs nodejs)</span>
+      </div>
+      <pre><code>sudo systemctl restart typing-tutor
+journalctl -u typing-tutor -f</code></pre>
+    </section>
+
+    <!-- math-tutor -->
+    <section id="math-tutor">
+      <div class="svc-header">
+        <h2>math-tutor</h2>
+        <span class="svc-port">:3001</span>
+        <a class="svc-url" href="http://homeserver.lan:3001" target="_blank">homeserver.lan:3001</a>
+      </div>
+      <p>Maths practice application. Node.js / Express.</p>
+      <div class="kv">
+        <span class="kv-label">source</span>   <span class="kv-value"><code>apps/math-tutor/</code></span>
+        <span class="kv-label">config</span>    <span class="kv-value"><code>modules/lan-apps.nix</code></span>
+        <span class="kv-label">service</span>   <span class="kv-value"><code>math-tutor.service</code></span>
+        <span class="kv-label">runtime</span>   <span class="kv-value">Node.js (nixpkgs nodejs)</span>
+      </div>
+      <pre><code>sudo systemctl restart math-tutor
+journalctl -u math-tutor -f</code></pre>
+    </section>
+
+    <!-- lan-pastebin -->
+    <section id="lan-pastebin">
+      <div class="svc-header">
+        <h2>lan-pastebin</h2>
+        <span class="svc-port">:5001</span>
+        <a class="svc-url" href="http://homeserver.lan:5001" target="_blank">homeserver.lan:5001</a>
+      </div>
+      <p>LAN-only pastebin for sharing text snippets. Flask / waitress.</p>
+      <div class="kv">
+        <span class="kv-label">source</span>   <span class="kv-value"><code>apps/lan-pastebin/</code></span>
+        <span class="kv-label">config</span>    <span class="kv-value"><code>modules/lan-apps.nix</code></span>
+        <span class="kv-label">service</span>   <span class="kv-value"><code>lan-pastebin.service</code></span>
+        <span class="kv-label">runtime</span>   <span class="kv-value">Python 3 / Flask / waitress</span>
+      </div>
+      <pre><code>sudo systemctl restart lan-pastebin
+journalctl -u lan-pastebin -f</code></pre>
+    </section>
+
+    <!-- music-info-library -->
+    <section id="music-info">
+      <div class="svc-header">
+        <h2>music-info-library</h2>
+        <span class="svc-port">:5010</span>
+        <a class="svc-url" href="http://homeserver.lan:5010" target="_blank">homeserver.lan:5010</a>
+      </div>
+      <p>Music metadata browser backed by a SQLite database of tracks scanned from the DAS. Flask / waitress.</p>
+      <div class="kv">
+        <span class="kv-label">source</span>    <span class="kv-value"><code>apps/music-info-library/</code></span>
+        <span class="kv-label">config</span>     <span class="kv-value"><code>modules/lan-apps.nix</code></span>
+        <span class="kv-label">service</span>    <span class="kv-value"><code>music-info-library.service</code></span>
+        <span class="kv-label">scanner</span>    <span class="kv-value"><code>music-scanner.service</code> (oneshot)</span>
+        <span class="kv-label">secrets</span>    <span class="kv-value"><code>/var/lib/music-info/secrets.env</code></span>
+        <span class="kv-label">music path</span> <span class="kv-value">Set via <code>MUSIC_PATH</code> in the systemd unit in <code>lan-apps.nix</code></span>
+      </div>
+
+      <h3>Scanner</h3>
+      <p>Reads <code>Artist/Album/NN - Title.mp3</code> directory structure using 16 parallel CIFS workers. Scans ~27,000 tracks in ~13 minutes. Performs a full wipe and rebuild of the <code>tracks</code> table on every run.</p>
+      <pre><code>sudo systemctl start music-scanner
+journalctl -fu music-scanner          <span class="cmt"># live progress</span></code></pre>
+
+      <h3>Secrets</h3>
+      <p>File: <code>/var/lib/music-info/secrets.env</code> (chmod 600, owned <code>music-info:music-info</code>)</p>
+      <pre><code>DISCOGS_TOKEN=&lt;discogs api token&gt;
+EMBY_API_KEY=&lt;emby api key&gt;
+EMBY_BASE_URL=http://localhost:8096
+EMBY_EXTERNAL_URL=https://intrentaka.com</code></pre>
+    </section>
+
+    <!-- Emby -->
+    <section id="emby">
+      <div class="svc-header">
+        <h2>Emby</h2>
+        <span class="svc-port">:8096 / :8920</span>
+        <a class="svc-url" href="https://intrentaka.com" target="_blank" rel="noopener">intrentaka.com</a>
+      </div>
+      <p>Media server running as a Podman container. Exposed externally via nginx reverse proxy with Let's Encrypt.</p>
+      <div class="kv">
+        <span class="kv-label">config</span>     <span class="kv-value"><code>modules/emby.nix</code></span>
+        <span class="kv-label">service</span>     <span class="kv-value"><code>podman-emby.service</code></span>
+        <span class="kv-label">image</span>       <span class="kv-value">emby/embyserver (pinned digest)</span>
+        <span class="kv-label">PUID / PGID</span> <span class="kv-value">0 / 125 (sambashare gid)</span>
+        <span class="kv-label">media</span>        <span class="kv-value"><code>/mnt/server-pc</code> (CIFS)</span>
+        <span class="kv-label">config dir</span>  <span class="kv-value"><code>/var/lib/emby/</code></span>
+        <span class="kv-label">LAN</span>          <span class="kv-value"><code>homeserver.lan:8096</code></span>
+        <span class="kv-label">external</span>     <span class="kv-value"><code>https://intrentaka.com</code></span>
+      </div>
+
+      <h3>Groups and permissions</h3>
+      <p><code>users.groups.sambashare.gid = 125</code> is shared by Emby (PGID=125), music-info, nextcloud, and kryt. Media files on the DAS are accessible to all services through this group. Do not change the GID.</p>
+
+      <h3>Restart / upgrade</h3>
+      <pre><code>sudo systemctl restart podman-emby
+journalctl -u podman-emby -f</code></pre>
+      <p>To upgrade: update the pinned image digest in <code>modules/emby.nix</code> and rebuild.</p>
+    </section>
+
+    <!-- Nextcloud -->
+    <section id="nextcloud">
+      <div class="svc-header">
+        <h2>Nextcloud</h2>
+        <span class="svc-port">:443</span>
+        <a class="svc-url" href="https://cloud.intrentaka.com" target="_blank" rel="noopener">cloud.intrentaka.com</a>
+      </div>
+      <p>Self-hosted cloud storage and collaboration. Native NixOS Nextcloud module (nextcloud34). MySQL backend. User data stored on the DAS over CIFS.</p>
+      <div class="kv">
+        <span class="kv-label">config</span>       <span class="kv-value"><code>modules/nextcloud.nix</code></span>
+        <span class="kv-label">package</span>       <span class="kv-value"><code>unstablePkgs.nextcloud34</code></span>
+        <span class="kv-label">database</span>      <span class="kv-value">MySQL (<code>databases.nix</code>)</span>
+        <span class="kv-label">data dir</span>      <span class="kv-value"><code>/var/lib/nextcloud/data</code> → CIFS <code>//192.168.0.110/hsas01/Nextcloud/data</code></span>
+        <span class="kv-label">admin URL</span>     <span class="kv-value"><code>https://cloud.intrentaka.com/login</code></span>
+        <span class="kv-label">UID</span>            <span class="kv-value">991 (pinned via <code>homeserver.nextcloudUid</code>; drives both service user and CIFS <code>uid=</code>)</span>
+      </div>
+
+      <h3>Secrets</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>File</th><th>Owner</th><th>Mode</th><th>Contents</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">/var/lib/nextcloud-admin-pass</td><td>root:root</td><td>600</td><td class="wrap">Single-line admin password</td></tr>
+            <tr><td class="mono">/var/lib/nextcloud/nc-secrets.php</td><td>nextcloud:nextcloud</td><td>400</td><td class="wrap">JSON with <code>instanceid</code>, <code>passwordsalt</code>, <code>secret</code> — must match backup or all user passwords break</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Restore from backup</h3>
+      <ol style="color:var(--text-dim);padding-left:20px;line-height:2">
+        <li>Copy <code>nc-secrets.php</code> with original values from backup <code>config.php</code>.</li>
+        <li>Restore the MySQL <code>nextcloud</code> database from backup.</li>
+        <li>Restore the data directory from <code>/mnt/server-pc/Backups/Nextcloud/</code>.</li>
+        <li>Run <code>sudo -u nextcloud nextcloud-occ maintenance:repair</code> if needed.</li>
+      </ol>
+
+      <div class="callout warn">
+        <span class="tag">UID pin</span>
+        The Nextcloud service user UID (991) is declared once in <code>modules/nextcloud.nix</code> as <code>homeserver.nextcloudUid</code>. The CIFS data mount in <code>hosts/homeserver/configuration.nix</code> derives <code>uid=</code> from the same option. Never hardcode 991 in two places.
+      </div>
+    </section>
+
+    <!-- Pi-hole -->
+    <section id="pihole">
+      <div class="svc-header">
+        <h2>Pi-hole</h2>
+        <span class="svc-port">:8083</span>
+        <a class="svc-url" href="http://homeserver.lan:8083/admin" target="_blank">homeserver.lan:8083/admin</a>
+      </div>
+      <p>Network-wide ad blocking and local DNS server. Running as a Podman container.</p>
+      <div class="kv">
+        <span class="kv-label">config</span>        <span class="kv-value"><code>modules/pihole-container.nix</code></span>
+        <span class="kv-label">service</span>        <span class="kv-value"><code>podman-pihole.service</code></span>
+        <span class="kv-label">image</span>          <span class="kv-value"><code>pihole/pihole:2026.07.2</code> (pinned)</span>
+        <span class="kv-label">admin port</span>     <span class="kv-value">8083 (internal 8080 via <code>FTLCONF_webserver_port=8080</code>)</span>
+        <span class="kv-label">DNS</span>            <span class="kv-value">Port 53 UDP/TCP</span>
+        <span class="kv-label">secrets</span>        <span class="kv-value"><code>/var/lib/pihole/secrets.env</code> — <code>WEBPASSWORD</code></span>
+      </div>
+
+      <div class="callout warn">
+        <span class="tag">Port pinning</span>
+        The internal web port is pinned to <strong>8080</strong> via <code>FTLCONF_webserver_port=8080</code> in the container environment. If you restore settings via Teleporter without this env var present, Pi-hole will reset the internal port back to 80 and the admin UI will become unreachable on :8083. Always keep this env var in the container config.
+      </div>
+
+      <h3>Teleporter backup/restore</h3>
+      <p>Settings → Teleporter → Download backup. Store the zip at <code>/mnt/server-pc/Backups/pihole/</code>.</p>
+      <p>To restore: Settings → Teleporter → Restore. After restoring, verify <code>:8083/admin</code> is still accessible. If not:</p>
+      <pre><code>sudo systemctl restart podman-pihole
+<span class="cmt"># Or: exec into the container and verify FTLCONF_webserver_port</span>
+sudo podman exec pihole env | grep FTLCONF</code></pre>
+
+      <h3>DNS router config</h3>
+      <p>Set the router's primary DNS to <code>192.168.0.X</code> (this machine's LAN IP) to route DNS through Pi-hole. Fallback DNS in Pi-hole: <code>1.1.1.1</code>.</p>
+    </section>
+
+    <!-- mc-control -->
+    <section id="mc-control">
+      <div class="svc-header">
+        <h2>mc-control</h2>
+        <span class="svc-port">:5020</span>
+        <a class="svc-url" href="http://homeserver.lan:5020" target="_blank">homeserver.lan:5020</a>
+      </div>
+      <p>Web UI for managing the Minecraft server: start/stop, configure server.properties, and manage plugins. Flask / waitress, running as the <code>mcctl</code> system user.</p>
+      <div class="kv">
+        <span class="kv-label">source</span>      <span class="kv-value"><code>apps/mc-control/</code></span>
+        <span class="kv-label">config</span>       <span class="kv-value"><code>modules/minecraft.nix</code></span>
+        <span class="kv-label">service</span>      <span class="kv-value"><code>mc-control.service</code></span>
+        <span class="kv-label">state dir</span>    <span class="kv-value"><code>/var/lib/mc-control/</code> (settings.json, curseforge.env)</span>
+        <span class="kv-label">user</span>         <span class="kv-value"><code>mcctl</code> (system user, groups: mcctl mcplugins minecraft)</span>
+      </div>
+
+      <h3>UI sections</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Section</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Connect</strong></td><td class="wrap">Server address with one-click copy to clipboard.</td></tr>
+            <tr><td><strong>Status</strong></td><td class="wrap">Running/stopped indicator with Stop/Start buttons. Shows uptime, players (names + count), world name, world type, game mode, and difficulty. World type / game mode / difficulty are always shown from the loaded config.</td></tr>
+            <tr><td><strong>Settings</strong></td><td class="wrap">Full <code>server.properties</code> editor grouped by World, Gameplay, Players, Rendering, Performance, Resource Pack, and Server Info. Settings are persisted in <code>/var/lib/mc-control/settings.json</code> and applied to <code>server.properties</code> on every server start. The "Save &amp; Restart" button saves then stops/starts the server.</td></tr>
+            <tr><td><strong>Plugins</strong></td><td class="wrap">Search Modrinth or CurseForge (API key required), install from URL, list and delete installed plugins. Manages an allowed-hosts list that gates which download URLs are permitted.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Plugins</h3>
+      <p>Plugin JARs are installed to <code>/var/lib/minecraft/survival/plugins/</code>. The <code>mcctl</code> user has write access via the <code>minecraft</code> group (mode 0770). New plugins take effect on the next server restart.</p>
+      <p>The allowed-hosts list is stored in <code>/var/lib/mc-control/settings.json</code> under the <code>allowed_hosts</code> key. When an install URL's hostname is not in the list, a prompt appears offering to add it.</p>
+      <p>Default allowed hosts: <code>cdn.modrinth.com</code>, <code>hangar.papermc.io</code>, <code>github.com</code>, <code>objects.githubusercontent.com</code>, <code>mediafilez.forgecdn.net</code>, <code>edge.forgecdn.net</code>.</p>
+
+      <h3>CurseForge API key</h3>
+      <p>Create a key at <a href="https://console.curseforge.com" target="_blank" rel="noopener">console.curseforge.com</a>. Store it as:</p>
+      <pre><code>sudo tee /var/lib/mc-control/curseforge.env &lt;&lt;'EOF'
+CURSEFORGE_API_KEY=&lt;your key&gt;
+EOF
+sudo chown mcctl:mcctl /var/lib/mc-control/curseforge.env
+sudo chmod 600 /var/lib/mc-control/curseforge.env</code></pre>
+      <div class="callout warn">
+        <span class="tag">Shell quoting</span>
+        Use a heredoc with a single-quoted delimiter (<code>&lt;&lt;'EOF'</code>) when writing the key. CurseForge keys are bcrypt hashes containing <code>$</code> characters that the shell will try to expand if you use double quotes.
+      </div>
+
+      <h3>CurseForge version matching</h3>
+      <p>The resolver tries (in order): exact version match in <code>latestFilesIndexes</code>, exact match in <code>latestFiles[].gameVersions</code>, family match (e.g. <code>"1.19"</code> for a 1.19.4 server), family match in <code>latestFiles</code>. If none found it returns an error with the available MC versions rather than silently installing the wrong version.</p>
+      <p>The <code>/v1/mods/{id}/files</code> endpoint returns 403 on the free API tier — the resolver works entirely from the data in <code>/v1/mods/{id}</code>.</p>
+
+      <div class="callout danger">
+        <span class="tag">sudo wrapper</span>
+        <code>mc-control</code> calls <code>/run/wrappers/bin/sudo</code> (the setuid wrapper NixOS creates at boot), not <code>/run/current-system/sw/bin/sudo</code> which lacks the setuid bit. If mc-control returns <code>{"status":"unknown"}</code> after a rebuild, verify the wrapper exists and is setuid root:
+        <pre style="margin:8px 0 0"><code>ls -la /run/wrappers/bin/sudo</code></pre>
+      </div>
+    </section>
+
+    <!-- Minecraft -->
+    <section id="minecraft">
+      <div class="svc-header">
+        <h2>Minecraft</h2>
+        <span class="svc-port">:25565</span>
+        <span class="svc-url">LAN only</span>
+      </div>
+      <p>Paper 1.19.4 server. Does not start at boot — managed via mc-control or systemctl. LAN-only (online-mode=false; Mojang account not required).</p>
+      <div class="kv">
+        <span class="kv-label">config</span>         <span class="kv-value"><code>modules/minecraft.nix</code></span>
+        <span class="kv-label">service</span>         <span class="kv-value"><code>minecraft-server-survival.service</code></span>
+        <span class="kv-label">package</span>         <span class="kv-value"><code>pkgs.paperServers.paper-1_19_4</code></span>
+        <span class="kv-label">data dir</span>        <span class="kv-value"><code>/var/lib/minecraft/survival/</code></span>
+        <span class="kv-label">plugins dir</span>     <span class="kv-value"><code>/var/lib/minecraft/survival/plugins/</code> (mode 0775, group mcplugins)</span>
+        <span class="kv-label">autoStart</span>       <span class="kv-value">false</span>
+        <span class="kv-label">online-mode</span>     <span class="kv-value">false (LAN only — do not expose port 25565 externally without enabling this)</span>
+        <span class="kv-label">JVM opts</span>        <span class="kv-value"><code>-Xms1G -Xmx3G</code></span>
+      </div>
+
+      <h3>Start / stop</h3>
+      <pre><code><span class="cmt"># Via mc-control web UI (preferred)</span>
+http://homeserver.lan:5020
+
+<span class="cmt"># Via systemctl</span>
+sudo systemctl start  minecraft-server-survival
+sudo systemctl stop   minecraft-server-survival
+sudo systemctl status minecraft-server-survival
+journalctl -u minecraft-server-survival -f</code></pre>
+
+      <h3>Plugins</h3>
+      <p>Plugins are managed from the mc-control Plugins section. JARs go in <code>/var/lib/minecraft/survival/plugins/</code>. The <code>mcctl</code> user (mc-control's service account) can write there via the <code>minecraft</code> group.</p>
+      <p>Plugins only load on server startup — install or delete while the server is stopped, then start it.</p>
+      <div class="callout">
+        <span class="tag">nix-minecraft tmpfiles note</span>
+        The <code>survival/</code> directory is created and owned by <code>minecraft:minecraft</code> (0770) by the nix-minecraft activation script, which runs after systemd tmpfiles. A <code>tmpfiles</code> rule setting <code>survival/</code> to mode 0771 is overwritten on each rebuild. The current solution is adding <code>mcctl</code> to the <code>minecraft</code> group, giving it group-level rwx without needing to change directory permissions.
+      </div>
+
+      <h3>World backup</h3>
+      <p>The <code>mc-backup</code> systemd timer runs daily at 03:00 and rsyncs the world to the DAS. If the machine was off at 03:00, it runs on next boot (<code>Persistent=true</code>).</p>
+      <div class="kv">
+        <span class="kv-label">source</span>       <span class="kv-value"><code>/var/lib/minecraft/survival/</code></span>
+        <span class="kv-label">destination</span>  <span class="kv-value"><code>/mnt/server-pc/Backups/minecraft/YYYY-MM-DD/</code></span>
+        <span class="kv-label">retention</span>    <span class="kv-value">7 most recent daily backups</span>
+        <span class="kv-label">skip condition</span> <span class="kv-value">Silently skips if <code>/mnt/server-pc</code> is not mounted</span>
+      </div>
+      <pre><code>systemctl list-timers mc-backup      <span class="cmt"># next run time</span>
+journalctl -u mc-backup              <span class="cmt"># last run result</span></code></pre>
+
+      <h3>Pinned settings (NixOS-managed)</h3>
+      <p>These two properties are set in <code>modules/minecraft.nix</code> and are not editable from mc-control:</p>
+      <div class="kv">
+        <span class="kv-label">server-port</span>   <span class="kv-value">25565</span>
+        <span class="kv-label">online-mode</span>   <span class="kv-value">false</span>
+      </div>
+    </section>
+
+    <footer>
+      <span>homeserver &middot; NixOS 25.11 &middot; services reference</span>
+      <a href="/reference.html">← NixOS Config</a>
+    </footer>
+
+  </main>
+</div>
+
+<script>
+(function () {
+  var root    = document.documentElement;
+  var sideBtn = document.getElementById('themeToggle');
+  var topBtn  = document.getElementById('themeToggleTop');
+  var stored  = null;
+  try { stored = localStorage.getItem('hs-theme'); } catch (e) {}
+  if (stored === 'dark' || stored === 'light') root.setAttribute('data-theme', stored);
+
+  function updateLabels() {
+    var mode = root.getAttribute('data-theme') || 'auto';
+    sideBtn.textContent = 'theme: ' + mode;
+    topBtn.textContent  = 'theme: ' + mode;
+  }
+  updateLabels();
+
+  function toggle() {
+    var c = root.getAttribute('data-theme');
+    var n = c === 'dark' ? 'light' : c === 'light' ? null : 'dark';
+    if (n) { root.setAttribute('data-theme', n); try { localStorage.setItem('hs-theme', n); } catch (e) {} }
+    else   { root.removeAttribute('data-theme'); try { localStorage.removeItem('hs-theme'); } catch (e) {} }
+    updateLabels();
+  }
+  sideBtn.addEventListener('click', toggle);
+  topBtn.addEventListener('click', toggle);
+
+  var navLinks = document.querySelectorAll('.nav-link');
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) {
+        var id = entry.target.id;
+        navLinks.forEach(function (link) {
+          link.classList.toggle('active', link.getAttribute('href') === '#' + id);
+        });
+      }
+    });
+  }, { rootMargin: '-15% 0px -70% 0px' });
+  document.querySelectorAll('.content section[id]').forEach(function (s) { observer.observe(s); });
+})();
+</script>
+</body>
+</html>
