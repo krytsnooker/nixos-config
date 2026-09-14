@@ -510,14 +510,14 @@ sudo nixos-rebuild switch --flake /etc/nixos#homeserver</code></pre>
         <table>
           <thead><tr><th>Service</th><th>Port</th><th>URL</th><th>Notes</th></tr></thead>
           <tbody>
-            <tr><td>homepage</td><td class="mono">5000</td><td><a href="http://homeserver:5000">homeserver:5000</a></td><td class="wrap">Static, served by nginx</td></tr>
+            <tr><td>homepage</td><td class="mono">5000</td><td><a href="http://homeserver:5000">homeserver:5000</a></td><td class="wrap">Static nginx; config reference at <code>/reference.html</code></td></tr>
             <tr><td>typing-tutor</td><td class="mono">3000</td><td><a href="http://homeserver:3000">homeserver:3000</a></td><td class="wrap">Node/Express</td></tr>
             <tr><td>math-tutor</td><td class="mono">3001</td><td><a href="http://homeserver:3001">homeserver:3001</a></td><td class="wrap">Node/Express</td></tr>
             <tr><td>lan-pastebin</td><td class="mono">5001</td><td><a href="http://homeserver:5001">homeserver:5001</a></td><td class="wrap">Flask/waitress</td></tr>
-            <tr><td>music-info</td><td class="mono">5010</td><td><a href="http://homeserver:5010">homeserver:5010</a></td><td class="wrap">Flask/waitress</td></tr>
+            <tr><td>music-info-library</td><td class="mono">5010</td><td><a href="http://homeserver:5010">homeserver:5010</a></td><td class="wrap">Flask/waitress</td></tr>
             <tr><td>Emby</td><td class="mono">8096 / 8920</td><td><a href="https://intrentaka.com">intrentaka.com</a></td><td class="wrap">Podman container</td></tr>
             <tr><td>Nextcloud</td><td class="mono">443</td><td><a href="https://cloud.intrentaka.com">cloud.intrentaka.com</a></td><td class="wrap">Native NixOS service</td></tr>
-            <tr><td>Pi-hole</td><td class="mono">8083</td><td><a href="http://homeserver:8083">homeserver:8083</a></td><td class="wrap">Podman container</td></tr>
+            <tr><td>Pi-hole</td><td class="mono">8083</td><td><a href="http://homeserver:8083/admin">homeserver:8083/admin</a></td><td class="wrap">Podman container</td></tr>
             <tr><td>mc-control</td><td class="mono">5020</td><td>LAN only</td><td class="wrap">Flask/waitress; start/stop Minecraft via HTTP</td></tr>
             <tr><td>Minecraft</td><td class="mono">25565</td><td>LAN only</td><td class="wrap">Manual start, not on boot</td></tr>
           </tbody>
