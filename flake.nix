@@ -30,6 +30,7 @@
           ./modules/nextcloud.nix
           ./modules/pihole-container.nix
           ./modules/xrdp.nix
+          ./modules/audiobookshelf.nix
           nix-minecraft.nixosModules.minecraft-servers
         ];
       };

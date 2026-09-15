@@ -8,7 +8,7 @@
   networking.hostName = "homeserver";
 
   networking.hosts = {
-    "192.168.0.120" = [ "homeserver.lan" ];
+    "192.168.0.120" = [ "homeserver" ];
   };
 
   # i5-7500T / 8GB RAM — small safety-margin swap, no hibernation needed (24/7 box).

@@ -230,6 +230,7 @@ modules/                     <span class="cmt">— NixOS modules (all loaded on 
   databases.nix              <span class="cmt">  MySQL (for Nextcloud)</span>
   nginx.nix                  <span class="cmt">  reverse proxy + ACME / Let's Encrypt</span>
   emby.nix                   <span class="cmt">  Podman Emby container</span>
+  audiobookshelf.nix         <span class="cmt">  Podman Audiobookshelf container</span>
   nextcloud.nix              <span class="cmt">  Nextcloud34 native module</span>
   pihole-container.nix       <span class="cmt">  Podman Pi-hole container</span>
   samba.nix                  <span class="cmt">  Samba share config</span>
@@ -292,27 +293,27 @@ sudo nixos-rebuild switch --flake /etc/nixos#homeserver</code></pre>
           <tbody>
             <tr>
               <td>homepage</td><td class="mono">5000</td>
-              <td><a href="http://homeserver.lan:5000">homeserver.lan:5000</a></td>
+              <td><a href="http://homeserver:5000">homeserver:5000</a></td>
               <td class="wrap">Static nginx; this reference at <code>/reference.html</code></td>
             </tr>
             <tr>
               <td>typing-tutor</td><td class="mono">3000</td>
-              <td><a href="http://homeserver.lan:3000">homeserver.lan:3000</a></td>
+              <td><a href="http://homeserver:3000">homeserver:3000</a></td>
               <td class="wrap">Node/Express</td>
             </tr>
             <tr>
               <td>math-tutor</td><td class="mono">3001</td>
-              <td><a href="http://homeserver.lan:3001">homeserver.lan:3001</a></td>
+              <td><a href="http://homeserver:3001">homeserver:3001</a></td>
               <td class="wrap">Node/Express</td>
             </tr>
             <tr>
               <td>lan-pastebin</td><td class="mono">5001</td>
-              <td><a href="http://homeserver.lan:5001">homeserver.lan:5001</a></td>
+              <td><a href="http://homeserver:5001">homeserver:5001</a></td>
               <td class="wrap">Flask/waitress</td>
             </tr>
             <tr>
               <td>music-info-library</td><td class="mono">5010</td>
-              <td><a href="http://homeserver.lan:5010">homeserver.lan:5010</a></td>
+              <td><a href="http://homeserver:5010">homeserver:5010</a></td>
               <td class="wrap">Flask/waitress; rescan: <code>sudo systemctl start music-scanner</code></td>
             </tr>
             <tr>
@@ -321,18 +322,23 @@ sudo nixos-rebuild switch --flake /etc/nixos#homeserver</code></pre>
               <td class="wrap">Podman container; PUID=0 PGID=125</td>
             </tr>
             <tr>
+              <td>Audiobookshelf</td><td class="mono">13378</td>
+              <td><a href="http://homeserver:13378">homeserver:13378</a></td>
+              <td class="wrap">Podman container; audiobook &amp; podcast server</td>
+            </tr>
+            <tr>
               <td>Nextcloud</td><td class="mono">443</td>
               <td><a href="https://cloud.intrentaka.com" target="_blank" rel="noopener">cloud.intrentaka.com</a></td>
               <td class="wrap">Native NixOS module; nextcloud34; MySQL</td>
             </tr>
             <tr>
               <td>Pi-hole</td><td class="mono">8083</td>
-              <td><a href="http://homeserver.lan:8083/admin">homeserver.lan:8083/admin</a></td>
+              <td><a href="http://homeserver:8083/admin">homeserver:8083/admin</a></td>
               <td class="wrap">Podman container; internal port 8080 pinned via <code>FTLCONF_webserver_port</code></td>
             </tr>
             <tr>
               <td>mc-control</td><td class="mono">5020</td>
-              <td><a href="http://homeserver.lan:5020">homeserver.lan:5020</a></td>
+              <td><a href="http://homeserver:5020">homeserver:5020</a></td>
               <td class="wrap">Flask/waitress; Minecraft start/stop, settings, plugins</td>
             </tr>
             <tr>
@@ -415,6 +421,30 @@ sudo chmod 600 /var/lib/mc-control/curseforge.env</code></pre>
         <span class="tag">DNS requirement</span>
         Both domains must resolve publicly to this machine's WAN IP before ACME can issue or renew. If the WAN IP changes, update the router port-forwarding and the DNS A records.
       </div>
+
+      <h3>Router — TP-Link ER605</h3>
+      <p>Port forwarding is under <strong>Transmission → NAT → Virtual Servers</strong> (standalone UI) or <strong>Settings → Transmission → NAT → Virtual Servers</strong> (Omada controller). Required rules:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Interface</th><th>External port</th><th>Internal IP</th><th>Internal port</th><th>Protocol</th></tr></thead>
+          <tbody>
+            <tr><td>WAN</td><td class="mono">80</td><td class="mono">192.168.0.120</td><td class="mono">80</td><td>TCP</td></tr>
+            <tr><td>WAN</td><td class="mono">443</td><td class="mono">192.168.0.120</td><td class="mono">443</td><td>TCP</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn">
+        <span class="tag">ER605 gotcha</span>
+        The ER605 does not support hairpin NAT (NAT loopback). LAN clients cannot reach <code>intrentaka.com</code> or <code>cloud.intrentaka.com</code> via the external IP — they need the Pi-hole local DNS overrides below. Port forwarding rules can also be lost after a firmware update or factory reset.
+      </div>
+
+      <h3>LAN access — Pi-hole split-horizon DNS</h3>
+      <p>Pi-hole serves as the LAN DNS resolver (port 53). Local overrides at <code>/var/lib/pihole/etc-pihole/custom.list</code> make LAN clients resolve the external domains directly to the server's LAN IP, bypassing the router entirely:</p>
+      <pre><code>192.168.0.120 intrentaka.com
+192.168.0.120 www.intrentaka.com
+192.168.0.120 cloud.intrentaka.com</code></pre>
+      <p>This file lives in the Pi-hole container volume — it is <strong>not</strong> tracked in the NixOS config and must be recreated if <code>/var/lib/pihole/</code> is wiped. After editing:</p>
+      <pre><code>sudo systemctl restart podman-pihole.service</code></pre>
     </section>
 
     <!-- Fresh install -->
@@ -448,7 +478,7 @@ PRESERVE_UUIDS=no bash /path/to/scripts/partition-homeserver.sh /dev/nvme0n1</co
       <h3>Step 3 — restore data</h3>
       <ol class="steps">
         <li>Restore Nextcloud from the DAS backup at <code>/mnt/server-pc/Backups/Nextcloud/</code>. Ensure <code>nc-secrets.php</code> has the original <code>instanceid</code>, <code>passwordsalt</code>, and <code>secret</code> values from the backup.</li>
-        <li>Restore Pi-hole settings via Teleporter (Settings → Teleporter → Restore). The admin password is in <code>/var/lib/pihole/secrets.env</code>.</li>
+        <li>Restore Pi-hole settings via Teleporter (Settings → Teleporter → Restore). The admin password is in <code>/var/lib/pihole/secrets.env</code>. Then recreate the split-horizon DNS overrides — see the <a href="#ssl">SSL / external access</a> section.</li>
         <li>Restore the Minecraft world from <code>/mnt/server-pc/Backups/minecraft/</code> to <code>/var/lib/minecraft/survival/</code>.</li>
         <li>Trigger the music scanner: <code>sudo systemctl start music-scanner</code></li>
       </ol>

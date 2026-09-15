@@ -147,6 +147,7 @@
         <li><a class="nav-link" href="#lan-pastebin">lan-pastebin</a></li>
         <li><a class="nav-link" href="#music-info">music-info</a></li>
         <li><a class="nav-link" href="#emby">Emby</a></li>
+        <li><a class="nav-link" href="#audiobookshelf">Audiobookshelf</a></li>
         <li><a class="nav-link" href="#nextcloud">Nextcloud</a></li>
         <li><a class="nav-link" href="#pihole">Pi-hole</a></li>
         <li><a class="nav-link" href="#mc-control">mc-control</a></li>
@@ -175,7 +176,7 @@
       <div class="svc-header">
         <h2>homepage</h2>
         <span class="svc-port">:5000</span>
-        <a class="svc-url" href="http://homeserver.lan:5000" target="_blank">homeserver.lan:5000</a>
+        <a class="svc-url" href="http://homeserver:5000" target="_blank">homeserver:5000</a>
       </div>
       <p>Static HTML site served by nginx. Landing page for all LAN services. Includes this reference documentation.</p>
       <div class="kv">
@@ -192,7 +193,7 @@
       <div class="svc-header">
         <h2>typing-tutor</h2>
         <span class="svc-port">:3000</span>
-        <a class="svc-url" href="http://homeserver.lan:3000" target="_blank">homeserver.lan:3000</a>
+        <a class="svc-url" href="http://homeserver:3000" target="_blank">homeserver:3000</a>
       </div>
       <p>Typing practice application. Node.js / Express.</p>
       <div class="kv">
@@ -210,7 +211,7 @@ journalctl -u typing-tutor -f</code></pre>
       <div class="svc-header">
         <h2>math-tutor</h2>
         <span class="svc-port">:3001</span>
-        <a class="svc-url" href="http://homeserver.lan:3001" target="_blank">homeserver.lan:3001</a>
+        <a class="svc-url" href="http://homeserver:3001" target="_blank">homeserver:3001</a>
       </div>
       <p>Maths practice application. Node.js / Express.</p>
       <div class="kv">
@@ -228,7 +229,7 @@ journalctl -u math-tutor -f</code></pre>
       <div class="svc-header">
         <h2>lan-pastebin</h2>
         <span class="svc-port">:5001</span>
-        <a class="svc-url" href="http://homeserver.lan:5001" target="_blank">homeserver.lan:5001</a>
+        <a class="svc-url" href="http://homeserver:5001" target="_blank">homeserver:5001</a>
       </div>
       <p>LAN-only pastebin for sharing text snippets. Flask / waitress.</p>
       <div class="kv">
@@ -246,7 +247,7 @@ journalctl -u lan-pastebin -f</code></pre>
       <div class="svc-header">
         <h2>music-info-library</h2>
         <span class="svc-port">:5010</span>
-        <a class="svc-url" href="http://homeserver.lan:5010" target="_blank">homeserver.lan:5010</a>
+        <a class="svc-url" href="http://homeserver:5010" target="_blank">homeserver:5010</a>
       </div>
       <p>Music metadata browser backed by a SQLite database of tracks scanned from the DAS. Flask / waitress.</p>
       <div class="kv">
@@ -286,7 +287,7 @@ EMBY_EXTERNAL_URL=https://intrentaka.com</code></pre>
         <span class="kv-label">PUID / PGID</span> <span class="kv-value">0 / 125 (sambashare gid)</span>
         <span class="kv-label">media</span>        <span class="kv-value"><code>/mnt/server-pc</code> (CIFS)</span>
         <span class="kv-label">config dir</span>  <span class="kv-value"><code>/var/lib/emby/</code></span>
-        <span class="kv-label">LAN</span>          <span class="kv-value"><code>homeserver.lan:8096</code></span>
+        <span class="kv-label">LAN</span>          <span class="kv-value"><code>homeserver:8096</code></span>
         <span class="kv-label">external</span>     <span class="kv-value"><code>https://intrentaka.com</code></span>
       </div>
 
@@ -297,6 +298,28 @@ EMBY_EXTERNAL_URL=https://intrentaka.com</code></pre>
       <pre><code>sudo systemctl restart podman-emby
 journalctl -u podman-emby -f</code></pre>
       <p>To upgrade: update the pinned image digest in <code>modules/emby.nix</code> and rebuild.</p>
+    </section>
+
+    <!-- Audiobookshelf -->
+    <section id="audiobookshelf">
+      <div class="svc-header">
+        <h2>Audiobookshelf</h2>
+        <span class="svc-port">:13378</span>
+        <a class="svc-url" href="http://homeserver:13378" target="_blank">homeserver:13378</a>
+      </div>
+      <p>Audiobook and podcast server running as a Podman container.</p>
+      <div class="kv">
+        <span class="kv-label">config</span>       <span class="kv-value"><code>modules/audiobookshelf.nix</code></span>
+        <span class="kv-label">service</span>       <span class="kv-value"><code>podman-audiobookshelf.service</code></span>
+        <span class="kv-label">image</span>         <span class="kv-value">ghcr.io/advplyr/audiobookshelf (pin digest after first run)</span>
+        <span class="kv-label">media</span>         <span class="kv-value"><code>/mnt/server-pc/Media</code> &rarr; <code>/media</code> in container</span>
+        <span class="kv-label">config dir</span>   <span class="kv-value"><code>/var/lib/audiobookshelf/</code></span>
+        <span class="kv-label">library path</span> <span class="kv-value"><code>/media/Audio Books</code> (set in Audiobookshelf UI)</span>
+      </div>
+      <h3>Restart / upgrade</h3>
+      <pre><code>sudo systemctl restart podman-audiobookshelf
+journalctl -u podman-audiobookshelf -f</code></pre>
+      <p>To upgrade: update the pinned image digest in <code>modules/audiobookshelf.nix</code> and rebuild.</p>
     </section>
 
     <!-- Nextcloud -->
@@ -346,7 +369,7 @@ journalctl -u podman-emby -f</code></pre>
       <div class="svc-header">
         <h2>Pi-hole</h2>
         <span class="svc-port">:8083</span>
-        <a class="svc-url" href="http://homeserver.lan:8083/admin" target="_blank">homeserver.lan:8083/admin</a>
+        <a class="svc-url" href="http://homeserver:8083/admin" target="_blank">homeserver:8083/admin</a>
       </div>
       <p>Network-wide ad blocking and local DNS server. Running as a Podman container.</p>
       <div class="kv">
@@ -379,7 +402,7 @@ sudo podman exec pihole env | grep FTLCONF</code></pre>
       <div class="svc-header">
         <h2>mc-control</h2>
         <span class="svc-port">:5020</span>
-        <a class="svc-url" href="http://homeserver.lan:5020" target="_blank">homeserver.lan:5020</a>
+        <a class="svc-url" href="http://homeserver:5020" target="_blank">homeserver:5020</a>
       </div>
       <p>Web UI for managing the Minecraft server: start/stop, configure server.properties, and manage plugins. Flask / waitress, running as the <code>mcctl</code> system user.</p>
       <div class="kv">
@@ -452,7 +475,7 @@ sudo chmod 600 /var/lib/mc-control/curseforge.env</code></pre>
 
       <h3>Start / stop</h3>
       <pre><code><span class="cmt"># Via mc-control web UI (preferred)</span>
-http://homeserver.lan:5020
+http://homeserver:5020
 
 <span class="cmt"># Via systemctl</span>
 sudo systemctl start  minecraft-server-survival
