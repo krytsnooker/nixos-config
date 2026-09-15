@@ -54,6 +54,9 @@
     services.nginx.virtualHosts."cloud.intrentaka.com" = {
       forceSSL = true;
       enableACME = true;
+      locations."= /status.php" = {
+        extraConfig = "return 404;";
+      };
     };
   };
 }
