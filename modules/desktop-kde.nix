@@ -19,6 +19,7 @@ in
     brave-origin-nightly
     firefox
     vscode
+    (python3.withPackages (ps: [ ps.pyqt6 ]))
   ];
 
   # chrome-sandbox must be setuid root for Chromium-based browsers to use
