@@ -7,6 +7,10 @@
 
   networking.hostName = "homeserver";
 
+  networking.hosts = {
+    "192.168.0.120" = [ "homeserver.lan" ];
+  };
+
   # i5-7500T / 8GB RAM — small safety-margin swap, no hibernation needed (24/7 box).
   swapDevices = [
     { device = "/swapfile"; size = 4096; } # MB
