@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Documentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>.shell { max-width: 860px; }</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="top">
+    <div class="host-id">
+      <a href="reference.html" style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--accent);text-decoration:none;display:inline-block;margin-bottom:8px;">← homeserver reference</a>
+      <span class="eyebrow">homeserver // documentation</span>
+      <h1>Documentation</h1>
+      <p>Build guides and project reference pages</p>
+    </div>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle color theme">theme: auto</button>
+  </header>
+
+  <div class="section-label">Build guides</div>
+  <div class="doc-grid">
+
+    <a href="bc250-build-guide.html" class="doc-card">
+      <div class="doc-card-body">
+        <span class="doc-card-eyebrow">AMD BC-250 &middot; NixOS</span>
+        <span class="doc-card-title">BC-250 Build Guide</span>
+        <span class="doc-card-desc">Installation, package hash resolution, gaming/emulators/LLM module setup. Declarative NixOS configuration for gaming, emulation, and local LLM inference.</span>
+      </div>
+      <span class="doc-card-arrow">→</span>
+    </a>
+
+  </div>
+
+  <footer>
+    <span>homeserver &middot; documentation index</span>
+    <span id="genDate"></span>
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById('themeToggle');
+    var stored = null;
+    try { stored = localStorage.getItem('hs-theme'); } catch (e) {}
+    if (stored === 'dark' || stored === 'light') {
+      root.setAttribute('data-theme', stored);
+    }
+    function label() {
+      var mode = root.getAttribute('data-theme');
+      btn.textContent = 'theme: ' + (mode ? mode : 'auto');
+    }
+    label();
+    btn.addEventListener('click', function () {
+      var current = root.getAttribute('data-theme');
+      var next = current === 'dark' ? 'light' : (current === 'light' ? null : 'dark');
+      if (next) {
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem('hs-theme', next); } catch (e) {}
+      } else {
+        root.removeAttribute('data-theme');
+        try { localStorage.removeItem('hs-theme'); } catch (e) {}
+      }
+      label();
+    });
+
+    var d = new Date();
+    document.getElementById('genDate').textContent =
+      'reference generated ' + d.toISOString().slice(0, 10);
+  })();
+</script>
+
+</body>
+</html>

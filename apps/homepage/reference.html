@@ -3,540 +3,276 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>homeserver · NixOS config</title>
+<title>homeserver reference</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root {
-    color-scheme: dark;
-    --bg: #0e1316; --surface: #151c20; --surface-2: #1c252a; --surface-3: #232d33;
-    --border: #2b363c; --text: #e7edf0; --text-dim: #93a5ac; --text-faint: #5f7178;
-    --accent: #5fd6c4; --warn: #e8b34c; --warn-bg: rgba(232,179,76,0.10);
-    --danger: #e07a6b; --danger-bg: rgba(224,122,107,0.09);
-    --shadow: 0 8px 24px rgba(0,0,0,0.35);
-  }
-  @media (prefers-color-scheme: light) {
-    :root { color-scheme: light; --bg: #f4f6f5; --surface: #ffffff; --surface-2: #edf1f0; --surface-3: #e3e9e7; --border: #d3dcda; --text: #14201f; --text-dim: #4d6260; --text-faint: #8098a0; --accent: #0f8a76; --warn: #9a6a11; --warn-bg: rgba(154,106,17,0.08); --danger: #ab3d2c; --danger-bg: rgba(171,61,44,0.07); --shadow: 0 8px 24px rgba(20,32,31,0.08); }
-  }
-  html[data-theme="dark"]  { color-scheme: dark;  --bg: #0e1316; --surface: #151c20; --surface-2: #1c252a; --surface-3: #232d33; --border: #2b363c; --text: #e7edf0; --text-dim: #93a5ac; --text-faint: #5f7178; --accent: #5fd6c4; --warn: #e8b34c; --warn-bg: rgba(232,179,76,0.10); --danger: #e07a6b; --danger-bg: rgba(224,122,107,0.09); --shadow: 0 8px 24px rgba(0,0,0,0.35); }
-  html[data-theme="light"] { color-scheme: light; --bg: #f4f6f5; --surface: #ffffff; --surface-2: #edf1f0; --surface-3: #e3e9e7; --border: #d3dcda; --text: #14201f; --text-dim: #4d6260; --text-faint: #8098a0; --accent: #0f8a76; --warn: #9a6a11; --warn-bg: rgba(154,106,17,0.08); --danger: #ab3d2c; --danger-bg: rgba(171,61,44,0.07); --shadow: 0 8px 24px rgba(20,32,31,0.08); }
-
-  * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--text); }
-  body { font-family: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif; line-height: 1.55; -webkit-font-smoothing: antialiased; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  code, kbd { font-family: "IBM Plex Mono", monospace; background: var(--surface-3); padding: 0.1em 0.4em; border-radius: 4px; font-size: 0.88em; color: var(--accent); }
-  pre { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; overflow-x: auto; font-size: 0.85rem; line-height: 1.6; margin: 10px 0; }
-  pre code { background: none; padding: 0; color: var(--text); font-size: inherit; }
-  pre .cmt { color: var(--text-faint); }
-
-  /* ── Layout ──────────────────────────────────────────────────────────────── */
-  .layout { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
-
-  .sidebar {
-    background: var(--surface); border-right: 1px solid var(--border);
-    position: sticky; top: 0; height: 100vh; overflow-y: auto;
-    display: flex; flex-direction: column; padding: 24px 0;
-  }
-  .sidebar-brand { padding: 0 20px 18px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
-  .back-link { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--text-faint); display: inline-block; margin-bottom: 14px; }
-  .back-link:hover { color: var(--accent); text-decoration: none; }
-  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
-  .sidebar-title { font-family: "IBM Plex Mono", monospace; font-size: 0.95rem; font-weight: 600; }
-
-  .nav-section-head { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); padding: 12px 20px 6px; }
-  .nav-list { list-style: none; margin: 0; padding: 0 8px; }
-  .nav-list li { margin: 2px 0; }
-  .nav-link { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; padding: 7px 12px; border-radius: 6px; color: var(--text-faint); transition: color 0.15s, background 0.15s; }
-  .nav-link:hover { color: var(--text-dim); background: var(--surface-2); text-decoration: none; }
-  .nav-link.active { color: var(--accent); background: var(--surface-2); }
-  .nav-sep { height: 1px; background: var(--border); margin: 14px 12px; }
-  .nav-other { display: block; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; padding: 7px 12px; color: var(--text-faint); border-radius: 6px; margin: 0 8px; }
-  .nav-other:hover { color: var(--text-dim); background: var(--surface-2); text-decoration: none; }
-
-  .sidebar-footer { margin-top: auto; padding: 16px 20px 0; border-top: 1px solid var(--border); }
-  .theme-toggle { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; background: none; border: 1px solid var(--border); color: var(--text-faint); border-radius: 6px; padding: 7px 10px; cursor: pointer; width: 100%; text-align: left; }
-  .theme-toggle:hover { color: var(--text); border-color: var(--text-faint); }
-
-  /* ── Content ─────────────────────────────────────────────────────────────── */
-  .content { padding: 36px 48px 80px; min-width: 0; max-width: 960px; }
-
-  .page-header { padding-bottom: 24px; border-bottom: 1px solid var(--border); margin-bottom: 28px; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
-  .page-header-text .eyebrow { margin-bottom: 6px; }
-  h1 { font-family: "IBM Plex Mono", monospace; font-size: clamp(1.4rem, 2.5vw, 2rem); font-weight: 600; margin: 0 0 4px; }
-  .page-header p { margin: 4px 0 0; color: var(--text-dim); font-size: 0.92rem; }
-  .page-theme { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; background: none; border: 1px solid var(--border); color: var(--text-faint); border-radius: 6px; padding: 7px 12px; cursor: pointer; flex-shrink: 0; }
-  .page-theme:hover { color: var(--text); border-color: var(--text-faint); }
-
-  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 36px; }
-  .stat { background: var(--surface); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
-  .stat .label { font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); font-family: "IBM Plex Mono", monospace; }
-  .stat .value { font-family: "IBM Plex Mono", monospace; font-size: 0.95rem; }
-
-  section { padding-block: 32px; border-bottom: 1px solid var(--border); }
-  section:last-of-type { border-bottom: none; }
-  h2 { font-family: "IBM Plex Mono", monospace; font-size: 1.1rem; font-weight: 600; margin: 0 0 16px; }
-  h3 { font-family: "IBM Plex Mono", monospace; font-size: 0.92rem; font-weight: 600; color: var(--text); margin: 22px 0 8px; }
-  p { max-width: 72ch; color: var(--text-dim); margin: 8px 0; }
-  p.dim { color: var(--text-dim); }
-  ul { color: var(--text-dim); padding-left: 20px; }
-  li { margin-bottom: 4px; }
-
-  .table-wrap { overflow-x: auto; margin-block: 10px; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); }
-  th { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-faint); font-weight: 500; white-space: nowrap; }
-  td { color: var(--text-dim); }
-  td code { font-size: 0.82em; }
-  td.mono { font-family: "IBM Plex Mono", monospace; font-size: 0.85rem; color: var(--text); white-space: nowrap; }
-  td.wrap { white-space: normal; }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: var(--surface-2); }
-
-  .callout { border: 1px solid var(--border); border-left: 3px solid var(--text-faint); background: var(--surface-2); border-radius: 0 8px 8px 0; padding: 12px 16px; margin-block: 16px; font-size: 0.88rem; color: var(--text-dim); }
-  .callout .tag { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; display: block; margin-bottom: 5px; color: var(--text-faint); }
-  .callout.warn { border-left-color: var(--warn); background: var(--warn-bg); }
-  .callout.warn .tag { color: var(--warn); }
-  .callout.danger { border-left-color: var(--danger); background: var(--danger-bg); }
-  .callout.danger .tag { color: var(--danger); }
-
-  ol.steps { padding-left: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 12px; }
-  ol.steps li { counter-increment: step; position: relative; padding-left: 38px; min-height: 26px; color: var(--text-dim); font-size: 0.92rem; }
-  ol.steps li::before { content: counter(step); position: absolute; left: 0; top: 0; font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; color: var(--accent); background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; }
-
-  .secret-card { border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-block: 12px; background: var(--surface); }
-  .secret-card .path { font-family: "IBM Plex Mono", monospace; font-size: 0.88rem; color: var(--text); }
-  .secret-card .perm { font-size: 0.78rem; color: var(--text-faint); margin-left: 8px; }
-  .secret-card p { margin: 6px 0; }
-
-  footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--border); color: var(--text-faint); font-size: 0.8rem; font-family: "IBM Plex Mono", monospace; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-
-  /* ── Responsive ──────────────────────────────────────────────────────────── */
-  @media (max-width: 780px) {
-    .layout { grid-template-columns: 1fr; }
-    .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); padding: 16px 20px 0; }
-    .sidebar-brand { border-bottom: none; margin-bottom: 0; padding-bottom: 8px; }
-    .back-link { margin-bottom: 8px; }
-    .nav-section-head { padding: 8px 4px 4px; }
-    .nav-list { display: flex; overflow-x: auto; padding: 4px 0; gap: 4px; scrollbar-width: none; }
-    .nav-list::-webkit-scrollbar { display: none; }
-    .nav-list li { flex-shrink: 0; }
-    .nav-sep { display: none; }
-    .nav-other { margin: 4px 0; padding: 7px 4px; }
-    .sidebar-footer { display: none; }
-    .content { padding: 24px 20px 60px; }
-    .stat-row { grid-template-columns: repeat(2, 1fr); }
-    td.wrap { white-space: normal; min-width: 140px; }
-  }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="layout">
+<div class="shell">
 
-  <!-- ── Sidebar ─────────────────────────────────────────────────────────── -->
-  <aside class="sidebar">
-    <div class="sidebar-brand">
-      <a class="back-link" href="/">← homeserver</a>
-      <div class="eyebrow">Reference</div>
-      <div class="sidebar-title">NixOS Config</div>
+  <header class="top">
+    <div class="host-id">
+      <a href="/" style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--accent);text-decoration:none;display:inline-block;margin-bottom:8px;">← homeserver</a>
+      <span class="eyebrow">NixOS host // reference</span>
+      <h1>homeserver</h1>
+      <p>HP ProDesk G4 800 &middot; i5-7500T &middot; 8&nbsp;GB RAM &middot; 256&nbsp;GB SSD &middot; NixOS 25.11</p>
     </div>
-    <nav>
-      <div class="nav-section-head">NixOS Config</div>
-      <ul class="nav-list">
-        <li><a class="nav-link" href="#hardware">Hardware</a></li>
-        <li><a class="nav-link" href="#repo">Repository layout</a></li>
-        <li><a class="nav-link" href="#rebuilding">Rebuilding</a></li>
-        <li><a class="nav-link" href="#snapshots">Snapshots</a></li>
-        <li><a class="nav-link" href="#services">Services</a></li>
-        <li><a class="nav-link" href="#secrets">Secrets</a></li>
-        <li><a class="nav-link" href="#ssl">SSL / external</a></li>
-        <li><a class="nav-link" href="#fresh-install">Fresh install</a></li>
-      </ul>
-      <div class="nav-sep"></div>
-      <a class="nav-other" href="/reference-services.html">Services detail →</a>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle color theme">theme: auto</button>
+  </header>
+
+  <div class="stat-row">
+    <div class="stat"><span class="label">CPU</span><span class="value">i5-7500T</span></div>
+    <div class="stat"><span class="label">Memory</span><span class="value">8 GB</span></div>
+    <div class="stat"><span class="label">Boot disk</span><span class="value">256 GB SSD</span></div>
+    <div class="stat"><span class="label">Media store</span><span class="value">192.168.0.110 (CIFS)</span></div>
+  </div>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Sections">
+      <a href="#hardware">Hardware</a>
+      <a href="#repo">Repository layout</a>
+      <a href="#rebuilding">Rebuilding</a>
+      <a href="#snapshots">Snapshots</a>
+      <a href="#services">Services</a>
+      <a href="#secrets">Secrets</a>
+      <a href="#music">Music scanner</a>
+      <a href="#ssl">SSL / external</a>
+      <a href="#minecraft">Minecraft</a>
+      <a href="#fresh-install">Fresh install</a>
+      <a href="#docs">Documentation</a>
     </nav>
-    <div class="sidebar-footer">
-      <button class="theme-toggle" id="themeToggle" type="button">theme: auto</button>
-    </div>
-  </aside>
 
-  <!-- ── Content ─────────────────────────────────────────────────────────── -->
-  <main class="content">
+    <main>
 
-    <div class="page-header">
-      <div class="page-header-text">
-        <div class="eyebrow">NixOS 25.11 &middot; config reference</div>
-        <h1>homeserver</h1>
-        <p>HP ProDesk G4 800 &middot; i5-7500T &middot; 8&nbsp;GB RAM &middot; 256&nbsp;GB SSD</p>
-      </div>
-      <button class="page-theme" id="themeToggleTop" type="button">theme: auto</button>
-    </div>
-
-    <div class="stat-row">
-      <div class="stat"><span class="label">CPU</span><span class="value">i5-7500T</span></div>
-      <div class="stat"><span class="label">Memory</span><span class="value">8 GB DDR4</span></div>
-      <div class="stat"><span class="label">Boot disk</span><span class="value">256 GB NVMe</span></div>
-      <div class="stat"><span class="label">Media store</span><span class="value">192.168.0.110 CIFS</span></div>
-    </div>
-
-    <!-- Hardware -->
-    <section id="hardware">
-      <h2>Hardware</h2>
-      <p>Media and user data live on a Windows 10 machine at <code>192.168.0.110</code> with a SAS DAS attached via HBA, mounted over CIFS at <code>/mnt/server-pc</code>.</p>
-
-      <h3>Partitions</h3>
-      <div class="table-wrap">
+      <section id="hardware">
+        <h2><span class="idx">01</span> Hardware</h2>
+        <p class="dim">Media and user data live on a Windows 10 machine at <code>192.168.0.110</code> with a SAS DAS attached via HBA. This box mounts it over CIFS at <code>/mnt/server-pc</code>.</p>
+        <div class="table-wrap">
         <table>
-          <thead><tr><th>Device</th><th>UUID</th><th>FS</th><th>Mount</th></tr></thead>
+          <thead><tr><th>Partition</th><th>UUID</th><th>Filesystem</th><th>Mount</th></tr></thead>
           <tbody>
-            <tr><td class="mono">nvme0n1p1</td><td class="mono">A745-730E</td><td>vfat FAT32</td><td><code>/boot</code> (ESP)</td></tr>
-            <tr><td class="mono">nvme0n1p2</td><td class="mono">f2ba3164-49c0-4f90-bea6-8c7ada01d308</td><td>btrfs</td><td><code>/</code></td></tr>
-            <tr><td class="mono">nvme0n1p3</td><td class="mono">8034dca1-d1fd-41fd-bc45-941c2e1ef74c</td><td>btrfs</td><td><code>/home</code></td></tr>
+            <tr><td class="mono"><code>nvme0n1p1</code></td><td class="mono">A745-730E</td><td>vfat FAT32</td><td><code>/boot</code> (ESP)</td></tr>
+            <tr><td class="mono"><code>nvme0n1p2</code></td><td class="mono">f2ba3164-49c0-4f90-bea6-8c7ada01d308</td><td>btrfs</td><td><code>/</code></td></tr>
+            <tr><td class="mono"><code>nvme0n1p3</code></td><td class="mono">8034dca1-d1fd-41fd-bc45-941c2e1ef74c</td><td>btrfs</td><td><code>/home</code></td></tr>
           </tbody>
         </table>
-      </div>
-      <p>Swap: 4 GB swapfile at <code>/swapfile</code>.</p>
-
-      <h3>CIFS mounts</h3>
-      <div class="table-wrap">
+        </div>
+        <p class="dim">Swap: 4 GB swapfile at <code>/swapfile</code>.</p>
+        <h3>CIFS mounts</h3>
+        <div class="table-wrap">
         <table>
-          <thead><tr><th>Mount point</th><th>Remote share</th><th>Purpose</th></tr></thead>
+          <thead><tr><th>Mount point</th><th>Remote path</th><th>Purpose</th></tr></thead>
           <tbody>
-            <tr><td class="mono">/mnt/server-pc</td><td class="mono">//192.168.0.110/hsas01</td><td class="wrap">General DAS access — media, backups, music</td></tr>
-            <tr><td class="mono">/var/lib/nextcloud/data</td><td class="mono">//192.168.0.110/hsas01/Nextcloud/data</td><td class="wrap">Nextcloud user data; mounted with <code>uid=991</code> (see nextcloudUid)</td></tr>
+            <tr><td class="mono"><code>/mnt/server-pc</code></td><td class="mono"><code>//192.168.0.110/hsas01</code></td><td class="wrap">General DAS access (media, backups, music)</td></tr>
+            <tr><td class="mono"><code>/var/lib/nextcloud/data</code></td><td class="mono"><code>//192.168.0.110/hsas01/Nextcloud/data</code></td><td class="wrap">Nextcloud user data; mounted with <code>uid=991</code> so ownership checks pass</td></tr>
           </tbody>
         </table>
-      </div>
-      <div class="callout warn">
-        <span class="tag">CIFS ownership</span>
-        CIFS mounts don't support real UNIX ownership — it is set at mount time via <code>uid=</code>/<code>gid=</code>. The Nextcloud data mount <code>uid=</code> is derived from <code>homeserver.nextcloudUid</code> declared in <code>modules/nextcloud.nix</code> (default 991) — change that option and both the service UID and the mount option update together.
-      </div>
-    </section>
+        </div>
+        <div class="callout warn">
+          <span class="tag">CIFS ownership note</span>
+          CIFS mounts don't support real UNIX ownership — ownership is set at mount time via <code>uid=</code>/<code>gid=</code> options. The Nextcloud data mount <code>uid=</code> is derived from <code>homeserver.nextcloudUid</code> (declared in <code>modules/nextcloud.nix</code>, default 991) — change it there and both the service user UID and the mount option update together.
+        </div>
+      </section>
 
-    <!-- Repository layout -->
-    <section id="repo">
-      <h2>Repository layout</h2>
-      <pre><code>flake.nix                    <span class="cmt">— single nixosConfigurations.homeserver</span>
-                             <span class="cmt">  inputs: nixpkgs 25.11, nixpkgs-unstable (Nextcloud34), nix-minecraft</span>
-hosts/homeserver/            <span class="cmt">— hardware-configuration.nix, per-host options</span>
-modules/                     <span class="cmt">— NixOS modules (all loaded on every build):</span>
-  common.nix                 <span class="cmt">  locale, packages, user accounts</span>
-  lan-apps.nix               <span class="cmt">  typing-tutor, math-tutor, pastebin, music-info</span>
-  minecraft.nix              <span class="cmt">  Minecraft server + mc-control web UI + backup timer</span>
-  databases.nix              <span class="cmt">  MySQL (for Nextcloud)</span>
-  nginx.nix                  <span class="cmt">  reverse proxy + ACME / Let's Encrypt</span>
-  emby.nix                   <span class="cmt">  Podman Emby container</span>
-  audiobookshelf.nix         <span class="cmt">  Podman Audiobookshelf container</span>
-  nextcloud.nix              <span class="cmt">  Nextcloud34 native module</span>
-  pihole-container.nix       <span class="cmt">  Podman Pi-hole container</span>
-  samba.nix                  <span class="cmt">  Samba share config</span>
-  xrdp.nix                   <span class="cmt">  RDP access (KDE desktop)</span>
-apps/                        <span class="cmt">— source for custom LAN apps (canonical copy)</span>
-  homepage/                  <span class="cmt">  static HTML site + this reference</span>
-  mc-control/                <span class="cmt">  Minecraft management web UI (Flask/waitress)</span>
-  lan-pastebin/              <span class="cmt">  pastebin app</span>
-  typing-tutor/              <span class="cmt">  typing practice app</span>
-  math-tutor/                <span class="cmt">  maths practice app</span>
-  music-info-library/        <span class="cmt">  music metadata + scanner</span>
+      <section id="repo">
+        <h2><span class="idx">02</span> Repository layout</h2>
+        <pre><code>flake.nix                    <span class="cmt">— single nixosConfigurations.homeserver</span>
+hosts/homeserver/            <span class="cmt">— hardware config + per-host settings</span>
+modules/                     <span class="cmt">— NixOS modules (all loaded by every build)</span>
 pkgs/                        <span class="cmt">— custom packages (brave-origin-nightly)</span>
-scripts/                     <span class="cmt">— maintenance scripts (partition-homeserver.sh)</span></code></pre>
-      <div class="callout">
-        <span class="tag">Flake rule</span>
-        Flakes only see git-tracked files. Stage every new file before rebuilding: <code>git add &lt;file&gt;</code>. Modifications to existing tracked files are picked up automatically.
-      </div>
-    </section>
+apps/                        <span class="cmt">— source for custom LAN apps (canonical copy)</span></code></pre>
+      </section>
 
-    <!-- Rebuilding -->
-    <section id="rebuilding">
-      <h2>Rebuilding</h2>
-      <pre><code><span class="cmt"># Apply config and activate immediately</span>
+      <section id="rebuilding">
+        <h2><span class="idx">03</span> Rebuilding</h2>
+        <pre><code><span class="cmt"># Apply config changes</span>
 sudo nixos-rebuild switch --flake /etc/nixos#homeserver
 
-<span class="cmt"># Test-activate without changing the boot default</span>
+<span class="cmt"># Test without making it the boot default</span>
 sudo nixos-rebuild test --flake /etc/nixos#homeserver
 
-<span class="cmt"># Stage for next boot only (current system unchanged)</span>
+<span class="cmt"># Set as next boot without touching the running system</span>
 sudo nixos-rebuild boot --flake /etc/nixos#homeserver
 
-<span class="cmt"># Roll back to the previous generation</span>
+<span class="cmt"># Roll back to previous generation</span>
 sudo nixos-rebuild switch --rollback</code></pre>
+        <p class="dim">Flakes only see git-tracked files — stage changes before rebuilding:</p>
+        <pre><code>git add &lt;file&gt;</code></pre>
+      </section>
 
-      <h3>After adding/editing an app</h3>
-      <p>Apps under <code>apps/</code> are referenced by nix store path in <code>ExecStart</code>. A rebuild copies the source into the store and rewrites the service unit. After <code>switch</code>, no manual <code>systemctl restart</code> is needed — the unit already points at the new store path.</p>
-      <pre><code>systemctl --failed                 <span class="cmt"># anything that didn't start</span>
-journalctl -u &lt;service&gt; -f        <span class="cmt"># live logs</span></code></pre>
-    </section>
-
-    <!-- Snapshots -->
-    <section id="snapshots">
-      <h2>Snapshots</h2>
-      <p>Tag the repo whenever things are known-good:</p>
-      <pre><code>git tag working-YYYY-MM-DD
-git push --tags   <span class="cmt"># if you have a remote</span></code></pre>
-      <p>To restore a snapshot:</p>
-      <pre><code>git checkout working-YYYY-MM-DD
+      <section id="snapshots">
+        <h2><span class="idx">04</span> Known-good snapshots</h2>
+        <p class="dim">Tag the current state whenever things are stable:</p>
+        <pre><code>git tag working-YYYY-MM-DD</code></pre>
+        <p class="dim">To restore:</p>
+        <pre><code>git checkout working-YYYY-MM-DD
 sudo nixos-rebuild switch --flake /etc/nixos#homeserver</code></pre>
-      <p>Latest stable tag: <code>working-2026-09-13</code></p>
-    </section>
+      </section>
 
-    <!-- Services -->
-    <section id="services">
-      <h2>Services</h2>
-      <p>See <a href="/reference-services.html">Services detail →</a> for per-service configuration, restart procedures, and troubleshooting.</p>
-      <div class="table-wrap">
+      <section id="services">
+        <h2><span class="idx">05</span> Services</h2>
+        <div class="table-wrap">
         <table>
-          <thead><tr><th>Service</th><th>Port</th><th>URL / access</th><th>Notes</th></tr></thead>
+          <thead><tr><th>Service</th><th>Port</th><th>URL</th><th>Notes</th></tr></thead>
           <tbody>
-            <tr>
-              <td>homepage</td><td class="mono">5000</td>
-              <td><a href="http://homeserver:5000">homeserver:5000</a></td>
-              <td class="wrap">Static nginx; this reference at <code>/reference.html</code></td>
-            </tr>
-            <tr>
-              <td>typing-tutor</td><td class="mono">3000</td>
-              <td><a href="http://homeserver:3000">homeserver:3000</a></td>
-              <td class="wrap">Node/Express</td>
-            </tr>
-            <tr>
-              <td>math-tutor</td><td class="mono">3001</td>
-              <td><a href="http://homeserver:3001">homeserver:3001</a></td>
-              <td class="wrap">Node/Express</td>
-            </tr>
-            <tr>
-              <td>lan-pastebin</td><td class="mono">5001</td>
-              <td><a href="http://homeserver:5001">homeserver:5001</a></td>
-              <td class="wrap">Flask/waitress</td>
-            </tr>
-            <tr>
-              <td>music-info-library</td><td class="mono">5010</td>
-              <td><a href="http://homeserver:5010">homeserver:5010</a></td>
-              <td class="wrap">Flask/waitress; rescan: <code>sudo systemctl start music-scanner</code></td>
-            </tr>
-            <tr>
-              <td>Emby</td><td class="mono">8096 / 8920</td>
-              <td><a href="https://intrentaka.com" target="_blank" rel="noopener">intrentaka.com</a></td>
-              <td class="wrap">Podman container; PUID=0 PGID=125</td>
-            </tr>
-            <tr>
-              <td>Audiobookshelf</td><td class="mono">13378</td>
-              <td><a href="http://homeserver:13378">homeserver:13378</a></td>
-              <td class="wrap">Podman container; audiobook &amp; podcast server</td>
-            </tr>
-            <tr>
-              <td>Nextcloud</td><td class="mono">443</td>
-              <td><a href="https://cloud.intrentaka.com" target="_blank" rel="noopener">cloud.intrentaka.com</a></td>
-              <td class="wrap">Native NixOS module; nextcloud34; MySQL</td>
-            </tr>
-            <tr>
-              <td>Pi-hole</td><td class="mono">8083</td>
-              <td><a href="http://homeserver:8083/admin">homeserver:8083/admin</a></td>
-              <td class="wrap">Podman container; internal port 8080 pinned via <code>FTLCONF_webserver_port</code></td>
-            </tr>
-            <tr>
-              <td>mc-control</td><td class="mono">5020</td>
-              <td><a href="http://homeserver:5020">homeserver:5020</a></td>
-              <td class="wrap">Flask/waitress; Minecraft start/stop, settings, plugins</td>
-            </tr>
-            <tr>
-              <td>Minecraft</td><td class="mono">25565</td>
-              <td>LAN only</td>
-              <td class="wrap">paper-1_19_4; <code>autoStart=false</code>; <code>online-mode=false</code></td>
-            </tr>
+            <tr><td>homepage</td><td class="mono">5000</td><td><a href="http://homeserver:5000">homeserver:5000</a></td><td class="wrap">Static nginx; config reference at <code>/reference.html</code></td></tr>
+            <tr><td>typing-tutor</td><td class="mono">3000</td><td><a href="http://homeserver:3000">homeserver:3000</a></td><td class="wrap">Node/Express</td></tr>
+            <tr><td>math-tutor</td><td class="mono">3001</td><td><a href="http://homeserver:3001">homeserver:3001</a></td><td class="wrap">Node/Express</td></tr>
+            <tr><td>lan-pastebin</td><td class="mono">5001</td><td><a href="http://homeserver:5001">homeserver:5001</a></td><td class="wrap">Flask/waitress</td></tr>
+            <tr><td>music-info-library</td><td class="mono">5010</td><td><a href="http://homeserver:5010">homeserver:5010</a></td><td class="wrap">Flask/waitress</td></tr>
+            <tr><td>Emby</td><td class="mono">8096 / 8920</td><td><a href="https://intrentaka.com">intrentaka.com</a></td><td class="wrap">Podman container</td></tr>
+            <tr><td>Nextcloud</td><td class="mono">443</td><td><a href="https://cloud.intrentaka.com">cloud.intrentaka.com</a></td><td class="wrap">Native NixOS service</td></tr>
+            <tr><td>Pi-hole</td><td class="mono">8083</td><td><a href="http://homeserver:8083/admin">homeserver:8083/admin</a></td><td class="wrap">Podman container; internal port pinned to 8080 via <code>FTLCONF_webserver_port</code> (Teleporter restores would otherwise flip it back to 80)</td></tr>
+            <tr><td>mc-control</td><td class="mono">5020</td><td>LAN only</td><td class="wrap">Flask/waitress; start/stop Minecraft via HTTP</td></tr>
+            <tr><td>Minecraft</td><td class="mono">25565</td><td>LAN only</td><td class="wrap">Manual start, not on boot</td></tr>
           </tbody>
         </table>
-      </div>
-    </section>
+        </div>
+        <pre><code>systemctl --failed                 <span class="cmt"># anything that didn't start</span>
+journalctl -u &lt;service&gt; -f        <span class="cmt"># live logs for a service</span></code></pre>
+      </section>
 
-    <!-- Secrets -->
-    <section id="secrets">
-      <h2>Secrets</h2>
-      <p>Never stored in this repo. Copy machine-to-machine via scp or USB — never paste values into chat or logs.</p>
-      <p>Verify all secrets are present: <code>bash /home/kryt/check-secrets.sh</code></p>
+      <section id="secrets">
+        <h2><span class="idx">06</span> Secrets</h2>
+        <p class="dim">Never stored in this repo. Copy machine-to-machine (scp/USB) — never paste values into chat or logs.</p>
 
-      <div class="secret-card">
-        <div class="path">/home/kryt/.smbcredentials <span class="perm">chmod 600 · kryt:kryt</span></div>
-        <p>Required for both CIFS mounts.</p>
-        <pre><code>username=&lt;user&gt;
+        <div class="secret-card">
+          <div class="path">/home/kryt/.smbcredentials <span class="perm">chmod 600, owned kryt:kryt</span></div>
+          <p class="dim" style="margin:6px 0 8px;">Required for the CIFS mount.</p>
+          <pre><code>username=&lt;user&gt;
 password=&lt;password&gt;
 domain=WORKGROUP</code></pre>
-      </div>
+        </div>
 
-      <div class="secret-card">
-        <div class="path">/var/lib/music-info/secrets.env <span class="perm">chmod 600 · music-info:music-info</span></div>
-        <pre><code>DISCOGS_TOKEN=&lt;discogs api token&gt;
-EMBY_API_KEY=&lt;emby api key&gt;
+        <div class="secret-card">
+          <div class="path">/var/lib/music-info/secrets.env <span class="perm">chmod 600, owned music-info:music-info</span></div>
+          <pre><code>DISCOGS_TOKEN=&lt;your Discogs token&gt;
+EMBY_API_KEY=&lt;your Emby API key&gt;
 EMBY_BASE_URL=http://localhost:8096
 EMBY_EXTERNAL_URL=https://intrentaka.com</code></pre>
-        <p><code>MUSIC_PATH</code> is set in the systemd unit in <code>modules/lan-apps.nix</code>, not here.</p>
-      </div>
+          <p class="dim" style="margin:8px 0 0;"><code>MUSIC_PATH</code> is set in the systemd unit in <code>modules/lan-apps.nix</code>, not here.</p>
+        </div>
 
-      <div class="secret-card">
-        <div class="path">/var/lib/pihole/secrets.env <span class="perm">chmod 600 · root:root</span></div>
-        <pre><code>WEBPASSWORD=&lt;pi-hole admin password&gt;</code></pre>
-      </div>
+        <div class="secret-card">
+          <div class="path">/var/lib/pihole/secrets.env <span class="perm">chmod 600, owned root:root</span></div>
+          <pre><code>WEBPASSWORD=&lt;your Pi-hole admin password&gt;</code></pre>
+        </div>
 
-      <div class="secret-card">
-        <div class="path">/var/lib/nextcloud-admin-pass <span class="perm">chmod 600 · root:root</span></div>
-        <p>Single line — the Nextcloud admin password.</p>
-      </div>
+        <div class="secret-card">
+          <div class="path">/var/lib/nextcloud-admin-pass <span class="perm">chmod 600, owned root:root</span></div>
+          <p class="dim" style="margin:6px 0 0;">Single line: the Nextcloud admin password.</p>
+        </div>
 
-      <div class="secret-card">
-        <div class="path">/var/lib/nextcloud/nc-secrets.php <span class="perm">chmod 400 · nextcloud:nextcloud</span></div>
-        <p>JSON format (despite the <code>.php</code> extension — nextcloud34 module requirement). The <code>instanceid</code>, <code>passwordsalt</code>, and <code>secret</code> values must match the backup exactly; changing them invalidates all user passwords.</p>
-        <pre><code>{
-  "instanceid":    "&lt;from backup config.php&gt;",
-  "passwordsalt":  "&lt;from backup config.php&gt;",
-  "secret":        "&lt;from backup config.php&gt;",
-  "mail_smtppassword": "&lt;gmail app password&gt;"
+        <div class="secret-card">
+          <div class="path">/var/lib/nextcloud/nc-secrets.php <span class="perm">chmod 400, owned nextcloud:nextcloud</span></div>
+          <p class="dim" style="margin:6px 0 8px;">JSON format (despite the <code>.php</code> extension — nextcloud34 module requirement). Must preserve the original <code>instanceid</code>, <code>passwordsalt</code>, and <code>secret</code> values from the backup; changing them invalidates all user passwords.</p>
+          <pre><code>{
+  "instanceid": "&lt;from backup config.php&gt;",
+  "passwordsalt": "&lt;from backup config.php&gt;",
+  "secret": "&lt;from backup config.php&gt;",
+  "mail_smtppassword": "&lt;Gmail app password&gt;"
 }</code></pre>
-      </div>
+        </div>
+      </section>
 
-      <div class="secret-card">
-        <div class="path">/var/lib/mc-control/curseforge.env <span class="perm">chmod 600 · mcctl:mcctl</span></div>
-        <p>Required for CurseForge plugin search in mc-control. Create at <a href="https://console.curseforge.com" target="_blank" rel="noopener">console.curseforge.com</a>.</p>
-        <pre><code>CURSEFORGE_API_KEY=&lt;your api key&gt;</code></pre>
-        <p>Write safely (avoids shell expansion of <code>$</code> in bcrypt keys):</p>
-        <pre><code>sudo tee /var/lib/mc-control/curseforge.env &lt;&lt;'EOF'
-CURSEFORGE_API_KEY=&lt;your api key&gt;
-EOF
-sudo chown mcctl:mcctl /var/lib/mc-control/curseforge.env
-sudo chmod 600 /var/lib/mc-control/curseforge.env</code></pre>
-      </div>
-    </section>
+      <section id="music">
+        <h2><span class="idx">07</span> Music library scanner</h2>
+        <p class="dim">Reads metadata from the directory structure (<code>Artist/Album/NN - Title.mp3</code>) and MP3/FLAC duration headers using 16 parallel CIFS workers. Scans ~27,000 tracks in ~13 minutes. Full wipe + rebuild of the <code>tracks</code> table on every run.</p>
+        <p class="dim">Rescan after adding music to the DAS:</p>
+        <pre><code>sudo systemctl start music-scanner
+journalctl -fu music-scanner       <span class="cmt"># live progress</span></code></pre>
+      </section>
 
-    <!-- SSL / external -->
-    <section id="ssl">
-      <h2>SSL / external access</h2>
-      <p>Let's Encrypt certificates managed by NixOS ACME (auto-renews). Ports 80 and 443 must be forwarded from the router to this machine.</p>
-      <ul>
-        <li><code>intrentaka.com</code> / <code>www.intrentaka.com</code> → Emby (<code>localhost:8096</code>)</li>
-        <li><code>cloud.intrentaka.com</code> → Nextcloud</li>
-      </ul>
-      <p>Certificate files are managed by the <code>acme-intrentaka.com</code> and <code>acme-cloud.intrentaka.com</code> systemd services. They live under <code>/var/lib/acme/</code> and are renewed automatically. No manual action needed unless the domain or nginx config changes.</p>
-      <div class="callout warn">
-        <span class="tag">DNS requirement</span>
-        Both domains must resolve publicly to this machine's WAN IP before ACME can issue or renew. If the WAN IP changes, update the router port-forwarding and the DNS A records.
-      </div>
+      <section id="ssl">
+        <h2><span class="idx">08</span> SSL / external access</h2>
+        <p class="dim">Let's Encrypt via NixOS ACME (auto-renews). Port 80 and 443 must be forwarded from the router to this machine.</p>
+        <ul style="color:var(--text-dim); padding-left: 20px;">
+          <li><code>intrentaka.com</code> / <code>www.intrentaka.com</code> &rarr; Emby (<code>localhost:8096</code>)</li>
+          <li><code>cloud.intrentaka.com</code> &rarr; Nextcloud</li>
+        </ul>
+      </section>
 
-      <h3>Router — TP-Link ER605</h3>
-      <p>Port forwarding is under <strong>Transmission → NAT → Virtual Servers</strong> (standalone UI) or <strong>Settings → Transmission → NAT → Virtual Servers</strong> (Omada controller). Required rules:</p>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Interface</th><th>External port</th><th>Internal IP</th><th>Internal port</th><th>Protocol</th></tr></thead>
-          <tbody>
-            <tr><td>WAN</td><td class="mono">80</td><td class="mono">192.168.0.120</td><td class="mono">80</td><td>TCP</td></tr>
-            <tr><td>WAN</td><td class="mono">443</td><td class="mono">192.168.0.120</td><td class="mono">443</td><td>TCP</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="callout warn">
-        <span class="tag">ER605 gotcha</span>
-        The ER605 does not support hairpin NAT (NAT loopback). LAN clients cannot reach <code>intrentaka.com</code> or <code>cloud.intrentaka.com</code> via the external IP — they need the Pi-hole local DNS overrides below. Port forwarding rules can also be lost after a firmware update or factory reset.
-      </div>
+      <section id="minecraft">
+        <h2><span class="idx">09</span> Minecraft</h2>
+        <pre><code>sudo systemctl start minecraft-server-survival
+sudo systemctl stop minecraft-server-survival</code></pre>
+        <p class="dim"><code>autoStart = false</code> — does not start at boot. Also controllable from the homepage Minecraft card via the <code>mc-control</code> API (port 5020).</p>
+        <p class="dim"><code>online-mode = false</code> for LAN clients without Mojang accounts. Do not expose port 25565 externally without re-enabling online mode first.</p>
+        <div class="callout danger">
+          <span class="tag">NixOS gotcha</span>
+          <code>mc-control</code> uses <code>/run/wrappers/bin/sudo</code> (the setuid wrapper NixOS creates at boot), not <code>/run/current-system/sw/bin/sudo</code>, which lacks the setuid bit. If <code>mc-control</code> ever returns <code>{"status":"unknown"}</code> after a reinstall, verify <code>/run/wrappers/bin/sudo</code> exists and is setuid root.
+        </div>
+      </section>
 
-      <h3>LAN access — Pi-hole split-horizon DNS</h3>
-      <p>Pi-hole serves as the LAN DNS resolver (port 53). Local overrides at <code>/var/lib/pihole/etc-pihole/custom.list</code> make LAN clients resolve the external domains directly to the server's LAN IP, bypassing the router entirely:</p>
-      <pre><code>192.168.0.120 intrentaka.com
-192.168.0.120 www.intrentaka.com
-192.168.0.120 cloud.intrentaka.com</code></pre>
-      <p>This file lives in the Pi-hole container volume — it is <strong>not</strong> tracked in the NixOS config and must be recreated if <code>/var/lib/pihole/</code> is wiped. After editing:</p>
-      <pre><code>sudo systemctl restart podman-pihole.service</code></pre>
-    </section>
+      <section id="fresh-install">
+        <h2><span class="idx">10</span> Fresh install</h2>
+        <ol class="steps">
+          <li>Partition 256GB SSD: 512MB EFI (vfat) + btrfs root + btrfs <code>/home</code></li>
+          <li>Mount at <code>/mnt</code>, <code>/mnt/boot</code>, <code>/mnt/home</code></li>
+          <li><code>nixos-generate-config --root /mnt</code> — overwrites <code>hosts/homeserver/hardware-configuration.nix</code></li>
+          <li>Clone this repo to <code>/mnt/etc/nixos/</code></li>
+          <li>Create all secrets files listed above</li>
+          <li><code>nixos-install --flake /mnt/etc/nixos#homeserver</code></li>
+          <li>Reboot &rarr; <code>passwd kryt</code> &rarr; place <code>.smbcredentials</code></li>
+          <li>Verify CIFS mount: <code>systemctl status 'mnt-server\x2dpc.mount'</code></li>
+          <li>Run music scanner: <code>sudo systemctl start music-scanner</code></li>
+          <li>Restore Nextcloud and Pi-hole from DAS backups at <code>/mnt/server-pc/Backups/</code></li>
+        </ol>
+      </section>
 
-    <!-- Fresh install -->
-    <section id="fresh-install">
-      <h2>Fresh install</h2>
+      <section id="docs">
+        <h2><span class="idx">11</span> Documentation</h2>
+        <p class="dim">Build guides and project reference pages.</p>
+        <a href="documentation.html" class="doc-link">
+          <span class="doc-link-title">Documentation index →</span>
+          <span class="doc-link-desc">BC-250 NixOS build guide and more</span>
+        </a>
+      </section>
 
-      <div class="callout">
-        <span class="tag">Reinstall vs new hardware</span>
-        On a reinstall of the same machine, <strong>skip <code>nixos-generate-config</code></strong>. The partition UUIDs in <code>hardware-configuration.nix</code> are already in git. The partition script below recreates them exactly, so the existing config works without changes. Only regenerate if you swap hardware.
-      </div>
+    </main>
+  </div>
 
-      <h3>Step 1 — partition, format, mount</h3>
-      <p>A ready-to-run script lives in the repo at <code>scripts/partition-homeserver.sh</code>. Boot the NixOS installer, then:</p>
-      <pre><code><span class="cmt"># Default: preserves existing partition UUIDs (no need to regenerate hardware config)</span>
-bash /path/to/scripts/partition-homeserver.sh /dev/nvme0n1
+  <footer>
+    <span>homeserver &middot; NixOS 25.11 config reference</span>
+    <span id="genDate"></span>
+  </footer>
 
-<span class="cmt"># New or different hardware: assign fresh UUIDs, then run nixos-generate-config</span>
-PRESERVE_UUIDS=no bash /path/to/scripts/partition-homeserver.sh /dev/nvme0n1</code></pre>
-
-      <p>The script creates three partitions, formats them, mounts everything at <code>/mnt</code>, and creates the 4 GB swapfile. Sizes: ESP 512 MiB · root 60 GiB · home remainder (~190 GiB).</p>
-
-      <h3>Step 2 — install</h3>
-      <ol class="steps">
-        <li>Clone the config repo: <code>git clone &lt;url&gt; /mnt/etc/nixos</code></li>
-        <li>Create all secrets files listed in the <a href="#secrets">Secrets</a> section above.</li>
-        <li>Run the installer: <code>nixos-install --flake /mnt/etc/nixos#homeserver</code></li>
-        <li>Reboot, then set the user password: <code>passwd kryt</code></li>
-        <li>Verify the CIFS mount: <code>systemctl status 'mnt-server\x2dpc.mount'</code></li>
-      </ol>
-
-      <h3>Step 3 — restore data</h3>
-      <ol class="steps">
-        <li>Restore Nextcloud from the DAS backup at <code>/mnt/server-pc/Backups/Nextcloud/</code>. Ensure <code>nc-secrets.php</code> has the original <code>instanceid</code>, <code>passwordsalt</code>, and <code>secret</code> values from the backup.</li>
-        <li>Restore Pi-hole settings via Teleporter (Settings → Teleporter → Restore). The admin password is in <code>/var/lib/pihole/secrets.env</code>. Then recreate the split-horizon DNS overrides — see the <a href="#ssl">SSL / external access</a> section.</li>
-        <li>Restore the Minecraft world from <code>/mnt/server-pc/Backups/minecraft/</code> to <code>/var/lib/minecraft/survival/</code>.</li>
-        <li>Trigger the music scanner: <code>sudo systemctl start music-scanner</code></li>
-      </ol>
-
-      <div class="callout warn">
-        <span class="tag">Pi-hole Teleporter</span>
-        After restoring via Teleporter, verify the admin port is still 8083 — Teleporter may reset <code>FTLCONF_webserver_port</code> back to 80. If the admin UI disappears, restart the container: <code>sudo systemctl restart podman-pihole.service</code>.
-      </div>
-    </section>
-
-    <footer>
-      <span>homeserver &middot; NixOS 25.11 &middot; NixOS config reference</span>
-      <a href="/reference-services.html">Services detail →</a>
-    </footer>
-
-  </main>
 </div>
 
 <script>
-(function () {
-  var root    = document.documentElement;
-  var sideBtn = document.getElementById('themeToggle');
-  var topBtn  = document.getElementById('themeToggleTop');
-  var stored  = null;
-  try { stored = localStorage.getItem('hs-theme'); } catch (e) {}
-  if (stored === 'dark' || stored === 'light') root.setAttribute('data-theme', stored);
-
-  function updateLabels() {
-    var mode = root.getAttribute('data-theme') || 'auto';
-    sideBtn.textContent = 'theme: ' + mode;
-    topBtn.textContent  = 'theme: ' + mode;
-  }
-  updateLabels();
-
-  function toggle() {
-    var c = root.getAttribute('data-theme');
-    var n = c === 'dark' ? 'light' : c === 'light' ? null : 'dark';
-    if (n) { root.setAttribute('data-theme', n); try { localStorage.setItem('hs-theme', n); } catch (e) {} }
-    else   { root.removeAttribute('data-theme'); try { localStorage.removeItem('hs-theme'); } catch (e) {} }
-    updateLabels();
-  }
-  sideBtn.addEventListener('click', toggle);
-  topBtn.addEventListener('click', toggle);
-
-  // Active nav tracking
-  var navLinks = document.querySelectorAll('.nav-link');
-  var observer = new IntersectionObserver(function (entries) {
-    entries.forEach(function (entry) {
-      if (entry.isIntersecting) {
-        var id = entry.target.id;
-        navLinks.forEach(function (link) {
-          link.classList.toggle('active', link.getAttribute('href') === '#' + id);
-        });
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById('themeToggle');
+    var stored = null;
+    try { stored = localStorage.getItem('hs-theme'); } catch (e) {}
+    if (stored === 'dark' || stored === 'light') {
+      root.setAttribute('data-theme', stored);
+    }
+    function label() {
+      var mode = root.getAttribute('data-theme');
+      btn.textContent = 'theme: ' + (mode ? mode : 'auto');
+    }
+    label();
+    btn.addEventListener('click', function () {
+      var current = root.getAttribute('data-theme');
+      var next = current === 'dark' ? 'light' : (current === 'light' ? null : 'dark');
+      if (next) {
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem('hs-theme', next); } catch (e) {}
+      } else {
+        root.removeAttribute('data-theme');
+        try { localStorage.removeItem('hs-theme'); } catch (e) {}
       }
+      label();
     });
-  }, { rootMargin: '-15% 0px -70% 0px' });
-  document.querySelectorAll('.content section[id]').forEach(function (s) { observer.observe(s); });
-})();
+
+    var d = new Date();
+    document.getElementById('genDate').textContent =
+      'reference generated ' + d.toISOString().slice(0, 10);
+  })();
 </script>
+
 </body>
 </html>

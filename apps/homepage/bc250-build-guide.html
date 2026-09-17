@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BC-250 NixOS Build Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="shell">
+
+  <header class="top">
+    <div class="host-id">
+      <a href="documentation.html" style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--accent);text-decoration:none;display:inline-block;margin-bottom:8px;">← documentation</a>
+      <span class="eyebrow">AMD BC-250 // NixOS build guide</span>
+      <h1>BC-250</h1>
+      <p>Gaming &middot; Emulation &middot; LLM &mdash; Declarative NixOS configuration</p>
+    </div>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle color theme">theme: auto</button>
+  </header>
+
+  <div class="stat-row">
+    <div class="stat"><span class="label">GPU</span><span class="value">RDNA2 gfx1013, 24 CU</span></div>
+    <div class="stat"><span class="label">Memory</span><span class="value">16 GB GDDR6 shared</span></div>
+    <div class="stat"><span class="label">CPU</span><span class="value">Zen 2, 6 cores</span></div>
+    <div class="stat"><span class="label">Storage</span><span class="value">500 GB NVMe</span></div>
+  </div>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Sections">
+      <a href="#hardware">Hardware</a>
+      <a href="#repo">Repository layout</a>
+      <a href="#disk">Disk layout</a>
+      <a href="#install">Installation</a>
+      <a href="#hashes">Package hashes</a>
+      <a href="#gaming">Gaming module</a>
+      <a href="#emulators">Emulators module</a>
+      <a href="#llm">LLM module</a>
+    </nav>
+
+    <main>
+
+      <!-- ══════════════════════════════════════════════ HARDWARE -->
+      <section id="hardware">
+        <h2><span class="idx">01</span> Hardware</h2>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Component</th><th>Spec</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>GPU</td><td>RDNA2 gfx1013, 24 CUs active</td><td class="wrap">40 CUs unlockable via software</td></tr>
+            <tr><td>Memory</td><td>16 GB GDDR6, 256-bit, ~448 GB/s</td><td class="wrap">Shared CPU/GPU pool</td></tr>
+            <tr><td>BIOS split</td><td>10 GB GPU / 6 GB CPU</td><td class="wrap">Use this split for LLM workloads</td></tr>
+            <tr><td>CPU</td><td>Zen 2, 6 active cores</td><td class="wrap">8 cores unlockable via software</td></tr>
+            <tr><td>Storage</td><td>500 GB NVMe</td><td><code>/dev/nvme0n1</code></td></tr>
+            <tr><td>TDP</td><td>220 W max (235 W peak)</td><td class="wrap">Cooling determines clock ceiling</td></tr>
+            <tr><td>Display</td><td>DisplayPort 1.4</td><td class="wrap">Up to 8K@60Hz</td></tr>
+            <tr><td>Network</td><td>Gigabit Ethernet</td><td class="wrap">Realtek RTL8111H</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════ REPO -->
+      <section id="repo">
+        <h2><span class="idx">02</span> Repository layout</h2>
+        <p class="dim">Config repo: <code>git@github.com:krytsnooker/bc250-nixos-config.git</code></p>
+        <div class="code-wrap">
+          <pre><code>/etc/nixos/
+  flake.nix
+  .gitignore
+  hosts/bc250/
+    hardware-configuration.nix   <span class="cmt">← generated during install, committed once</span>
+    configuration.nix            <span class="cmt">← hostname, user, timezone, boot, ACPI override</span>
+  modules/
+    gaming.nix                   <span class="cmt">← always loaded</span>
+    emulators.nix                <span class="cmt">← toggle in/out of flake.nix</span>
+    llm.nix                      <span class="cmt">← toggle in/out of flake.nix</span>
+  pkgs/
+    cyan-skillfish-governor.nix  <span class="cmt">← GPU governor kernel module + service</span>
+    bc250-acpi-fix.nix           <span class="cmt">← ACPI .aml tables → cpio for initrd</span>
+    bc250-cpu-oc.nix             <span class="cmt">← CPU OC tool + systemd service</span>
+    citron-neo.nix               <span class="cmt">← Switch emulator, fetched from GitHub CI</span>
+  disko/
+    bc250.nix                    <span class="cmt">← declarative partition layout</span>
+  bios/                          <span class="cmt">← gitignored — populate manually</span>
+    retroarch/
+    pcsx2/
+    dolphin/
+    citron/</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+
+        <p style="margin-top:16px;font-size:0.88rem;font-weight:600;">Module toggles in <code>flake.nix</code>:</p>
+        <div class="toggle-row"><span class="toggle-pill on">Always on</span> <code>gaming.nix</code></div>
+        <div class="toggle-row"><span class="toggle-pill off">Optional</span> <code>emulators.nix</code> — comment in/out</div>
+        <div class="toggle-row"><span class="toggle-pill off">Optional</span> <code>llm.nix</code> — comment in/out</div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════ DISK -->
+      <section id="disk">
+        <h2><span class="idx">03</span> Disk layout</h2>
+        <p class="dim"><code>/dev/nvme0n1</code> — 500 GB NVMe. Partitioning is fully automated by disko (Step 4 of installation).</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Partition</th><th>Size</th><th>Format</th><th>Mount</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>nvme0n1p1</code></td><td>512 MB</td><td>FAT32</td><td><code>/boot</code></td><td class="wrap">EFI System Partition</td></tr>
+            <tr><td><code>nvme0n1p2</code></td><td>8 GB</td><td>swap</td><td>—</td><td class="wrap">Safety net — OS only sees 6 GB RAM with 10 GB GPU split</td></tr>
+            <tr><td><code>nvme0n1p3</code></td><td>~491 GB</td><td>ext4</td><td><code>/</code></td><td class="wrap">Root. NixOS generations handle rollback at bootloader.</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════ INSTALLATION -->
+      <section id="install">
+        <h2><span class="idx">04</span> Installation</h2>
+        <div class="callout info">
+          <span class="tag">Prerequisites</span>
+          Boot the BC-250 from a NixOS minimal installer USB before running any of these commands.
+        </div>
+
+        <h3><span class="step-id">1a</span> Verify the NVMe is visible</h3>
+        <p class="dim">Confirm <code>/dev/nvme0n1</code> appears and shows ~500 GB. If the device name differs, update <code>disko/bc250.nix</code> before proceeding.</p>
+        <div class="code-wrap">
+          <pre><code>lsblk</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+
+        <h3><span class="step-id">1b</span> Connect to the internet</h3>
+        <p class="dim">The Realtek RTL8111H NIC should be detected automatically. Check the interface name first:</p>
+        <div class="code-wrap">
+          <pre><code>ip link</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <p class="dim" style="margin-top:10px;">If the interface is not already up, bring it up manually (replace <code>enp1s0</code> with the name shown by <code>ip link</code>):</p>
+        <div class="code-wrap">
+          <pre><code>sudo ip link set enp1s0 up
+sudo dhclient enp1s0
+ping -c 3 1.1.1.1</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+
+        <h3><span class="step-id">1c</span> Get the config onto the machine</h3>
+        <p class="dim">Install git into the live environment:</p>
+        <div class="code-wrap">
+          <pre><code>nix-shell -p git</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <p class="dim" style="margin-top:12px;">The repo is private — copy your SSH key from the homeserver. Run this on the <strong>homeserver</strong>:</p>
+        <div class="code-wrap">
+          <pre><code>scp ~/.ssh/id_ed25519 ~/.ssh/id_ed25519.pub nixos@&lt;bc250-ip&gt;:/home/nixos/.ssh/</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <p class="dim" style="margin-top:10px;">Then on the <strong>BC-250 installer</strong>, set permissions and verify the key works:</p>
+        <div class="code-wrap">
+          <pre><code>chmod 600 ~/.ssh/id_ed25519
+chmod 644 ~/.ssh/id_ed25519.pub
+ssh -T git@github.com
+<span class="cmt"># Expected: Hi krytsnooker! You've successfully authenticated...</span></code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <p class="dim" style="margin-top:12px;">Clone the config repo:</p>
+        <div class="code-wrap">
+          <pre><code>sudo mkdir -p /mnt/etc/nixos
+git clone git@github.com:krytsnooker/bc250-nixos-config.git /tmp/nixos-config
+sudo cp -r /tmp/nixos-config/. /mnt/etc/nixos/</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <div class="callout warn">
+          <span class="tag">Expected state</span>
+          The disk is not yet partitioned at this point — <code>/mnt</code> is a tmpfs in the live environment. Disko in the next step creates and mounts the real partitions at <code>/mnt</code>.
+        </div>
+
+        <h3><span class="step-id">1d</span> Run disko — automatic partitioning, formatting, and mounting</h3>
+        <p class="dim">This single command replaces all manual <code>fdisk</code>, <code>mkfs</code>, and <code>mount</code> steps. It reads <code>disko/bc250.nix</code> and sets up the disk exactly as declared:</p>
+        <div class="code-wrap">
+          <pre><code>sudo nix run github:nix-community/disko -- \
+  --mode disko \
+  /mnt/etc/nixos/disko/bc250.nix</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <div class="callout danger">
+          <span class="tag">Destructive</span>
+          This erases all data on <code>/dev/nvme0n1</code>. The disk is left mounted at <code>/mnt</code> ready for install.
+        </div>
+
+        <h3><span class="step-id">1e</span> Verify mounts</h3>
+        <div class="code-wrap">
+          <pre><code>lsblk
+mount | grep /mnt
+
+<span class="cmt"># Expected from lsblk:</span>
+<span class="cmt">  nvme0n1p1   512M   /mnt/boot</span>
+<span class="cmt">  nvme0n1p2     8G   [SWAP]</span>
+<span class="cmt">  nvme0n1p3  ~491G   /mnt</span></code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+
+        <h3><span class="step-id">1f</span> Generate hardware configuration</h3>
+        <p class="dim">Output goes directly into the config repo. Review the generated file — check that the NVMe UUID and filesystem types look correct:</p>
+        <div class="code-wrap">
+          <pre><code>sudo nixos-generate-config --root /mnt --dir /mnt/etc/nixos/hosts/bc250
+cat /mnt/etc/nixos/hosts/bc250/hardware-configuration.nix</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <p class="dim" style="margin-top:10px;">Commit this file — it is machine-specific and should never need to be regenerated unless hardware changes:</p>
+        <div class="code-wrap">
+          <pre><code>cd /mnt/etc/nixos
+sudo git add hosts/bc250/hardware-configuration.nix
+sudo git commit -m "bc250: add hardware configuration"</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+
+        <h3><span class="step-id">1g</span> Install NixOS</h3>
+        <p class="dim">This step downloads and builds the entire system closure. Set a root password when prompted:</p>
+        <div class="code-wrap">
+          <pre><code>sudo nixos-install --flake /mnt/etc/nixos#bc250</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+
+        <h3><span class="step-id">1h</span> Reboot</h3>
+        <p class="dim">Remove the USB drive when the machine powers down:</p>
+        <div class="code-wrap">
+          <pre><code>sudo reboot</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════ HASHES -->
+      <section id="hashes">
+        <h2><span class="idx">05</span> Package hashes</h2>
+        <div class="callout info">
+          <span class="tag">Context</span>
+          All config files are already in the repo. The 4 custom packages have <code>lib.fakeHash</code> placeholders that must be replaced with real hashes before they build. This is a standard NixOS workflow — each package errors once with the correct hash.
+        </div>
+
+        <h3>What needs fixing</h3>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>File</th><th>Hashes needed</th></tr></thead>
+          <tbody>
+            <tr><td><code>pkgs/cyan-skillfish-governor.nix</code></td><td class="wrap"><code>hash</code> (source) + <code>cargoHash</code> (Rust deps)</td></tr>
+            <tr><td><code>pkgs/bc250-acpi-fix.nix</code></td><td><code>hash</code> (source)</td></tr>
+            <tr><td><code>pkgs/bc250-cpu-oc.nix</code></td><td><code>hash</code> (source)</td></tr>
+            <tr><td><code>pkgs/citron-neo.nix</code></td><td><code>hash</code> (AppImage download)</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>The process — repeat until clean</h3>
+        <p class="dim">Run the rebuild. It will fail on the first package with a hash mismatch error:</p>
+        <div class="code-wrap">
+          <pre><code>sudo nixos-rebuild switch --flake /etc/nixos#bc250</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <p class="dim" style="margin-top:10px;">The error will show the correct hash:</p>
+        <div class="code-wrap">
+          <pre><code><span class="cmt">error: hash mismatch in fixed-output derivation:
+       specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          got:    sha256-ABC123realHashHere...=</span></code></pre>
+        </div>
+        <p class="dim">Copy the <strong>got:</strong> hash and replace <code>lib.fakeHash</code> in the relevant file, then commit and rebuild:</p>
+        <div class="code-wrap">
+          <pre><code>nano /etc/nixos/pkgs/&lt;relevant-file&gt;.nix   <span class="cmt"># replace lib.fakeHash</span>
+cd /etc/nixos
+sudo git add pkgs/
+sudo git commit -m "bc250: fix package hashes"
+sudo nixos-rebuild switch --flake /etc/nixos#bc250</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <div class="callout info">
+          <span class="tag">Iterations</span>
+          Typically 5–6 rounds — <code>cyan-skillfish-governor</code> needs 2 hashes (source + Rust deps), the others need 1 each. Repeat until <code>nixos-rebuild switch</code> completes without error.
+        </div>
+        <p class="dim" style="margin-top:4px;">Push the fixed hashes back to GitHub:</p>
+        <div class="code-wrap">
+          <pre><code>cd /etc/nixos
+git push</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+
+        <h3>Verify hardware unlock</h3>
+        <p class="dim">After a successful rebuild, verify all three hardware unlock services are active.</p>
+
+        <p style="margin-top:14px;font-size:0.88rem;font-weight:600;color:var(--text);">GPU Governor</p>
+        <div class="callout danger">
+          <span class="tag">Caution</span>
+          Never set minimum GPU voltage below 700 mV — this locks the GPU to 1500 MHz permanently until reboot.
+        </div>
+        <div class="code-wrap">
+          <pre><code>systemctl status cyan-skillfish-governor
+cat /sys/class/drm/card0/device/pp_dpm_sclk</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+
+        <p style="margin-top:14px;font-size:0.88rem;font-weight:600;color:var(--text);">ACPI Fix</p>
+        <p class="dim">Enables CPU P-states (800 MHz → 3200 MHz) and C-states (idle power savings). Requires a reboot to take effect:</p>
+        <div class="code-wrap">
+          <pre><code>sudo reboot</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <p class="dim" style="margin-top:10px;">After reboot, verify P-states and C-states are available:</p>
+        <div class="code-wrap">
+          <pre><code>ls /sys/devices/system/cpu/cpu0/cpuidle/
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+
+        <p style="margin-top:14px;font-size:0.88rem;font-weight:600;color:var(--text);">CPU Overclock — 3900 MHz @ 1275 mV (+9% over stock)</p>
+        <div class="code-wrap">
+          <pre><code>systemctl status bc250-cpu-oc
+cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════ GAMING -->
+      <section id="gaming">
+        <h2><span class="idx">06</span> Gaming module</h2>
+        <p class="dim"><code>modules/gaming.nix</code> is always loaded — KDE Plasma 6, Steam, Proton-GE, GameMode, MangoHud, Pipewire, Mesa/RADV, and all selected applications are included in the base build.</p>
+
+        <h3>Verify gaming stack</h3>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Check</th><th>Command</th></tr></thead>
+          <tbody>
+            <tr><td>GPU driver (RADV)</td><td><code>vulkaninfo | grep deviceName</code></td></tr>
+            <tr><td>GPU governor</td><td><code>cat /sys/class/drm/card0/device/pp_dpm_sclk</code></td></tr>
+            <tr><td>CPU OC active</td><td><code>cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq</code></td></tr>
+            <tr><td>Steam</td><td class="wrap">Launch from KDE menu — let it update</td></tr>
+            <tr><td>Audio</td><td class="wrap">System Settings → Audio</td></tr>
+            <tr><td>Failed units</td><td><code>systemctl --failed</code></td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="code-wrap">
+          <pre><code>systemctl --failed
+vulkaninfo | grep deviceName</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+
+        <h3>Tag working state</h3>
+        <p class="dim">Once gaming is confirmed working, tag the git state as a known-good baseline:</p>
+        <div class="code-wrap">
+          <pre><code>cd /etc/nixos
+git tag working-$(date +%Y-%m-%d)
+git push --tags</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <p class="dim" style="margin-top:10px;">To roll back to a tag:</p>
+        <div class="code-wrap">
+          <pre><code>git checkout working-YYYY-MM-DD
+sudo nixos-rebuild switch --flake /etc/nixos#bc250</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <p class="dim" style="margin-top:10px;">To roll back at the bootloader level without git (selects previous NixOS generation):</p>
+        <div class="code-wrap">
+          <pre><code>sudo nixos-rebuild switch --rollback</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════ EMULATORS -->
+      <section id="emulators">
+        <h2><span class="idx">07</span> Emulators module <span style="font-size:0.75rem;font-weight:400;color:var(--text-faint);margin-left:4px;">optional</span></h2>
+        <p class="dim">Includes RetroArch (all cores), PCSX2 (PS2), Dolphin (GameCube/Wii), Citron-neo (Switch). All files are already in the repo — just toggle the line in <code>flake.nix</code> and rebuild.</p>
+
+        <h3>Enable / disable</h3>
+        <p class="dim">Remove the <code>#</code> from <code># ./modules/emulators.nix</code> in <code>flake.nix</code> to enable; add it back to disable. Then rebuild:</p>
+        <div class="code-wrap">
+          <pre><code>sudo nixos-rebuild switch --flake /etc/nixos#bc250</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+
+        <h3>BIOS and keys — staging directory</h3>
+        <p class="dim">BIOS and key files are staged on the homeserver at <code>//192.168.0.110/hsas01</code> → <code>amdbc250/bios/</code>. Drop your files into the correct folder:</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Folder on hsas01</th><th>Files</th><th>Copies to on BC-250</th></tr></thead>
+          <tbody>
+            <tr><td><code>amdbc250/bios/retroarch/</code></td><td class="wrap">Any BIOS files (e.g. <code>scph5501.bin</code>)</td><td><code>~/.config/retroarch/system/</code></td></tr>
+            <tr><td><code>amdbc250/bios/pcsx2/</code></td><td class="wrap">PS2 BIOS (e.g. <code>SCPH-70012.bin</code>)</td><td><code>~/.config/PCSX2/bios/</code></td></tr>
+            <tr><td><code>amdbc250/bios/dolphin/GC/USA/</code></td><td><code>IPL.bin</code></td><td><code>~/.local/share/dolphin-emu/GC/USA/</code></td></tr>
+            <tr><td><code>amdbc250/bios/dolphin/GC/JAP/</code></td><td><code>IPL.bin</code></td><td><code>~/.local/share/dolphin-emu/GC/JAP/</code></td></tr>
+            <tr><td><code>amdbc250/bios/dolphin/GC/EUR/</code></td><td><code>IPL.bin</code></td><td><code>~/.local/share/dolphin-emu/GC/EUR/</code></td></tr>
+            <tr><td><code>amdbc250/bios/dolphin/GBA/</code></td><td><code>gba_bios.bin</code></td><td><code>~/.local/share/dolphin-emu/GBA/</code></td></tr>
+            <tr><td><code>amdbc250/bios/citron/keys/</code></td><td><code>prod.keys</code>, <code>title.keys</code></td><td><code>~/.local/share/citron/keys/</code></td></tr>
+            <tr><td><code>amdbc250/bios/citron/firmware/</code></td><td class="wrap">Switch firmware NCA files</td><td class="wrap"><code>~/.local/share/citron/nand/system/Contents/registered/</code></td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>Transfer to BC-250</h3>
+        <p class="dim">Once the BC-250 is up and SSH is running, copy the staging directory from the homeserver. Run this on the <strong>homeserver</strong>:</p>
+        <div class="code-wrap">
+          <pre><code>scp -r /mnt/server-pc/amdbc250/bios/ kryt@&lt;bc250-ip&gt;:/etc/nixos/bios/</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <p class="dim" style="margin-top:10px;">Then trigger a rebuild on the BC-250. The activation script copies everything to the correct emulator locations:</p>
+        <div class="code-wrap">
+          <pre><code>sudo nixos-rebuild switch --flake /etc/nixos#bc250</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <div class="callout info">
+          <span class="tag">Safe to re-run</span>
+          Files are copied with <code>cp -rn</code> (no-clobber) — existing files are never overwritten. Emulator saves are safe. Re-running after adding more files only copies the new ones.
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════════ LLM -->
+      <section id="llm">
+        <h2><span class="idx">08</span> LLM module <span style="font-size:0.75rem;font-weight:400;color:var(--text-faint);margin-left:4px;">optional</span></h2>
+        <p class="dim">Includes Ollama with ROCm backend configured for gfx1013, stopped by default. All files are already in the repo — just toggle the line in <code>flake.nix</code> and rebuild.</p>
+
+        <div class="callout warn">
+          <span class="tag">Before enabling</span>
+          Set BIOS memory split to <strong>10 GB GPU / 6 GB CPU</strong> for maximum usable VRAM (~9–9.5 GB after driver overhead).
+        </div>
+
+        <h3>Enable / disable</h3>
+        <p class="dim">Remove the <code>#</code> from <code># ./modules/llm.nix</code> in <code>flake.nix</code> to enable; add it back to disable. Then rebuild:</p>
+        <div class="code-wrap">
+          <pre><code>sudo nixos-rebuild switch --flake /etc/nixos#bc250</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+
+        <h3>Starting / stopping Ollama</h3>
+        <div class="code-wrap">
+          <pre><code>sudo systemctl start ollama
+sudo systemctl stop ollama
+systemctl status ollama</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+
+        <h3>Recommended models</h3>
+        <div class="table-wrap">
+        <table class="model-table">
+          <thead><tr><th>Model</th><th>Quant</th><th>VRAM</th><th>Est. TPS</th><th>Use case</th></tr></thead>
+          <tbody>
+            <tr><td>Qwen2.5-Coder 7B Instruct</td><td>Q8_0</td><td>~7.7 GB</td><td class="perf">50–70 t/s</td><td class="wrap">Daily driver — fast, top-tier at this size</td></tr>
+            <tr><td>Qwen2.5-Coder 14B Instruct</td><td>Q4_K_M</td><td>~9.0 GB</td><td class="perf">35–48 t/s</td><td class="wrap">Larger context, stronger multi-file reasoning</td></tr>
+            <tr><td>DeepSeek-R1-Distill-Qwen 14B</td><td>Q4_K_M</td><td>~9.0 GB</td><td class="perf">35–48 t/s</td><td class="wrap">Complex / algorithmic — chain-of-thought reasoning</td></tr>
+            <tr><td>Qwen2.5-Coder 14B Instruct</td><td>Q6_K</td><td>~12.0 GB</td><td class="perf">20–30 t/s</td><td class="wrap">Higher quality quant — requires CPU layer offload</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="code-wrap" style="margin-top:14px;">
+          <pre><code><span class="cmt"># Pull daily driver</span>
+ollama pull qwen2.5-coder:7b-instruct-q8_0
+
+<span class="cmt"># Pull secondary (larger context / complex problems)</span>
+ollama pull qwen2.5-coder:14b-instruct-q4_K_M
+
+<span class="cmt"># Pull reasoning model</span>
+ollama pull deepseek-r1:14b-qwen-distill-q4_K_M</code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
+        <div class="callout info">
+          <span class="tag">ROCm note</span>
+          gfx1013 is not a standard desktop ROCm target. If Ollama fails to use the GPU, test <code>HSA_OVERRIDE_GFX_VERSION=11.0.0</code> first (RDNA2), then fall back to <code>10.3.0</code> (RDNA1).
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <footer>
+    <span>AMD BC-250 &middot; NixOS build guide</span>
+    <span id="genDate"></span>
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById('themeToggle');
+    var stored = null;
+    try { stored = localStorage.getItem('hs-theme'); } catch (e) {}
+    if (stored === 'dark' || stored === 'light') {
+      root.setAttribute('data-theme', stored);
+    }
+    function label() {
+      var mode = root.getAttribute('data-theme');
+      btn.textContent = 'theme: ' + (mode ? mode : 'auto');
+    }
+    label();
+    btn.addEventListener('click', function () {
+      var current = root.getAttribute('data-theme');
+      var next = current === 'dark' ? 'light' : (current === 'light' ? null : 'dark');
+      if (next) {
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem('hs-theme', next); } catch (e) {}
+      } else {
+        root.removeAttribute('data-theme');
+        try { localStorage.removeItem('hs-theme'); } catch (e) {}
+      }
+      label();
+    });
+
+    var d = new Date();
+    document.getElementById('genDate').textContent =
+      'last updated ' + d.toISOString().slice(0, 10);
+  })();
+
+  function copyCode(btn) {
+    var pre = btn.previousElementSibling;
+    var text = pre.innerText;
+    navigator.clipboard.writeText(text).then(function () {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(function () {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 1800);
+    });
+  }
+</script>
+
+</body>
+</html>
