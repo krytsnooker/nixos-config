@@ -20,11 +20,11 @@ MC_STATE_DIR = os.environ.get("MC_STATE_DIR", "/var/lib/mc-control")
 MC_PORT      = int(os.environ.get("MC_PORT",  "25565"))
 PROPS_FILE   = os.path.join(MC_DATA_DIR,  "server.properties")
 SETTINGS_FILE = os.path.join(MC_STATE_DIR, "settings.json")
-PLUGINS_DIR      = os.path.join(MC_DATA_DIR,  "plugins")
+MODS_DIR         = os.path.join(MC_DATA_DIR,  "mods")
 CF_KEY_FILE      = os.path.join(MC_STATE_DIR, "curseforge.env")
 MAX_PLUGIN_SIZE  = 50 * 1024 * 1024  # 50 MB
 CF_GAME_ID       = 432   # Minecraft
-CF_MC_VERSION    = "1.19.4"
+CF_MC_VERSION    = "1.20.1"
 CF_MC_FAMILY     = ".".join(CF_MC_VERSION.split(".")[:2])   # "1.19"
 
 DEFAULT_ALLOWED_HOSTS = [
@@ -418,7 +418,7 @@ def config_restart():
 @app.route("/plugins")
 def list_plugins():
     try:
-        files = sorted(f for f in os.listdir(PLUGINS_DIR) if f.lower().endswith(".jar"))
+        files = sorted(f for f in os.listdir(MODS_DIR) if f.lower().endswith(".jar"))
     except FileNotFoundError:
         files = []
     return jsonify({"plugins": files})
@@ -432,8 +432,8 @@ def search_plugins():
     params = urllib.parse.urlencode({
         "query": q,
         "facets": json.dumps([
-            ["categories:paper", "categories:spigot", "categories:bukkit"],
-            ["versions:1.19.4"],
+            ["categories:neoforge", "categories:forge"],
+            ["versions:1.20.1"],
         ]),
         "limit": "10",
         "index": "downloads",
@@ -465,8 +465,8 @@ def resolve_plugin(project_id):
     if not project_id or "/" in project_id or ".." in project_id:
         return jsonify({"ok": False, "error": "invalid project id"}), 400
     params = urllib.parse.urlencode({
-        "loaders":       json.dumps(["paper", "spigot", "bukkit", "purpur", "folia"]),
-        "game_versions": json.dumps(["1.19.4"]),
+        "loaders":       json.dumps(["neoforge", "forge"]),
+        "game_versions": json.dumps(["1.20.1"]),
     })
     url = f"https://api.modrinth.com/v2/project/{project_id}/version?{params}"
     try:
@@ -515,11 +515,11 @@ def fetch_plugin():
         return jsonify({"ok": False, "error": "invalid filename"}), 400
 
     try:
-        os.makedirs(PLUGINS_DIR, exist_ok=True)
+        os.makedirs(MODS_DIR, exist_ok=True)
     except OSError as e:
         return jsonify({"ok": False, "error": f"cannot access plugins directory: {e}"}), 500
 
-    dest = os.path.join(PLUGINS_DIR, filename)
+    dest = os.path.join(MODS_DIR, filename)
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "mc-control/1.0"})
         with urllib.request.urlopen(req, timeout=30) as resp:
@@ -548,7 +548,7 @@ def fetch_plugin():
 def delete_plugin(name):
     if not name.lower().endswith(".jar") or "/" in name or ".." in name:
         return jsonify({"ok": False, "error": "invalid filename"}), 400
-    path = os.path.join(PLUGINS_DIR, name)
+    path = os.path.join(MODS_DIR, name)
     try:
         os.unlink(path)
     except FileNotFoundError:
@@ -616,8 +616,6 @@ def cf_search():
     if not q:
         return jsonify({"results": []})
     try:
-        # Search both plugin (5) and mod (6) class IDs in one call — CF returns
-        # mixed results; the download URL is what matters.
         data = _cf_request("/v1/mods/search", {
             "gameId":       CF_GAME_ID,
             "searchFilter": q,
@@ -666,9 +664,17 @@ def cf_resolve(mod_id):
 
         chosen = None
 
-        # 1. Index exact match
-        if target_id and target_id in all_files:
-            chosen = all_files[target_id]
+        # 1. Index exact match — latestFiles may be truncated; fetch file directly if missing
+        if target_id:
+            candidate = all_files.get(target_id)
+            if candidate is None:
+                try:
+                    fd = _cf_request(f"/v1/mods/{mod_id}/files/{target_id}")
+                    candidate = fd.get("data")
+                except Exception:
+                    pass
+            if candidate:
+                chosen = candidate
 
         # 2. latestFiles exact match
         if not chosen:
@@ -676,15 +682,36 @@ def cf_resolve(mod_id):
             if exact:
                 chosen = sorted(exact, key=lambda x: x.get("id", 0), reverse=True)[0]
 
-        # 3. Index family match ("1.19" covers "1.19.4" on CurseForge)
-        if not chosen and family_id and family_id in all_files:
-            chosen = all_files[family_id]
+        # 3. Index family match ("1.21" covers "1.21.1" on CurseForge)
+        if not chosen and family_id:
+            candidate = all_files.get(family_id)
+            if candidate is None:
+                try:
+                    fd = _cf_request(f"/v1/mods/{mod_id}/files/{family_id}")
+                    candidate = fd.get("data")
+                except Exception:
+                    pass
+            if candidate:
+                chosen = candidate
 
         # 4. latestFiles family match
         if not chosen:
             family = [lf for lf in all_files.values() if CF_MC_FAMILY in lf.get("gameVersions", [])]
             if family:
                 chosen = sorted(family, key=lambda x: x.get("id", 0), reverse=True)[0]
+
+        # 5. Files API query — last resort when latestFiles/indexes gave nothing
+        if not chosen:
+            try:
+                fdata = _cf_request(f"/v1/mods/{mod_id}/files", {
+                    "gameVersion": CF_MC_VERSION,
+                    "pageSize":    "10",
+                })
+                files = fdata.get("data", [])
+                if files:
+                    chosen = sorted(files, key=lambda x: x.get("id", 0), reverse=True)[0]
+            except Exception:
+                pass
 
         if not chosen:
             versions = sorted({

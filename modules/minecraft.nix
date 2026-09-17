@@ -1,11 +1,44 @@
 { config, pkgs, lib, inputs, ... }:
 
 let
-  mcServerName = "survival";
-  mcUnit       = "minecraft-server-${mcServerName}.service";
-  mcDataDir    = "/var/lib/minecraft/${mcServerName}";
-  propsFile    = "${mcDataDir}/server.properties";
-  pythonEnv    = pkgs.python3.withPackages (ps: with ps; [ flask waitress ]);
+  mcServerName    = "survival";
+  mcUnit          = "minecraft-server-${mcServerName}.service";
+  mcDataDir       = "/var/lib/minecraft/${mcServerName}";
+  propsFile       = "${mcDataDir}/server.properties";
+  pythonEnv       = pkgs.python3.withPackages (ps: with ps; [ flask waitress ]);
+
+  neoforgeVersion = "1.20.1-47.1.106";
+
+  # Wrapper that nix-minecraft calls as: minecraft-server -Xms1G -Xmx3G
+  # Writes JVM args to user_jvm_args.txt (NeoForge's args file) then runs run.sh
+  neoforge1201Package = pkgs.writeShellScriptBin "minecraft-server" ''
+    export PATH="${pkgs.jdk21}/bin:$PATH"
+    printf '%s\n' "$@" > user_jvm_args.txt
+    exec ${pkgs.bash}/bin/bash ./run.sh
+  '';
+
+  # One-time installer: downloads and runs the NeoForge 1.20.1 installer into the data dir
+  neoforge1201SetupScript = pkgs.writeShellScript "neoforge-1201-setup" ''
+    set -euo pipefail
+    MARKER="${mcDataDir}/.neoforge-${neoforgeVersion}-installed"
+    [ -f "$MARKER" ] && exit 0
+
+    echo "Downloading NeoForge ${neoforgeVersion} installer..."
+    TMPDIR=$(${pkgs.coreutils}/bin/mktemp -d)
+    trap '${pkgs.coreutils}/bin/rm -rf "$TMPDIR"' EXIT
+
+    ${pkgs.curl}/bin/curl -fL \
+      "https://maven.neoforged.net/releases/net/neoforged/forge/${neoforgeVersion}/forge-${neoforgeVersion}-installer.jar" \
+      -o "$TMPDIR/installer.jar"
+
+    echo "Installing NeoForge server to ${mcDataDir}..."
+    cd "${mcDataDir}"
+    ${pkgs.jdk21}/bin/java -jar "$TMPDIR/installer.jar" --installServer "${mcDataDir}"
+
+    chmod +x "${mcDataDir}/run.sh"
+    touch "$MARKER"
+    echo "NeoForge ${neoforgeVersion} installation complete"
+  '';
 
   backupScript = pkgs.writeShellScript "mc-backup" ''
     set -euo pipefail
@@ -21,7 +54,7 @@ let
 
     today=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
     ${pkgs.coreutils}/bin/mkdir -p "$dst/$today"
-    ${pkgs.rsync}/bin/rsync -a --delete "$src" "$dst/$today/"
+    ${pkgs.rsync}/bin/rsync -a --copy-links --delete "$src" "$dst/$today/"
 
     # Retain the 7 most recent daily backups; remove the rest
     ${pkgs.findutils}/bin/find "$dst" -maxdepth 1 -type d -name '????-??-??' \
@@ -43,7 +76,7 @@ in
     servers.${mcServerName} = {
       enable = true;
       autoStart = false;
-      package = pkgs.paperServers.paper-1_19_4;
+      package = neoforge1201Package;
       jvmOpts = "-Xms1G -Xmx3G";
       serverProperties = {
         # Infrastructure settings only — pinned here so nixos-rebuild can't
@@ -58,16 +91,36 @@ in
 
   # --- mc-control: web UI for starting/stopping and configuring the server ---
   users.groups.mcctl = { };
-  users.groups.mcplugins = { };
+  users.groups.mcmods = { };
   users.users.mcctl = {
     isSystemUser = true;
     group = "mcctl";
-    extraGroups = [ "mcplugins" "minecraft" ];
+    extraGroups = [ "mcmods" "minecraft" ];
   };
 
   systemd.tmpfiles.rules = [
-    "d /var/lib/minecraft/${mcServerName}/plugins 0775 minecraft mcplugins -"
+    "d /var/lib/minecraft/${mcServerName}/mods 0775 minecraft mcmods -"
   ];
+
+  # Runs once to download and install NeoForge 1.20.1 into the data dir
+  systemd.services.neoforge-1201-setup = {
+    description = "Install NeoForge ${neoforgeVersion} server";
+    wantedBy = [ mcUnit ];
+    before   = [ mcUnit ];
+    serviceConfig = {
+      Type             = "oneshot";
+      RemainAfterExit  = true;
+      User             = "minecraft";
+      WorkingDirectory = mcDataDir;
+      ExecStart        = neoforge1201SetupScript;
+    };
+  };
+
+  # Ensure the server service waits for the installer to finish
+  systemd.services."minecraft-server-${mcServerName}" = {
+    after    = [ "neoforge-1201-setup.service" ];
+    requires = [ "neoforge-1201-setup.service" ];
+  };
 
   security.sudo.extraRules = [
     {

@@ -404,13 +404,13 @@ sudo podman exec pihole env | grep FTLCONF</code></pre>
         <span class="svc-port">:5020</span>
         <a class="svc-url" href="http://homeserver:5020" target="_blank">homeserver:5020</a>
       </div>
-      <p>Web UI for managing the Minecraft server: start/stop, configure server.properties, and manage plugins. Flask / waitress, running as the <code>mcctl</code> system user.</p>
+      <p>Web UI for managing the Minecraft server: start/stop, configure server.properties, and manage mods. Flask / waitress, running as the <code>mcctl</code> system user.</p>
       <div class="kv">
         <span class="kv-label">source</span>      <span class="kv-value"><code>apps/mc-control/</code></span>
         <span class="kv-label">config</span>       <span class="kv-value"><code>modules/minecraft.nix</code></span>
         <span class="kv-label">service</span>      <span class="kv-value"><code>mc-control.service</code></span>
         <span class="kv-label">state dir</span>    <span class="kv-value"><code>/var/lib/mc-control/</code> (settings.json, curseforge.env)</span>
-        <span class="kv-label">user</span>         <span class="kv-value"><code>mcctl</code> (system user, groups: mcctl mcplugins minecraft)</span>
+        <span class="kv-label">user</span>         <span class="kv-value"><code>mcctl</code> (system user, groups: mcctl mcmods minecraft)</span>
       </div>
 
       <h3>UI sections</h3>
@@ -421,15 +421,15 @@ sudo podman exec pihole env | grep FTLCONF</code></pre>
             <tr><td><strong>Connect</strong></td><td class="wrap">Server address with one-click copy to clipboard.</td></tr>
             <tr><td><strong>Status</strong></td><td class="wrap">Running/stopped indicator with Stop/Start buttons. Shows uptime, players (names + count), world name, world type, game mode, and difficulty. World type / game mode / difficulty are always shown from the loaded config.</td></tr>
             <tr><td><strong>Settings</strong></td><td class="wrap">Full <code>server.properties</code> editor grouped by World, Gameplay, Players, Rendering, Performance, Resource Pack, and Server Info. Settings are persisted in <code>/var/lib/mc-control/settings.json</code> and applied to <code>server.properties</code> on every server start. The "Save &amp; Restart" button saves then stops/starts the server.</td></tr>
-            <tr><td><strong>Plugins</strong></td><td class="wrap">Search Modrinth or CurseForge (API key required), install from URL, list and delete installed plugins. Manages an allowed-hosts list that gates which download URLs are permitted.</td></tr>
+            <tr><td><strong>Mods</strong></td><td class="wrap">Search Modrinth or CurseForge (API key required), install from URL, list and delete installed mods. Manages an allowed-hosts list that gates which download URLs are permitted.</td></tr>
           </tbody>
         </table>
       </div>
 
-      <h3>Plugins</h3>
-      <p>Plugin JARs are installed to <code>/var/lib/minecraft/survival/plugins/</code>. The <code>mcctl</code> user has write access via the <code>minecraft</code> group (mode 0770). New plugins take effect on the next server restart.</p>
+      <h3>Mods</h3>
+      <p>Mod JARs are installed to <code>/var/lib/minecraft/survival/mods/</code>. The <code>mcctl</code> user has write access via the <code>mcmods</code> group (mode 0775). New mods take effect on the next server restart.</p>
       <p>The allowed-hosts list is stored in <code>/var/lib/mc-control/settings.json</code> under the <code>allowed_hosts</code> key. When an install URL's hostname is not in the list, a prompt appears offering to add it.</p>
-      <p>Default allowed hosts: <code>cdn.modrinth.com</code>, <code>hangar.papermc.io</code>, <code>github.com</code>, <code>objects.githubusercontent.com</code>, <code>mediafilez.forgecdn.net</code>, <code>edge.forgecdn.net</code>.</p>
+      <p>Default allowed hosts: <code>cdn.modrinth.com</code>, <code>github.com</code>, <code>objects.githubusercontent.com</code>, <code>mediafilez.forgecdn.net</code>, <code>edge.forgecdn.net</code>.</p>
 
       <h3>CurseForge API key</h3>
       <p>Create a key at <a href="https://console.curseforge.com" target="_blank" rel="noopener">console.curseforge.com</a>. Store it as:</p>
@@ -444,7 +444,7 @@ sudo chmod 600 /var/lib/mc-control/curseforge.env</code></pre>
       </div>
 
       <h3>CurseForge version matching</h3>
-      <p>The resolver tries (in order): exact version match in <code>latestFilesIndexes</code>, exact match in <code>latestFiles[].gameVersions</code>, family match (e.g. <code>"1.19"</code> for a 1.19.4 server), family match in <code>latestFiles</code>. If none found it returns an error with the available MC versions rather than silently installing the wrong version.</p>
+      <p>The resolver tries (in order): exact version match in <code>latestFilesIndexes</code>, exact match in <code>latestFiles[].gameVersions</code>, family match (e.g. <code>"1.21"</code> for a 1.21.1 server), family match in <code>latestFiles</code>, then a direct <code>/v1/mods/{id}/files</code> query. If none found it returns an error with the available MC versions rather than silently installing the wrong version.</p>
       <p>The <code>/v1/mods/{id}/files</code> endpoint returns 403 on the free API tier — the resolver works entirely from the data in <code>/v1/mods/{id}</code>.</p>
 
       <div class="callout danger">
@@ -461,13 +461,13 @@ sudo chmod 600 /var/lib/mc-control/curseforge.env</code></pre>
         <span class="svc-port">:25565</span>
         <span class="svc-url">LAN only</span>
       </div>
-      <p>Paper 1.19.4 server. Does not start at boot — managed via mc-control or systemctl. LAN-only (online-mode=false; Mojang account not required).</p>
+      <p>NeoForge 1.20.1 server. Does not start at boot — managed via mc-control or systemctl. LAN-only (online-mode=false; Mojang account not required).</p>
       <div class="kv">
         <span class="kv-label">config</span>         <span class="kv-value"><code>modules/minecraft.nix</code></span>
         <span class="kv-label">service</span>         <span class="kv-value"><code>minecraft-server-survival.service</code></span>
-        <span class="kv-label">package</span>         <span class="kv-value"><code>pkgs.paperServers.paper-1_19_4</code></span>
+        <span class="kv-label">package</span>         <span class="kv-value">custom <code>neoforge1201Package</code> wrapper (nix-minecraft has no 1.20.1); installer downloaded on first boot by <code>neoforge-1201-setup.service</code></span>
         <span class="kv-label">data dir</span>        <span class="kv-value"><code>/var/lib/minecraft/survival/</code></span>
-        <span class="kv-label">plugins dir</span>     <span class="kv-value"><code>/var/lib/minecraft/survival/plugins/</code> (mode 0775, group mcplugins)</span>
+        <span class="kv-label">mods dir</span>        <span class="kv-value"><code>/var/lib/minecraft/survival/mods/</code> (mode 0775, group mcmods)</span>
         <span class="kv-label">autoStart</span>       <span class="kv-value">false</span>
         <span class="kv-label">online-mode</span>     <span class="kv-value">false (LAN only — do not expose port 25565 externally without enabling this)</span>
         <span class="kv-label">JVM opts</span>        <span class="kv-value"><code>-Xms1G -Xmx3G</code></span>
@@ -483,9 +483,9 @@ sudo systemctl stop   minecraft-server-survival
 sudo systemctl status minecraft-server-survival
 journalctl -u minecraft-server-survival -f</code></pre>
 
-      <h3>Plugins</h3>
-      <p>Plugins are managed from the mc-control Plugins section. JARs go in <code>/var/lib/minecraft/survival/plugins/</code>. The <code>mcctl</code> user (mc-control's service account) can write there via the <code>minecraft</code> group.</p>
-      <p>Plugins only load on server startup — install or delete while the server is stopped, then start it.</p>
+      <h3>Mods</h3>
+      <p>Mods are managed from the mc-control Mods section. JARs go in <code>/var/lib/minecraft/survival/mods/</code>. The <code>mcctl</code> user (mc-control's service account) can write there via the <code>mcmods</code> group.</p>
+      <p>Mods only load on server startup — install or delete while the server is stopped, then start it.</p>
       <div class="callout">
         <span class="tag">nix-minecraft tmpfiles note</span>
         The <code>survival/</code> directory is created and owned by <code>minecraft:minecraft</code> (0770) by the nix-minecraft activation script, which runs after systemd tmpfiles. A <code>tmpfiles</code> rule setting <code>survival/</code> to mode 0771 is overwritten on each rebuild. The current solution is adding <code>mcctl</code> to the <code>minecraft</code> group, giving it group-level rwx without needing to change directory permissions.
