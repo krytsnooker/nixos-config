@@ -152,6 +152,7 @@
         <li><a class="nav-link" href="#pihole">Pi-hole</a></li>
         <li><a class="nav-link" href="#mc-control">mc-control</a></li>
         <li><a class="nav-link" href="#minecraft">Minecraft</a></li>
+        <li><a class="nav-link" href="#mumble">Mumble</a></li>
       </ul>
     </nav>
     <div class="sidebar-footer">
@@ -508,6 +509,25 @@ journalctl -u mc-backup              <span class="cmt"># last run result</span><
         <span class="kv-label">server-port</span>   <span class="kv-value">25565</span>
         <span class="kv-label">online-mode</span>   <span class="kv-value">false</span>
       </div>
+    </section>
+
+    <!-- Mumble -->
+    <section id="mumble">
+      <div class="svc-header">
+        <h2>Mumble</h2>
+        <span class="svc-port">:64738</span>
+        <span class="svc-url">LAN only</span>
+      </div>
+      <p>Voice chat server via <code>services.murmur</code>. Registered as "hometalk". Listens on port 64738 TCP+UDP. Data and SSL cert stored at <code>/var/lib/murmur</code>.</p>
+      <div class="kv">
+        <span class="kv-label">config</span>    <span class="kv-value"><code>modules/mumble.nix</code></span>
+        <span class="kv-label">service</span>    <span class="kv-value"><code>murmur.service</code></span>
+        <span class="kv-label">data dir</span>   <span class="kv-value"><code>/var/lib/murmur</code></span>
+        <span class="kv-label">bandwidth</span>  <span class="kv-value">72000 bps per client</span>
+        <span class="kv-label">max users</span>  <span class="kv-value">20</span>
+      </div>
+      <pre><code>journalctl -u murmur -f</code></pre>
+      <p class="dim">The SuperUser password is printed to the journal on first start. Connect with any Mumble client to <code>192.168.0.120:64738</code>.</p>
     </section>
 
     <footer>
