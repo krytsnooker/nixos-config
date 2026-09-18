@@ -31,6 +31,7 @@
           ./modules/pihole-container.nix
           ./modules/xrdp.nix
           ./modules/audiobookshelf.nix
+          ./modules/mumble.nix
           nix-minecraft.nixosModules.minecraft-servers
         ];
       };
