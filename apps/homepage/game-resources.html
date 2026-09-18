@@ -8,7 +8,111 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<style>.shell { max-width: 860px; }</style>
+<style>
+/* ── Page layout ── */
+.page-layout {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 40px;
+  align-items: start;
+}
+@media (max-width: 680px) {
+  .page-layout { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.sidebar-heading {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: 10px 10px 4px;
+  margin-top: 6px;
+}
+.sidebar-heading:first-child { margin-top: 0; }
+.sidebar a {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  transition: color 0.12s, background 0.12s;
+  display: block;
+}
+.sidebar a:hover { color: var(--accent); background: var(--surface-2); text-decoration: none; }
+.sidebar a.active { color: var(--accent); }
+
+/* ── Main content ── */
+.main-content { min-width: 0; }
+.shell { max-width: 1060px; }
+.content-section { margin-bottom: 44px; }
+
+/* ── Command grid ── */
+.cmd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+.cmd-group { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); }
+.cmd-group-label { font-family: "IBM Plex Mono", monospace; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-faint); padding: 8px 14px 6px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+.cmd-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 14px; cursor: pointer; transition: background 0.12s; border-bottom: 1px solid var(--border); }
+.cmd-item:last-child { border-bottom: none; }
+.cmd-item:hover { background: var(--surface-2); }
+.cmd-item.copied { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.cmd-item code { font-size: 0.82rem; background: none; padding: 0; color: var(--accent); }
+.cmd-desc { font-size: 0.77rem; color: var(--text-faint); text-align: right; flex-shrink: 0; }
+.cmd-item .copy-flash { font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; color: var(--accent); display: none; }
+.cmd-item.copied .copy-flash { display: inline; }
+.cmd-item.copied .cmd-desc { display: none; }
+
+/* ── Guide cards ── */
+.guide-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.guide-card-header {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.guide-card-eyebrow {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 4px;
+}
+.guide-card-title {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.guide-card-body { padding: 20px; }
+.guide-card-body p { font-size: 0.875rem; color: var(--text-dim); line-height: 1.65; margin: 0 0 14px; }
+.guide-card-body p:last-child { margin-bottom: 0; }
+.guide-steps { list-style: none; padding: 0; margin: 0 0 16px; display: flex; flex-direction: column; gap: 10px; }
+.guide-step { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; }
+.step-num { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; font-weight: 600; color: var(--bg); background: var(--accent); border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+.step-body { font-size: 0.875rem; color: var(--text-dim); line-height: 1.6; }
+.step-body strong { color: var(--text); font-weight: 600; }
+.guide-tip { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; padding: 10px 14px; background: var(--surface-2); font-size: 0.82rem; color: var(--text-dim); line-height: 1.55; margin-top: 14px; }
+.guide-tip strong { color: var(--accent); font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase; display: block; margin-bottom: 3px; }
+</style>
 </head>
 <body>
 <div class="shell">
@@ -23,12 +127,364 @@
     <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle color theme">theme: auto</button>
   </header>
 
-  <div class="section-label">Resources</div>
-  <div class="doc-grid">
+  <div class="page-layout">
 
-    <!-- cards go here -->
+    <!-- ── Sidebar ── -->
+    <nav class="sidebar">
+      <div class="sidebar-heading">Mods</div>
+      <a href="#mods">Installed Mods</a>
 
-  </div>
+      <div class="sidebar-heading">Guides</div>
+      <a href="#guide-crafting">Car Mod: Building a Car</a>
+      <a href="#guide-driving">Car Mod: Driving</a>
+      <a href="#guide-roads">Car Mod: Building Roads</a>
+      <a href="#guide-fuel">Car Mod: Making Fuel</a>
+
+      <div class="sidebar-heading">Commands</div>
+      <a href="#cmd-general">General</a>
+      <a href="#cmd-teleport">Teleport</a>
+      <a href="#cmd-gamemode">Game Mode</a>
+      <a href="#cmd-time">Time &amp; Weather</a>
+      <a href="#cmd-items">Items</a>
+      <a href="#cmd-world">World</a>
+    </nav>
+
+    <!-- ── Main content ── -->
+    <div class="main-content">
+
+      <div style="margin-bottom:20px;">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:0.8rem;color:var(--text-dim);">NeoForge 1.20.1 &nbsp;·&nbsp; port 25565 &nbsp;·&nbsp; online-mode off</span>
+      </div>
+
+      <!-- ── Installed Mods ── -->
+      <div id="mods" class="content-section">
+        <div class="section-label">Installed Mods</div>
+        <div class="doc-grid">
+
+          <a class="doc-card" href="https://modrinth.com/mod/ultimate-car-mod" target="_blank" rel="noopener">
+            <div class="doc-card-body">
+              <span class="doc-card-eyebrow">modrinth</span>
+              <span class="doc-card-title">Ultimate Car Mod</span>
+              <span class="doc-card-desc">Adds driveable cars, fuel system, road construction blocks, and car repair kits. Craft a wrench and car workshop to get started.</span>
+            </div>
+            <span class="doc-card-arrow">↗</span>
+          </a>
+
+          <a class="doc-card" href="https://modrinth.com/mod/crackers-wither-storm-mod" target="_blank" rel="noopener">
+            <div class="doc-card-body">
+              <span class="doc-card-eyebrow">modrinth</span>
+              <span class="doc-card-title">Cracker's Wither Storm Mod</span>
+              <span class="doc-card-desc">Adds the Wither Storm boss from Minecraft Story Mode. Spawns via a command block structure — destroy its command block core to defeat it.</span>
+            </div>
+            <span class="doc-card-arrow">↗</span>
+          </a>
+
+        </div>
+      </div>
+
+      <!-- ── Guides ── -->
+      <div id="guide-crafting" class="content-section">
+        <div class="section-label">Guides</div>
+
+        <div class="guide-card">
+          <div class="guide-card-header">
+            <div class="guide-card-eyebrow">Ultimate Car Mod</div>
+            <div class="guide-card-title">How to Build a Car</div>
+          </div>
+          <div class="guide-card-body">
+            <p>Before you can drive anywhere you need to build a car. You don't make it in a regular crafting table — you need a special <strong>Car Workshop</strong>. Here's how:</p>
+
+            <ol class="guide-steps">
+              <li class="guide-step">
+                <span class="step-num">1</span>
+                <span class="step-body"><strong>Build the Car Workshop.</strong> Craft one <strong>Car Workshop block</strong> and eight <strong>Car Workshop parts</strong>. Place the main block down, then put the eight parts around it (like a 3×3 square with the main block in the middle). Right-click the middle block to open it.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">2</span>
+                <span class="step-body"><strong>Pick a body.</strong> Choose what your car looks like. <strong>Wooden bodies</strong> are the easiest to make and come in every wood type. There are also bigger options: <strong>Big Wooden Body</strong>, <strong>Transporter</strong> (like a van), <strong>SUV</strong>, and <strong>Sportscar</strong>. Non-wooden bodies can be dyed any Minecraft colour.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">3</span>
+                <span class="step-body"><strong>Add wheels.</strong> Normal cars need <strong>4 small wheels</strong>. If you picked a Transporter you'll need <strong>6 wheels</strong>. The SUV needs <strong>4 big wheels</strong>. Each wheel goes in its own slot in the workshop.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">4</span>
+                <span class="step-body"><strong>Choose an engine.</strong> There are three options: <strong>3-cylinder</strong> (slower, uses less fuel), <strong>6-cylinder</strong> (faster, uses more fuel), or <strong>truck engine</strong> (the most fuel-efficient — great for long trips).</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">5</span>
+                <span class="step-body"><strong>Pick a fuel tank.</strong> Small tank holds <strong>half a bucket</strong> of fuel, medium holds <strong>1 bucket</strong>, large holds <strong>1.5 buckets</strong>. A bigger tank means fewer trips to the fuel station.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">6</span>
+                <span class="step-body"><strong>Build it!</strong> Put all the parts in the workshop and craft your car. It will appear right there — hop in!</span>
+              </li>
+            </ol>
+
+            <div class="guide-tip">
+              <strong>Extras</strong>
+              You can also add a <strong>license plate holder</strong> (so you can write a custom name on your car), a <strong>bumper</strong> (wooden cars only, just for looks), or a <strong>container</strong> on a Transporter to carry lots of items or fluids.
+            </div>
+            <div class="guide-tip" style="margin-top:8px;">
+              <strong>Repairs</strong>
+              If your car gets damaged, drive it over the workshop and use <strong>repair kits</strong> in the workshop GUI. Each kit fixes 5% of the damage.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="guide-driving" class="content-section">
+        <div class="guide-card">
+          <div class="guide-card-header">
+            <div class="guide-card-eyebrow">Ultimate Car Mod</div>
+            <div class="guide-card-title">How to Drive Your Car</div>
+          </div>
+          <div class="guide-card-body">
+            <p>Once your car is built and has some fuel in it, here's everything you need to know to drive it.</p>
+
+            <ol class="guide-steps">
+              <li class="guide-step">
+                <span class="step-num">1</span>
+                <span class="step-body"><strong>Get in.</strong> Right-click the car to sit in it.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">2</span>
+                <span class="step-body"><strong>Start the engine.</strong> Hold down <strong>R</strong> until the engine starts. If it's cold (you haven't driven it in a while) it takes a little longer. A damaged car also takes longer to start.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">3</span>
+                <span class="step-body"><strong>Drive!</strong> Use your normal movement keys to go forwards, backwards, and steer. Press <strong>I</strong> while inside to open the car screen and check your fuel level and damage.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">4</span>
+                <span class="step-body"><strong>Refuel.</strong> Drive up to a <strong>fuel station</strong> and right-click it with a canister to refuel. Or shift-right-click the fuel station. If you completely run out of fuel, you can slowly <strong>push the car</strong> by sneaking (crouching) and walking into it.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">5</span>
+                <span class="step-body"><strong>Lock your car.</strong> Every car comes with <strong>2 keys</strong>. Right-click a key while standing within 25 blocks of your car to lock or unlock it. You can make a spare key by combining a key with an iron ingot in the crafting table.</span>
+              </li>
+            </ol>
+
+            <div class="guide-tip">
+              <strong>Watch out</strong>
+              Cars take damage from crashing into blocks or other vehicles, and from driving through water or lava. Check your damage bar in the car screen (press I) and repair before it gets too bad.
+            </div>
+            <div class="guide-tip" style="margin-top:8px;">
+              <strong>Breaking down a car</strong>
+              To pick up a car and remove it, you need to hit it <strong>twice quickly</strong> (within half a second) while holding a hammer, screwdriver, or wrench.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="guide-roads" class="content-section">
+        <div class="guide-card">
+          <div class="guide-card-header">
+            <div class="guide-card-eyebrow">Ultimate Car Mod</div>
+            <div class="guide-card-title">How to Build Roads</div>
+          </div>
+          <div class="guide-card-body">
+            <p>Most cars can only drive up a half-block step at a time — so if your road goes up or down a hill you need to use slopes, otherwise your car will get stuck. Here's how to build good roads:</p>
+
+            <ol class="guide-steps">
+              <li class="guide-step">
+                <span class="step-num">1</span>
+                <span class="step-body"><strong>Use Asphalt blocks for flat roads.</strong> Craft <strong>asphalt blocks</strong> and lay them down as your road surface. They look great and cars drive smoothly on them.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">2</span>
+                <span class="step-body"><strong>Use Asphalt Slopes for hills.</strong> Wherever your road goes up or down, replace the step with an <strong>asphalt slope</strong> or <strong>asphalt slab</strong>. This creates a gentle ramp your car can actually drive up.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">3</span>
+                <span class="step-body"><strong>Add road markings with Painters.</strong> Craft a <strong>painter</strong> and right-click it on your asphalt to add lane markings (white lines, yellow lines, etc.). Sneak and right-click to change the marking style.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">4</span>
+                <span class="step-body"><strong>Add Guardrails on the edges.</strong> Place <strong>guardrails</strong> along the sides of your road to stop cars from accidentally driving off the edge.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">5</span>
+                <span class="step-body"><strong>Add Signs.</strong> Place <strong>signs</strong> and right-click them to add text — up to 4 lines per side. Useful for labelling roads or pointing players in the right direction.</span>
+              </li>
+            </ol>
+
+            <div class="guide-tip">
+              <strong>Important</strong>
+              The SUV is the only car that can handle normal block-height steps. Every other car needs slopes on hills — don't skip them or your car will just sit there bumping against the wall!
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="guide-fuel" class="content-section">
+        <div class="guide-card">
+          <div class="guide-card-header">
+            <div class="guide-card-eyebrow">Ultimate Car Mod</div>
+            <div class="guide-card-title">How to Make Fuel for Your Car</div>
+          </div>
+          <div class="guide-card-body">
+            <p>Cars in this mod run on <strong>biodiesel</strong> — a special fuel you make yourself from plants and wood. It takes a few steps but once you have it set up it keeps making fuel automatically. Here's how to do it:</p>
+
+            <ol class="guide-steps">
+              <li class="guide-step">
+                <span class="step-num">1</span>
+                <span class="step-body"><strong>Grow Canola.</strong> Break some tall grass to find <strong>canola seeds</strong> — they drop just like wheat seeds. Plant them on farmland near water and wait for them to grow fully before harvesting.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">2</span>
+                <span class="step-body"><strong>Build an Oil Mill and a Dynamo.</strong> Craft an <strong>oil mill</strong> and place it down. Then craft a <strong>dynamo with a crank</strong> and connect it to the mill with a cable. The dynamo is like a hand-powered battery — you right-click the crank to spin it and give the mill power.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">3</span>
+                <span class="step-body"><strong>Squeeze the canola into oil.</strong> Put your canola into the oil mill and power it with the dynamo. It will press out <strong>canola oil</strong> (a liquid). You'll also get <strong>canola cake</strong> as a leftover — you can feed it to animals.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">4</span>
+                <span class="step-body"><strong>Make methanol from wood.</strong> Place <strong>wood logs</strong> into a <strong>blast furnace</strong> (also connected to your dynamo with a cable). This cooks the wood and produces <strong>methanol</strong>, another liquid you need.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">5</span>
+                <span class="step-body"><strong>Mix them in the Backmix Reactor.</strong> Build a <strong>backmix reactor</strong> and connect it to your dynamo. Use <strong>fluid pipes</strong> with <strong>fluid extractors</strong> at each machine to pump the canola oil and methanol into the reactor. It mixes them together to start making fuel.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">6</span>
+                <span class="step-body"><strong>Separate the fuel in the Split Tank.</strong> Pipe the mixture from the reactor into a <strong>split tank</strong>. Over time (no power needed) it separates into two things: <strong>biodiesel</strong> — your actual car fuel — and <strong>glycerin</strong>, a leftover liquid.</span>
+              </li>
+              <li class="guide-step">
+                <span class="step-num">7</span>
+                <span class="step-body"><strong>Fill up your car.</strong> Pipe the biodiesel into a <strong>fuel station</strong>, then drive your car up to it and right-click to fill the tank. Now you're ready to go!</span>
+              </li>
+            </ol>
+
+            <div class="guide-tip">
+              <strong>Tip</strong>
+              Don't forget to place a <strong>fluid extractor</strong> on every machine you want to pump fluid out of — pipes alone won't move anything without one. Also use <strong>fluid filters</strong> (fill a bucket with the fluid you want, then right-click the pipe) so the right liquid goes to the right place.
+            </div>
+            <div class="guide-tip" style="margin-top:8px;">
+              <strong>Pro tip</strong>
+              Once you have enough biodiesel, build a <strong>generator</strong> and run it on biodiesel instead of hand-cranking the dynamo. It's much faster and you won't have to stand there turning the crank!
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Client Commands ── -->
+      <div id="cmd-general" class="content-section">
+        <div class="section-label">Client Commands</div>
+        <p style="font-size:0.85rem;color:var(--text-dim);margin:0 0 18px;">Click any command to copy it to your clipboard.</p>
+
+        <div class="cmd-grid">
+
+          <div class="cmd-group" id="cmd-general-group">
+            <div class="cmd-group-label">General</div>
+            <div class="cmd-item" data-cmd="/list">
+              <code>/list</code>
+              <span class="cmd-desc">Show online players</span>
+            </div>
+            <div class="cmd-item" data-cmd="/msg ">
+              <code>/msg &lt;player&gt; &lt;message&gt;</code>
+              <span class="cmd-desc">Private message</span>
+            </div>
+            <div class="cmd-item" data-cmd="/kill">
+              <code>/kill</code>
+              <span class="cmd-desc">Kill yourself (respawn)</span>
+            </div>
+          </div>
+
+          <div class="cmd-group" id="cmd-teleport-group">
+            <div class="cmd-group-label" id="cmd-teleport">Teleport</div>
+            <div class="cmd-item" data-cmd="/tp ">
+              <code>/tp &lt;player&gt;</code>
+              <span class="cmd-desc">Teleport to a player</span>
+            </div>
+            <div class="cmd-item" data-cmd="/tp ">
+              <code>/tp &lt;x&gt; &lt;y&gt; &lt;z&gt;</code>
+              <span class="cmd-desc">Teleport to coordinates</span>
+            </div>
+            <div class="cmd-item" data-cmd="/spawn">
+              <code>/spawn</code>
+              <span class="cmd-desc">Return to world spawn</span>
+            </div>
+          </div>
+
+          <div class="cmd-group" id="cmd-gamemode-group">
+            <div class="cmd-group-label" id="cmd-gamemode">Game Mode</div>
+            <div class="cmd-item" data-cmd="/gamemode survival">
+              <code>/gamemode survival</code>
+              <span class="cmd-desc">Survival mode</span>
+            </div>
+            <div class="cmd-item" data-cmd="/gamemode creative">
+              <code>/gamemode creative</code>
+              <span class="cmd-desc">Creative mode</span>
+            </div>
+            <div class="cmd-item" data-cmd="/gamemode spectator">
+              <code>/gamemode spectator</code>
+              <span class="cmd-desc">Spectator mode</span>
+            </div>
+          </div>
+
+          <div class="cmd-group" id="cmd-time-group">
+            <div class="cmd-group-label" id="cmd-time">Time &amp; Weather</div>
+            <div class="cmd-item" data-cmd="/time set day">
+              <code>/time set day</code>
+              <span class="cmd-desc">Set time to day</span>
+            </div>
+            <div class="cmd-item" data-cmd="/time set night">
+              <code>/time set night</code>
+              <span class="cmd-desc">Set time to night</span>
+            </div>
+            <div class="cmd-item" data-cmd="/weather clear">
+              <code>/weather clear</code>
+              <span class="cmd-desc">Clear the weather</span>
+            </div>
+            <div class="cmd-item" data-cmd="/weather rain">
+              <code>/weather rain</code>
+              <span class="cmd-desc">Start rain/thunder</span>
+            </div>
+          </div>
+
+          <div class="cmd-group" id="cmd-items-group">
+            <div class="cmd-group-label" id="cmd-items">Items</div>
+            <div class="cmd-item" data-cmd="/give ">
+              <code>/give &lt;player&gt; &lt;item&gt;</code>
+              <span class="cmd-desc">Give an item</span>
+            </div>
+            <div class="cmd-item" data-cmd="/clear">
+              <code>/clear</code>
+              <span class="cmd-desc">Clear your inventory</span>
+            </div>
+            <div class="cmd-item" data-cmd="/enchant ">
+              <code>/enchant &lt;player&gt; &lt;enchant&gt;</code>
+              <span class="cmd-desc">Enchant held item</span>
+            </div>
+          </div>
+
+          <div class="cmd-group" id="cmd-world-group">
+            <div class="cmd-group-label" id="cmd-world">World</div>
+            <div class="cmd-item" data-cmd="/setworldspawn">
+              <code>/setworldspawn</code>
+              <span class="cmd-desc">Set world spawn here</span>
+            </div>
+            <div class="cmd-item" data-cmd="/difficulty peaceful">
+              <code>/difficulty peaceful</code>
+              <span class="cmd-desc">Difficulty: peaceful</span>
+            </div>
+            <div class="cmd-item" data-cmd="/difficulty normal">
+              <code>/difficulty normal</code>
+              <span class="cmd-desc">Difficulty: normal</span>
+            </div>
+            <div class="cmd-item" data-cmd="/difficulty hard">
+              <code>/difficulty hard</code>
+              <span class="cmd-desc">Difficulty: hard</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- /main-content -->
+  </div><!-- /page-layout -->
 
   <footer>
     <span>homeserver &middot; game resources</span>
@@ -67,6 +523,55 @@
     var d = new Date();
     document.getElementById('genDate').textContent =
       'updated ' + d.toISOString().slice(0, 10);
+
+    // Command copy-on-click
+    document.querySelectorAll('.cmd-item').forEach(function (el) {
+      var desc = el.querySelector('.cmd-desc');
+      if (desc) {
+        var flash = document.createElement('span');
+        flash.className = 'copy-flash';
+        flash.textContent = 'copied!';
+        desc.parentNode.insertBefore(flash, desc.nextSibling);
+      }
+      el.addEventListener('click', function () {
+        var cmd = el.getAttribute('data-cmd');
+        if (!cmd) return;
+        navigator.clipboard.writeText(cmd).then(function () {
+          el.classList.add('copied');
+          setTimeout(function () { el.classList.remove('copied'); }, 1200);
+        });
+      });
+    });
+
+    // Sidebar active link on scroll
+    var sections = [
+      { id: 'mods',        link: '[href="#mods"]' },
+      { id: 'guide-crafting', link: '[href="#guide-crafting"]' },
+      { id: 'guide-driving',  link: '[href="#guide-driving"]' },
+      { id: 'guide-roads',    link: '[href="#guide-roads"]' },
+      { id: 'guide-fuel',     link: '[href="#guide-fuel"]' },
+      { id: 'cmd-general-group', link: '[href="#cmd-general"]' },
+      { id: 'cmd-teleport-group', link: '[href="#cmd-teleport"]' },
+      { id: 'cmd-gamemode-group', link: '[href="#cmd-gamemode"]' },
+      { id: 'cmd-time-group',    link: '[href="#cmd-time"]' },
+      { id: 'cmd-items-group',   link: '[href="#cmd-items"]' },
+      { id: 'cmd-world-group',   link: '[href="#cmd-world"]' },
+    ];
+    function onScroll() {
+      var scrollY = window.scrollY + 80;
+      var active = sections[0].link;
+      for (var i = 0; i < sections.length; i++) {
+        var el = document.getElementById(sections[i].id);
+        if (el && el.getBoundingClientRect().top + window.scrollY <= scrollY) {
+          active = sections[i].link;
+        }
+      }
+      document.querySelectorAll('.sidebar a').forEach(function (a) { a.classList.remove('active'); });
+      var activeEl = document.querySelector('.sidebar ' + active);
+      if (activeEl) activeEl.classList.add('active');
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
   })();
 </script>
 
