@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terminal Scripts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .shell { max-width: 860px; }
+  .script-card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    background: var(--surface);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    user-select: none;
+  }
+  .script-card:hover { border-color: var(--accent); background: var(--surface-2); }
+  .script-card-body { display: flex; flex-direction: column; gap: 5px; }
+  .script-card-eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .script-card-title {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 1rem;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .script-card-cmd {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-top: 4px;
+    white-space: pre;
+    overflow-x: auto;
+  }
+  .copy-label {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.72rem;
+    color: var(--text-faint);
+    flex-shrink: 0;
+    transition: color 0.15s;
+  }
+  .script-card:hover .copy-label { color: var(--accent); }
+  .script-card.copied { border-color: #4caf82; }
+  .script-card.copied .copy-label { color: #4caf82; }
+  @media (max-width: 600px) {
+    .script-card { grid-template-columns: 1fr; }
+    .copy-label { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="top">
+    <div class="host-id">
+      <a href="index.html" style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--accent);text-decoration:none;display:inline-block;margin-bottom:8px;">← home</a>
+      <span class="eyebrow">homeserver // terminal scripts</span>
+      <h1>Terminal Scripts</h1>
+      <p>Click a card to run the command in a terminal</p>
+    </div>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle color theme">theme: auto</button>
+  </header>
+
+  <div class="layout">
+    <nav class="toc">
+      <a href="#nixos">NixOS</a>
+      <a href="#git">Git</a>
+      <a href="#system">System</a>
+    </nav>
+
+    <main>
+
+      <div id="nixos" class="section-label">NixOS</div>
+      <div class="doc-grid">
+
+        <div class="script-card" data-cmd="sudo nixos-rebuild switch --flake /etc/nixos#homeserver">
+          <div class="script-card-body">
+            <span class="script-card-eyebrow">NixOS &middot; Deploy</span>
+            <span class="script-card-title">Build &amp; Switch</span>
+            <span class="script-card-cmd">sudo nixos-rebuild switch --flake /etc/nixos#homeserver</span>
+          </div>
+          <span class="copy-label">run</span>
+        </div>
+
+        <div class="script-card" data-cmd="sudo nixos-rebuild test --flake /etc/nixos#homeserver">
+          <div class="script-card-body">
+            <span class="script-card-eyebrow">NixOS &middot; Test</span>
+            <span class="script-card-title">Test Build</span>
+            <span class="script-card-cmd">sudo nixos-rebuild test --flake /etc/nixos#homeserver</span>
+          </div>
+          <span class="copy-label">run</span>
+        </div>
+
+        <div class="script-card" data-cmd="sudo nixos-rebuild switch --rollback">
+          <div class="script-card-body">
+            <span class="script-card-eyebrow">NixOS &middot; Recovery</span>
+            <span class="script-card-title">Rollback</span>
+            <span class="script-card-cmd">sudo nixos-rebuild switch --rollback</span>
+          </div>
+          <span class="copy-label">run</span>
+        </div>
+
+        <div class="script-card" data-cmd="sudo git -C /etc/nixos tag working-$(date +%Y-%m-%d)">
+          <div class="script-card-body">
+            <span class="script-card-eyebrow">NixOS &middot; Git</span>
+            <span class="script-card-title">Tag Stable</span>
+            <span class="script-card-cmd">sudo git -C /etc/nixos tag working-$(date +%Y-%m-%d)</span>
+          </div>
+          <span class="copy-label">run</span>
+        </div>
+
+      </div>
+
+      <div id="git" class="section-label" style="margin-top:36px;">Git</div>
+      <div class="doc-grid">
+
+        <div class="script-card" data-cmd="sudo git -C /etc/nixos add -A && sudo git -C /etc/nixos commit">
+          <div class="script-card-body">
+            <span class="script-card-eyebrow">Git &middot; NixOS Config</span>
+            <span class="script-card-title">Stage &amp; Commit</span>
+            <span class="script-card-cmd">sudo git -C /etc/nixos add -A &amp;&amp; sudo git -C /etc/nixos commit</span>
+          </div>
+          <span class="copy-label">run</span>
+        </div>
+
+        <div class="script-card" data-cmd="git -C /etc/nixos push">
+          <div class="script-card-body">
+            <span class="script-card-eyebrow">Git &middot; NixOS Config</span>
+            <span class="script-card-title">Push Config</span>
+            <span class="script-card-cmd">git -C /etc/nixos push</span>
+          </div>
+          <span class="copy-label">run</span>
+        </div>
+
+        <div class="script-card" data-cmd="sudo cp -r /home/kryt/homepage/* /etc/nixos/apps/homepage/ && sudo git -C /etc/nixos add -A && sudo git -C /etc/nixos commit">
+          <div class="script-card-body">
+            <span class="script-card-eyebrow">Git &middot; Homepage</span>
+            <span class="script-card-title">Deploy Homepage</span>
+            <span class="script-card-cmd">sudo cp -r /home/kryt/homepage/* /etc/nixos/apps/homepage/
+sudo git -C /etc/nixos add -A &amp;&amp; sudo git -C /etc/nixos commit</span>
+          </div>
+          <span class="copy-label">run</span>
+        </div>
+
+      </div>
+
+      <div id="system" class="section-label" style="margin-top:36px;">System</div>
+      <div class="doc-grid">
+
+        <div class="script-card" data-cmd="systemctl --failed">
+          <div class="script-card-body">
+            <span class="script-card-eyebrow">System &middot; Status</span>
+            <span class="script-card-title">Failed Services</span>
+            <span class="script-card-cmd">systemctl --failed</span>
+          </div>
+          <span class="copy-label">run</span>
+        </div>
+
+        <div class="script-card" data-cmd="journalctl -u  -f">
+          <div class="script-card-body">
+            <span class="script-card-eyebrow">System &middot; Logs</span>
+            <span class="script-card-title">Follow Service Logs</span>
+            <span class="script-card-cmd">journalctl -u &lt;service&gt; -f</span>
+          </div>
+          <span class="copy-label">run</span>
+        </div>
+
+        <div class="script-card" data-cmd="bash /home/kryt/check-secrets.sh">
+          <div class="script-card-body">
+            <span class="script-card-eyebrow">System &middot; Secrets</span>
+            <span class="script-card-title">Verify Secrets</span>
+            <span class="script-card-cmd">bash /home/kryt/check-secrets.sh</span>
+          </div>
+          <span class="copy-label">run</span>
+        </div>
+
+        <div class="script-card" data-cmd="sudo systemctl restart podman-pihole.service">
+          <div class="script-card-body">
+            <span class="script-card-eyebrow">System &middot; Pi-hole</span>
+            <span class="script-card-title">Restart Pi-hole</span>
+            <span class="script-card-cmd">sudo systemctl restart podman-pihole.service</span>
+          </div>
+          <span class="copy-label">run</span>
+        </div>
+
+      </div>
+
+    </main>
+  </div>
+
+  <footer>
+    <span>homeserver &middot; terminal scripts</span>
+    <span id="genDate"></span>
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById('themeToggle');
+    var stored = null;
+    try { stored = localStorage.getItem('hs-theme'); } catch (e) {}
+    if (stored === 'dark' || stored === 'light') {
+      root.setAttribute('data-theme', stored);
+    }
+    function label() {
+      var mode = root.getAttribute('data-theme');
+      btn.textContent = 'theme: ' + (mode ? mode : 'auto');
+    }
+    label();
+    btn.addEventListener('click', function () {
+      var current = root.getAttribute('data-theme');
+      var next = current === 'dark' ? 'light' : (current === 'light' ? null : 'dark');
+      if (next) {
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem('hs-theme', next); } catch (e) {}
+      } else {
+        root.removeAttribute('data-theme');
+        try { localStorage.removeItem('hs-theme'); } catch (e) {}
+      }
+      label();
+    });
+
+    var d = new Date();
+    document.getElementById('genDate').textContent =
+      'updated ' + d.toISOString().slice(0, 10);
+
+    document.querySelectorAll('.script-card').forEach(function (card) {
+      card.addEventListener('click', function () {
+        var cmd = card.dataset.cmd;
+        var label = card.querySelector('.copy-label');
+        window.location = 'run-cmd://' + encodeURIComponent(cmd);
+        card.classList.add('copied');
+        label.textContent = 'launching…';
+        setTimeout(function () {
+          card.classList.remove('copied');
+          label.textContent = 'run';
+        }, 1500);
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>
