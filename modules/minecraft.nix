@@ -4,16 +4,64 @@ let
   mcServerName    = "survival";
   mcUnit          = "minecraft-server-${mcServerName}.service";
   mcDataDir       = "/var/lib/minecraft/${mcServerName}";
+  mcStateDir      = "/var/lib/mc-control";
   propsFile       = "${mcDataDir}/server.properties";
   pythonEnv       = pkgs.python3.withPackages (ps: with ps; [ flask waitress ]);
 
   neoforgeVersion = "1.20.1-47.1.106";
+
+  # Applies mc-control settings.json onto server.properties. Called from the
+  # ExecStart wrapper so it runs after nix-minecraft's ExecStartPre has already
+  # regenerated server.properties from the Nix store.
+  applySettingsScript = pkgs.writeScript "mc-apply-settings" ''
+    #!${pkgs.python3}/bin/python3
+    import json, os, sys
+
+    SETTINGS = "${mcStateDir}/settings.json"
+    PROPS    = "${propsFile}"
+    READONLY = {"online-mode", "server-port"}
+
+    if not os.path.exists(SETTINGS):
+        sys.exit(0)
+
+    with open(SETTINGS) as f:
+        try:
+            settings = json.load(f)
+        except json.JSONDecodeError:
+            sys.exit(0)
+
+    try:
+        with open(PROPS) as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        sys.exit(0)
+
+    applied = set()
+    out = []
+    for line in lines:
+        s = line.rstrip()
+        if s and not s.startswith("#"):
+            key = s.split("=")[0].strip()
+            if key in settings and key not in READONLY:
+                out.append(f"{key}={settings[key]}\n")
+                applied.add(key)
+                continue
+        out.append(line if line.endswith("\n") else line + "\n")
+
+    for key, val in settings.items():
+        if key not in applied and key not in READONLY:
+            out.append(f"{key}={val}\n")
+
+    with open(PROPS, "w") as f:
+        f.writelines(out)
+  '';
 
   # Wrapper that nix-minecraft calls as: minecraft-server -Xms1G -Xmx3G
   # Writes JVM args to user_jvm_args.txt (NeoForge's args file) then runs run.sh
   neoforge1201Package = pkgs.writeShellScriptBin "minecraft-server" ''
     export PATH="${pkgs.jdk21}/bin:$PATH"
     printf '%s\n' "$@" > user_jvm_args.txt
+    ${applySettingsScript} || true
     exec ${pkgs.bash}/bin/bash ./run.sh
   '';
 
