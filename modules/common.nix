@@ -83,6 +83,7 @@
     htop
     ripgrep
     claude-code
+    go
   ];
 
   system.stateVersion = "24.11";
