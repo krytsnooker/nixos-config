@@ -19,6 +19,7 @@ const (
 	mjhBase    = "https://i.mjh.nz/.r/"
 	userAgent  = "AppleTV/tvOS/9.1.1 Darwin/15.2.0"
 	hlsWindow  = 12 // segments (~60s at 5s each)
+	staleLimit = 15 * time.Second
 )
 
 var (
@@ -84,6 +85,8 @@ func (ch *liveChannel) run(channel string) {
 			"-http_persistent", "0",
 			"-user_agent", userAgent,
 			"-i", src,
+			"-fflags", "+genpts",
+			"-avoid_negative_ts", "make_zero",
 			"-c", "copy",
 			"-f", "hls",
 			"-hls_time", "5",
@@ -102,7 +105,38 @@ func (ch *liveChannel) run(channel string) {
 		}
 
 		log.Printf("live %s: ffmpeg started (pid %d)", channel, cmd.Process.Pid)
-		cmd.Wait()
+
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			cmd.Wait()
+		}()
+
+		// Watchdog: restart ffmpeg if manifest stops updating (stalled during ad break).
+		go func() {
+			ticker := time.NewTicker(5 * time.Second)
+			defer ticker.Stop()
+			lastMod := time.Now()
+			for {
+				select {
+				case <-done:
+					return
+				case <-ticker.C:
+					if fi, err := os.Stat(manifest); err == nil {
+						if fi.ModTime().After(lastMod) {
+							lastMod = fi.ModTime()
+						}
+					}
+					if time.Since(lastMod) > staleLimit {
+						log.Printf("live %s: manifest stale for %s, restarting ffmpeg", channel, staleLimit)
+						cancel()
+						return
+					}
+				}
+			}
+		}()
+
+		<-done
 		cancel()
 		log.Printf("live %s: ffmpeg exited, restarting in 2s", channel)
 		time.Sleep(2 * time.Second)
