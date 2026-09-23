@@ -14,9 +14,10 @@ import (
 )
 
 const (
-	listenAddr = ":5030"
-	mjhBase    = "https://i.mjh.nz/.r/"
-	userAgent  = "AppleTV/tvOS/9.1.1 Darwin/15.2.0"
+	listenAddr   = ":5030"
+	mjhBase      = "https://i.mjh.nz/.r/"
+	userAgent    = "AppleTV/tvOS/9.1.1 Darwin/15.2.0"
+	stallTimeout = 20 // seconds to wait for a stalled playlist to advance
 )
 
 var httpClient = &http.Client{Timeout: 15 * time.Second}
@@ -39,6 +40,7 @@ type channelState struct {
 	mu          sync.Mutex
 	variants    []variant
 	refreshedAt time.Time
+	seqs        map[int]int // variant idx -> last seen #EXT-X-MEDIA-SEQUENCE
 }
 
 var (
@@ -52,7 +54,7 @@ func stateFor(channel string) *channelState {
 	if s, ok := states[channel]; ok {
 		return s
 	}
-	s := &channelState{}
+	s := &channelState{seqs: make(map[int]int)}
 	states[channel] = s
 	return s
 }
@@ -99,6 +101,7 @@ func (cs *channelState) refresh(channel string) error {
 	}
 
 	cs.variants = variants
+	cs.seqs = make(map[int]int) // reset sequence tracking on session refresh
 	cs.refreshedAt = time.Now()
 	log.Printf("refreshed %s: %d variants", channel, len(variants))
 	return nil
@@ -111,6 +114,22 @@ func (cs *channelState) variantURL(idx int) (string, bool) {
 		return "", false
 	}
 	return cs.variants[idx].url, true
+}
+
+func (cs *channelState) getLastSeq(idx int) int {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	v, ok := cs.seqs[idx]
+	if !ok {
+		return -1
+	}
+	return v
+}
+
+func (cs *channelState) setLastSeq(idx, seq int) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	cs.seqs[idx] = seq
 }
 
 func parseMaster(r io.Reader, base string) ([]variant, error) {
@@ -154,6 +173,18 @@ func resolveURL(base, ref string) string {
 		return ref
 	}
 	return b.ResolveReference(r).String()
+}
+
+func parseMediaSeq(body string) int {
+	for _, line := range strings.Split(body, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "#EXT-X-MEDIA-SEQUENCE:") {
+			v, err := strconv.Atoi(strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "#EXT-X-MEDIA-SEQUENCE:")))
+			if err == nil {
+				return v
+			}
+		}
+	}
+	return -1
 }
 
 // --- handlers ---
@@ -224,12 +255,7 @@ func hlsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(body))
 }
 
-func fetchVariantPlaylist(cs *channelState, channel string, idx int) (string, error) {
-	varURL, ok := cs.variantURL(idx)
-	if !ok {
-		return "", fmt.Errorf("variant %d not found for %s", idx, channel)
-	}
-
+func getPlaylistBody(varURL string) (string, error) {
 	req, _ := http.NewRequest("GET", varURL, nil)
 	req.Header.Set("User-Agent", userAgent)
 	resp, err := httpClient.Do(req)
@@ -240,20 +266,57 @@ func fetchVariantPlaylist(cs *channelState, channel string, idx int) (string, er
 	if resp.StatusCode >= 400 {
 		return "", fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
-
 	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
+	return string(b), nil
+}
 
-	return rewriteMediaPlaylist(string(b), baseOf(varURL)), nil
+func fetchVariantPlaylist(cs *channelState, channel string, idx int) (string, error) {
+	varURL, ok := cs.variantURL(idx)
+	if !ok {
+		return "", fmt.Errorf("variant %d not found for %s", idx, channel)
+	}
+
+	body, err := getPlaylistBody(varURL)
+	if err != nil {
+		return "", err
+	}
+
+	seq := parseMediaSeq(body)
+	lastSeq := cs.getLastSeq(idx)
+
+	if seq != lastSeq || lastSeq == -1 {
+		cs.setLastSeq(idx, seq)
+		return rewriteMediaPlaylist(body, baseOf(varURL)), nil
+	}
+
+	// Playlist hasn't advanced — hold the connection and poll until it does
+	log.Printf("playlist stalled for %s/%d at seq %d, waiting up to %ds", channel, idx, seq, stallTimeout)
+	for i := 0; i < stallTimeout; i++ {
+		time.Sleep(1 * time.Second)
+		body, err = getPlaylistBody(varURL)
+		if err != nil {
+			return "", err
+		}
+		seq = parseMediaSeq(body)
+		if seq != lastSeq {
+			log.Printf("playlist resumed for %s/%d at seq %d (waited %ds)", channel, idx, seq, i+1)
+			cs.setLastSeq(idx, seq)
+			return rewriteMediaPlaylist(body, baseOf(varURL)), nil
+		}
+	}
+
+	log.Printf("playlist stall timeout for %s/%d, returning stale playlist", channel, idx)
+	return rewriteMediaPlaylist(body, baseOf(varURL)), nil
 }
 
 func rewriteMediaPlaylist(body, base string) string {
 	var sb strings.Builder
 	for _, line := range strings.Split(body, "\n") {
 		trimmed := strings.TrimSpace(line)
-		// Strip discontinuity markers — Emby stalls on these at DAI ad boundaries
+		// Strip in-band discontinuity markers (not the SEQUENCE header)
 		if trimmed == "#EXT-X-DISCONTINUITY" {
 			continue
 		}
