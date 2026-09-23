@@ -32,6 +32,7 @@
           ./modules/xrdp.nix
           ./modules/audiobookshelf.nix
           ./modules/mumble.nix
+          ./modules/mjh-proxy.nix
           nix-minecraft.nixosModules.minecraft-servers
         ];
       };
