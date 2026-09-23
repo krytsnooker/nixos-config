@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -15,11 +16,12 @@ import (
 )
 
 const (
-	listenAddr = ":5030"
-	mjhBase    = "https://i.mjh.nz/.r/"
-	userAgent  = "AppleTV/tvOS/9.1.1 Darwin/15.2.0"
-	hlsWindow  = 12 // segments (~60s at 5s each)
-	staleLimit = 15 * time.Second
+	listenAddr   = ":5030"
+	mjhBase      = "https://i.mjh.nz/.r/"
+	userAgent    = "AppleTV/tvOS/9.1.1 Darwin/15.2.0"
+	hlsWindow    = 12 // segments (~60s at 5s each)
+	staleLimit   = 15 * time.Second
+	pollInterval = 2 * time.Second
 )
 
 var (
@@ -27,6 +29,274 @@ var (
 	runtimeDir = "/tmp"
 	httpClient = &http.Client{Timeout: 15 * time.Second}
 )
+
+// isAdSegment returns true if the segment URL is from Google DAI ad/slate delivery.
+func isAdSegment(u string) bool {
+	return strings.Contains(u, "dai.google.com") || strings.Contains(u, "googlevideo.com")
+}
+
+// --- manifest filter ---
+
+type channelFilter struct {
+	mu        sync.Mutex
+	channel   string
+	mediaURL  string
+	seqMap    map[string]int64 // segment URL → our filtered sequence number
+	nextSeq   int64
+	content   string // latest filtered playlist
+	readyCh   chan struct{}
+	readyOnce sync.Once
+}
+
+var (
+	filtersMu sync.Mutex
+	filters   = map[string]*channelFilter{}
+)
+
+func getFilter(channel string) *channelFilter {
+	filtersMu.Lock()
+	defer filtersMu.Unlock()
+	if cf, ok := filters[channel]; ok {
+		return cf
+	}
+	cf := &channelFilter{
+		channel: channel,
+		seqMap:  make(map[string]int64),
+		readyCh: make(chan struct{}),
+	}
+	filters[channel] = cf
+	go cf.pollLoop()
+	return cf
+}
+
+func (cf *channelFilter) pollLoop() {
+	for {
+		cf.refresh()
+		time.Sleep(pollInterval)
+	}
+}
+
+func (cf *channelFilter) refresh() {
+	cf.mu.Lock()
+	mediaURL := cf.mediaURL
+	cf.mu.Unlock()
+
+	if mediaURL == "" {
+		var err error
+		mediaURL, err = cf.resolveMediaURL()
+		if err != nil {
+			log.Printf("filter %s: resolve: %v", cf.channel, err)
+			return
+		}
+		log.Printf("filter %s: media playlist: %s", cf.channel, mediaURL)
+		cf.mu.Lock()
+		cf.mediaURL = mediaURL
+		cf.mu.Unlock()
+	}
+
+	body, err := cf.fetchURL(mediaURL)
+	if err != nil {
+		log.Printf("filter %s: fetch media: %v — re-resolving", cf.channel, err)
+		cf.mu.Lock()
+		cf.mediaURL = ""
+		cf.mu.Unlock()
+		return
+	}
+
+	filtered, err := cf.buildFiltered(body)
+	if err != nil {
+		log.Printf("filter %s: build: %v", cf.channel, err)
+		return
+	}
+
+	cf.mu.Lock()
+	cf.content = filtered
+	cf.mu.Unlock()
+	cf.readyOnce.Do(func() { close(cf.readyCh) })
+}
+
+func (cf *channelFilter) fetchURL(rawURL string) (string, error) {
+	req, _ := http.NewRequest("GET", rawURL, nil)
+	req.Header.Set("User-Agent", userAgent)
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return "", fmt.Errorf("HTTP %d from %s", resp.StatusCode, rawURL)
+	}
+	b, err := io.ReadAll(resp.Body)
+	return string(b), err
+}
+
+// resolveMediaURL fetches the mjh master playlist and returns the highest-bandwidth variant URL.
+func (cf *channelFilter) resolveMediaURL() (string, error) {
+	masterURL := mjhBase + cf.channel + ".m3u8"
+	body, err := cf.fetchURL(masterURL)
+	if err != nil {
+		return "", fmt.Errorf("master: %w", err)
+	}
+	if strings.Contains(body, "#EXTINF") {
+		return masterURL, nil // already a media playlist
+	}
+	bestBW := -1
+	bestURL := ""
+	lines := strings.Split(body, "\n")
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "#EXT-X-STREAM-INF:") {
+			bw := parseBandwidth(line)
+			if i+1 < len(lines) {
+				next := strings.TrimSpace(lines[i+1])
+				if next != "" && !strings.HasPrefix(next, "#") && bw > bestBW {
+					bestBW = bw
+					bestURL = next
+				}
+			}
+		}
+	}
+	if bestURL == "" {
+		return "", fmt.Errorf("no variant found in master playlist")
+	}
+	if !strings.HasPrefix(bestURL, "http") {
+		return "", fmt.Errorf("unexpected relative variant URL: %s", bestURL)
+	}
+	return bestURL, nil
+}
+
+func parseBandwidth(streamInf string) int {
+	for _, part := range strings.Split(streamInf, ",") {
+		part = strings.TrimSpace(part)
+		if strings.HasPrefix(part, "BANDWIDTH=") {
+			var bw int
+			fmt.Sscanf(strings.TrimPrefix(part, "BANDWIDTH="), "%d", &bw)
+			return bw
+		}
+	}
+	return 0
+}
+
+// buildFiltered parses the upstream media playlist, drops ad/slate segments and
+// the #EXT-X-DISCONTINUITY markers on their boundaries, and returns a clean playlist
+// with our own monotonically-increasing sequence numbers.
+func (cf *channelFilter) buildFiltered(body string) (string, error) {
+	type seg struct {
+		keyLine  string // #EXT-X-KEY line (may be empty)
+		extinf   string // #EXTINF line
+		url      string
+		discPre  bool // #EXT-X-DISCONTINUITY was immediately before this segment
+	}
+
+	var segs []seg
+	var targetDuration string
+	var pendingKey, pendingExtinf string
+	var pendingDisc bool
+
+	for _, raw := range strings.Split(body, "\n") {
+		line := strings.TrimRight(raw, "\r")
+		t := strings.TrimSpace(line)
+		switch {
+		case strings.HasPrefix(t, "#EXT-X-TARGETDURATION:"):
+			targetDuration = t
+		case t == "#EXT-X-DISCONTINUITY":
+			pendingDisc = true
+		case strings.HasPrefix(t, "#EXT-X-KEY:"):
+			pendingKey = t
+		case strings.HasPrefix(t, "#EXTINF:"):
+			pendingExtinf = t
+		case pendingExtinf != "" && t != "" && !strings.HasPrefix(t, "#"):
+			// This line is the segment URL following an #EXTINF
+			segs = append(segs, seg{
+				keyLine: pendingKey,
+				extinf:  pendingExtinf,
+				url:     t,
+				discPre: pendingDisc,
+			})
+			pendingKey = ""
+			pendingExtinf = ""
+			pendingDisc = false
+		}
+	}
+
+	// Assign our sequence numbers to non-ad segments (first time seen).
+	cf.mu.Lock()
+	for i := range segs {
+		if !isAdSegment(segs[i].url) {
+			if _, ok := cf.seqMap[segs[i].url]; !ok {
+				cf.seqMap[segs[i].url] = cf.nextSeq
+				cf.nextSeq++
+			}
+		}
+	}
+	firstSeq := int64(0)
+	for _, s := range segs {
+		if !isAdSegment(s.url) {
+			firstSeq = cf.seqMap[s.url]
+			break
+		}
+	}
+	cf.mu.Unlock()
+
+	var sb strings.Builder
+	sb.WriteString("#EXTM3U\n")
+	sb.WriteString("#EXT-X-VERSION:3\n")
+	if targetDuration != "" {
+		sb.WriteString(targetDuration + "\n")
+	}
+	sb.WriteString(fmt.Sprintf("#EXT-X-MEDIA-SEQUENCE:%d\n", firstSeq))
+
+	prevWasAd := false
+	for _, s := range segs {
+		if isAdSegment(s.url) {
+			prevWasAd = true
+			continue
+		}
+		// Keep a content-to-content discontinuity, but not an ad-boundary one.
+		if s.discPre && !prevWasAd {
+			sb.WriteString("#EXT-X-DISCONTINUITY\n")
+		}
+		prevWasAd = false
+		if s.keyLine != "" {
+			sb.WriteString(s.keyLine + "\n")
+		}
+		sb.WriteString(s.extinf + "\n")
+		sb.WriteString(s.url + "\n")
+	}
+
+	return sb.String(), nil
+}
+
+func (cf *channelFilter) waitReady(timeout time.Duration) bool {
+	select {
+	case <-cf.readyCh:
+		return true
+	case <-time.After(timeout):
+		return false
+	}
+}
+
+func (cf *channelFilter) getContent() string {
+	cf.mu.Lock()
+	defer cf.mu.Unlock()
+	return cf.content
+}
+
+func filteredHandler(w http.ResponseWriter, r *http.Request) {
+	channel := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/filtered/"), ".m3u8")
+	if channel == "" {
+		http.Error(w, "bad path", 400)
+		return
+	}
+	content := getFilter(channel).getContent()
+	if content == "" {
+		http.Error(w, "not ready", 503)
+		return
+	}
+	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+	w.Header().Set("Cache-Control", "no-cache")
+	fmt.Fprint(w, content)
+}
 
 // --- live channel management ---
 
@@ -67,12 +337,19 @@ func (ch *liveChannel) start(channel string) {
 }
 
 func (ch *liveChannel) run(channel string) {
-	src := mjhBase + channel + ".m3u8"
+	// Point ffmpeg at our filtered manifest endpoint instead of upstream directly.
+	filteredSrc := "http://localhost" + listenAddr + "/filtered/" + channel + ".m3u8"
 	manifest := filepath.Join(ch.dir, "index.m3u8")
 	segPattern := filepath.Join(ch.dir, "%06d.ts")
 
 	if err := os.MkdirAll(ch.dir, 0755); err != nil {
 		log.Printf("live %s: mkdir: %v", channel, err)
+	}
+
+	cf := getFilter(channel)
+	log.Printf("live %s: waiting for first filtered manifest...", channel)
+	if !cf.waitReady(30 * time.Second) {
+		log.Printf("live %s: filter not ready after 30s, proceeding anyway", channel)
 	}
 
 	for {
@@ -84,9 +361,7 @@ func (ch *liveChannel) run(channel string) {
 			"-reconnect_delay_max", "5",
 			"-http_persistent", "0",
 			"-user_agent", userAgent,
-			"-i", src,
-			"-fflags", "+genpts",
-			"-avoid_negative_ts", "make_zero",
+			"-i", filteredSrc,
 			"-c", "copy",
 			"-f", "hls",
 			"-hls_time", "5",
@@ -112,7 +387,7 @@ func (ch *liveChannel) run(channel string) {
 			cmd.Wait()
 		}()
 
-		// Watchdog: restart ffmpeg if manifest stops updating (stalled during ad break).
+		// Watchdog: if the local manifest stops updating, kill ffmpeg so it restarts.
 		go func() {
 			ticker := time.NewTicker(5 * time.Second)
 			defer ticker.Stop()
@@ -122,10 +397,8 @@ func (ch *liveChannel) run(channel string) {
 				case <-done:
 					return
 				case <-ticker.C:
-					if fi, err := os.Stat(manifest); err == nil {
-						if fi.ModTime().After(lastMod) {
-							lastMod = fi.ModTime()
-						}
+					if fi, err := os.Stat(manifest); err == nil && fi.ModTime().After(lastMod) {
+						lastMod = fi.ModTime()
 					}
 					if time.Since(lastMod) > staleLimit {
 						log.Printf("live %s: manifest stale for %s, restarting ffmpeg", channel, staleLimit)
@@ -237,6 +510,7 @@ func main() {
 	}
 	log.Printf("using ffmpeg: %s, runtime dir: %s", ffmpegPath, runtimeDir)
 
+	http.HandleFunc("/filtered/", filteredHandler)
 	http.HandleFunc("/live/", liveHandler)
 	http.HandleFunc("/playlist.m3u8", playlistHandler)
 
