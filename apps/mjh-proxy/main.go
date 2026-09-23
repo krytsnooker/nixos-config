@@ -81,6 +81,7 @@ func (ch *liveChannel) run(channel string) {
 			"-reconnect", "1",
 			"-reconnect_streamed", "1",
 			"-reconnect_delay_max", "5",
+			"-http_persistent", "0",
 			"-user_agent", userAgent,
 			"-i", src,
 			"-c", "copy",
