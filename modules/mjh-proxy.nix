@@ -16,6 +16,7 @@ in
     serviceConfig = {
       DynamicUser = true;
       ExecStart = "${mjhProxy}/bin/mjh-proxy";
+      Environment = "FFMPEG_PATH=${pkgs.ffmpeg}/bin/ffmpeg";
       Restart = "on-failure";
       RestartSec = "5s";
     };

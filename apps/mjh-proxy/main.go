@@ -7,6 +7,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,19 +19,22 @@ const (
 	listenAddr   = ":5030"
 	mjhBase      = "https://i.mjh.nz/.r/"
 	userAgent    = "AppleTV/tvOS/9.1.1 Darwin/15.2.0"
-	stallTimeout = 20 // seconds to wait for a stalled playlist to advance
+	stallTimeout = 20
 )
 
-var httpClient = &http.Client{Timeout: 15 * time.Second}
+var (
+	ffmpegPath = "/usr/bin/ffmpeg"
+	httpClient = &http.Client{Timeout: 15 * time.Second}
 
-var noRedirectClient = &http.Client{
-	Timeout: 10 * time.Second,
-	CheckRedirect: func(*http.Request, []*http.Request) error {
-		return http.ErrUseLastResponse
-	},
-}
+	noRedirectClient = &http.Client{
+		Timeout: 10 * time.Second,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+)
 
-// --- channel session state ---
+// --- channel session state (used by HLS proxy endpoints) ---
 
 type variant struct {
 	attrs string
@@ -40,7 +45,7 @@ type channelState struct {
 	mu          sync.Mutex
 	variants    []variant
 	refreshedAt time.Time
-	seqs        map[int]int // variant idx -> last seen #EXT-X-MEDIA-SEQUENCE
+	seqs        map[int]int
 }
 
 var (
@@ -101,7 +106,7 @@ func (cs *channelState) refresh(channel string) error {
 	}
 
 	cs.variants = variants
-	cs.seqs = make(map[int]int) // reset sequence tracking on session refresh
+	cs.seqs = make(map[int]int)
 	cs.refreshedAt = time.Now()
 	log.Printf("refreshed %s: %d variants", channel, len(variants))
 	return nil
@@ -151,8 +156,6 @@ func parseMaster(r io.Reader, base string) ([]variant, error) {
 	return variants, scanner.Err()
 }
 
-// --- URL helpers ---
-
 func baseOf(rawURL string) string {
 	if i := strings.LastIndex(rawURL, "/"); i >= 0 {
 		return rawURL[:i+1]
@@ -187,7 +190,66 @@ func parseMediaSeq(body string) int {
 	return -1
 }
 
-// --- handlers ---
+// --- ffmpeg MPEG-TS handler ---
+
+func mpegtsHandler(w http.ResponseWriter, r *http.Request) {
+	channel := strings.TrimPrefix(r.URL.Path, "/mpegts/")
+	if channel == "" {
+		http.Error(w, "missing channel", 400)
+		return
+	}
+
+	src := mjhBase + channel + ".m3u8"
+	log.Printf("mpegts %s: client connected", channel)
+
+	w.Header().Set("Content-Type", "video/mp2t")
+
+	for {
+		if err := r.Context().Err(); err != nil {
+			log.Printf("mpegts %s: client disconnected", channel)
+			return
+		}
+
+		cmd := exec.CommandContext(r.Context(), ffmpegPath,
+			"-reconnect", "1",
+			"-reconnect_streamed", "1",
+			"-reconnect_delay_max", "5",
+			"-user_agent", userAgent,
+			"-i", src,
+			"-c", "copy",
+			"-f", "mpegts",
+			"pipe:1",
+		)
+		cmd.Stderr = os.Stderr
+
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			log.Printf("mpegts %s: pipe error: %v, retrying in 2s", channel, err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		if err := cmd.Start(); err != nil {
+			log.Printf("mpegts %s: start error: %v, retrying in 2s", channel, err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		log.Printf("mpegts %s: ffmpeg started (pid %d)", channel, cmd.Process.Pid)
+		_, copyErr := io.Copy(w, stdout)
+		cmd.Wait()
+
+		if r.Context().Err() != nil {
+			log.Printf("mpegts %s: client disconnected", channel)
+			return
+		}
+
+		log.Printf("mpegts %s: ffmpeg exited (copy err: %v), restarting in 1s", channel, copyErr)
+		time.Sleep(1 * time.Second)
+	}
+}
+
+// --- HLS proxy handlers (kept for reference/fallback) ---
 
 func streamHandler(w http.ResponseWriter, r *http.Request) {
 	channel := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/stream/"), ".m3u8")
@@ -292,7 +354,6 @@ func fetchVariantPlaylist(cs *channelState, channel string, idx int) (string, er
 		return rewriteMediaPlaylist(body, baseOf(varURL)), nil
 	}
 
-	// Playlist hasn't advanced — hold the connection and poll until it does
 	log.Printf("playlist stalled for %s/%d at seq %d, waiting up to %ds", channel, idx, seq, stallTimeout)
 	for i := 0; i < stallTimeout; i++ {
 		time.Sleep(1 * time.Second)
@@ -316,7 +377,6 @@ func rewriteMediaPlaylist(body, base string) string {
 	var sb strings.Builder
 	for _, line := range strings.Split(body, "\n") {
 		trimmed := strings.TrimSpace(line)
-		// Strip in-band discontinuity markers (not the SEQUENCE header)
 		if trimmed == "#EXT-X-DISCONTINUITY" {
 			continue
 		}
@@ -352,7 +412,7 @@ func playlistHandler(w http.ResponseWriter, r *http.Request) {
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "https://i.mjh.nz/.r/") {
 			channel := strings.TrimSuffix(strings.TrimPrefix(trimmed, "https://i.mjh.nz/.r/"), ".m3u8")
-			fmt.Fprintf(w, "%s/stream/%s.m3u8\n", proxyBase, channel)
+			fmt.Fprintf(w, "%s/mpegts/%s\n", proxyBase, channel)
 		} else {
 			fmt.Fprintln(w, line)
 		}
@@ -360,6 +420,12 @@ func playlistHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	if p := os.Getenv("FFMPEG_PATH"); p != "" {
+		ffmpegPath = p
+	}
+	log.Printf("using ffmpeg: %s", ffmpegPath)
+
+	http.HandleFunc("/mpegts/", mpegtsHandler)
 	http.HandleFunc("/stream/", streamHandler)
 	http.HandleFunc("/hls/", hlsHandler)
 	http.HandleFunc("/playlist.m3u8", playlistHandler)
