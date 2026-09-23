@@ -96,11 +96,26 @@ func (cf *channelFilter) refresh() {
 
 	body, err := cf.fetchURL(mediaURL)
 	if err != nil {
-		log.Printf("filter %s: fetch media: %v — re-resolving", cf.channel, err)
+		log.Printf("filter %s: fetch media: %v — re-resolving immediately", cf.channel, err)
 		cf.mu.Lock()
 		cf.mediaURL = ""
 		cf.mu.Unlock()
-		return
+		// Re-resolve and fetch fresh content in this same cycle so ffmpeg
+		// never sees a gap longer than one poll interval.
+		mediaURL, err = cf.resolveMediaURL()
+		if err != nil {
+			log.Printf("filter %s: re-resolve: %v", cf.channel, err)
+			return
+		}
+		log.Printf("filter %s: new session: %s", cf.channel, mediaURL)
+		cf.mu.Lock()
+		cf.mediaURL = mediaURL
+		cf.mu.Unlock()
+		body, err = cf.fetchURL(mediaURL)
+		if err != nil {
+			log.Printf("filter %s: fetch after re-resolve: %v", cf.channel, err)
+			return
+		}
 	}
 
 	filtered, err := cf.buildFiltered(body)
