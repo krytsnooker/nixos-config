@@ -253,6 +253,10 @@ func rewriteMediaPlaylist(body, base string) string {
 	var sb strings.Builder
 	for _, line := range strings.Split(body, "\n") {
 		trimmed := strings.TrimSpace(line)
+		// Strip discontinuity markers — Emby stalls on these at DAI ad boundaries
+		if trimmed == "#EXT-X-DISCONTINUITY" {
+			continue
+		}
 		if trimmed != "" && !strings.HasPrefix(trimmed, "#") {
 			line = resolveURL(base, trimmed)
 		}
