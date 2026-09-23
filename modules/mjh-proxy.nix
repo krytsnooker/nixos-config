@@ -3,7 +3,7 @@
 let
   mjhProxy = pkgs.buildGoModule {
     pname = "mjh-proxy";
-    version = "0.1.0";
+    version = "0.1.1";
     src = ../apps/mjh-proxy;
     vendorHash = null;
   };
