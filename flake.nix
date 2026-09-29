@@ -8,33 +8,37 @@
     nix-minecraft.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, nix-minecraft, ... }@inputs:
-    let
+  outputs = { self, nixpkgs, nixpkgs-unstable, nix-minecraft }: {
+    nixosConfigurations.homeserver = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
-      unstablePkgs = nixpkgs-unstable.legacyPackages.${system};
-    in
-    {
-      nixosConfigurations.homeserver = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        specialArgs = { inherit inputs unstablePkgs; };
-        modules = [
-          ./hosts/homeserver/configuration.nix
-          ./modules/common.nix
-          ./modules/desktop-kde.nix
-          ./modules/lan-apps.nix
-          ./modules/minecraft.nix
-          ./modules/databases.nix
-          ./modules/nginx.nix
-          ./modules/samba.nix
-          ./modules/emby.nix
-          ./modules/nextcloud.nix
-          ./modules/pihole-container.nix
-          ./modules/xrdp.nix
-          ./modules/audiobookshelf.nix
-          ./modules/mumble.nix
-          ./modules/mjh-proxy.nix
-          nix-minecraft.nixosModules.minecraft-servers
-        ];
-      };
+
+      modules = [
+        {
+          nixpkgs.overlays = [
+            (final: prev: {
+              brave-origin-nightly = final.callPackage ./pkgs/brave-origin-nightly.nix {};
+              nextcloud34 = nixpkgs-unstable.legacyPackages.x86_64-linux.nextcloud34;
+            })
+            nix-minecraft.overlays.default
+          ];
+          nixpkgs.config.allowUnfree = true;
+        }
+
+        ./hardware-configuration.nix
+        ./configuration.nix
+
+        ./modules/lan-apps.nix
+        ./modules/minecraft.nix
+        ./modules/databases.nix
+        ./modules/nginx.nix
+        ./modules/emby.nix
+        ./modules/nextcloud.nix
+        ./modules/pihole-container.nix
+        ./modules/audiobookshelf.nix
+        ./modules/mumble.nix
+        ./modules/mjh-proxy.nix
+        nix-minecraft.nixosModules.minecraft-servers
+      ];
     };
+  };
 }

@@ -19,7 +19,7 @@
       <h1>homeserver</h1>
       <p>HP ProDesk G4 800 &middot; i5-7500T &middot; 8&nbsp;GB RAM &middot; 256&nbsp;GB SSD &middot; NixOS 25.11</p>
     </div>
-    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle color theme">theme: auto</button>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle colour theme">theme: auto</button>
   </header>
 
   <div class="stat-row">
@@ -31,23 +31,75 @@
 
   <div class="layout">
     <nav class="toc" aria-label="Sections">
-      <a href="#hardware">Hardware</a>
-      <a href="#repo">Repository layout</a>
+      <a href="#flake">flake.nix</a>
+      <a href="#configuration">configuration.nix</a>
+      <a href="#hardware">hardware-configuration.nix</a>
+      <a href="#modules">modules/</a>
       <a href="#rebuilding">Rebuilding</a>
-      <a href="#snapshots">Snapshots</a>
-      <a href="#services">Services</a>
       <a href="#secrets">Secrets</a>
-      <a href="#music">Music scanner</a>
-      <a href="#ssl">SSL / external</a>
-      <a href="#minecraft">Minecraft</a>
       <a href="#fresh-install">Fresh install</a>
     </nav>
 
     <main>
 
+      <section id="flake">
+        <h2><span class="idx">01</span> flake.nix</h2>
+        <p class="dim">Entry point. Declares inputs, wires overlays, and lists every module loaded into the build.</p>
+        <h3>Inputs</h3>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Input</th><th>Channel</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">nixpkgs</td><td class="mono">nixos-25.11</td><td class="wrap">Main package set</td></tr>
+            <tr><td class="mono">nixpkgs-unstable</td><td class="mono">nixos-unstable</td><td class="wrap">Provides <code>nextcloud34</code> via overlay</td></tr>
+            <tr><td class="mono">nix-minecraft</td><td>—</td><td class="wrap">Minecraft server packages and NixOS module</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <h3>Overlays</h3>
+        <p class="dim">Declared inline in the flake — no <code>specialArgs</code> needed.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Package</th><th>Source</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">brave-origin-nightly</td><td class="wrap"><code>pkgs/brave-origin-nightly.nix</code></td></tr>
+            <tr><td class="mono">nextcloud34</td><td class="wrap"><code>nixpkgs-unstable</code></td></tr>
+            <tr><td class="mono">nix-minecraft packages</td><td class="wrap"><code>nix-minecraft.overlays.default</code></td></tr>
+          </tbody>
+        </table>
+        </div>
+      </section>
+
+      <section id="configuration">
+        <h2><span class="idx">02</span> configuration.nix</h2>
+        <p class="dim">Everything the machine fundamentally is. Not a service module — this file is not expected to grow into a list of optional features.</p>
+        <h3>Identity &amp; boot</h3>
+        <p class="dim">Hostname <code>homeserver</code>, static loopback alias <code>192.168.0.120</code>, systemd-boot, timezone <code>Australia/Sydney</code>, US keyboard, 4&nbsp;GB swapfile.</p>
+        <h3>Users</h3>
+        <p class="dim"><code>kryt</code> UID 1000 and GID 1000 are pinned — changing them without a <code>chown</code> pass on the DAS share will break file ownership. <code>sambashare</code> GID 125 is also pinned; Emby (PGID=125), music-info, and Nextcloud all share it for DAS access.</p>
+        <h3>Desktop</h3>
+        <p class="dim">KDE Plasma 6 on X11 via SDDM. Pipewire audio, Bluetooth, printing (CUPS), polkit, colord, udisks2, upower.</p>
+        <h3>Remote desktop (XRDP)</h3>
+        <p class="dim">Uses a wrapper script as the session launcher: sets <code>KWIN_COMPOSE=N</code> to prevent kwin compositing crashes on the virtual XRDP display, and disables <code>kscreenlocker</code> autolock so an idle session never reaches an unresponsive lock screen.</p>
+        <h3>Samba</h3>
+        <p class="dim">smbd/nmbd enabled for printer-sharing parity. This machine has no data shares — the DAS at 192.168.0.110 is a client mount only. <code>samba-wsdd</code> enabled for Windows network discovery.</p>
+        <h3>CIFS mounts</h3>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Mount point</th><th>Remote</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="mono"><code>/mnt/server-pc</code></td><td class="mono"><code>//192.168.0.110/hsas01</code></td><td class="wrap">General DAS — media, backups, music. <code>gid=125</code></td></tr>
+            <tr><td class="mono"><code>/var/lib/nextcloud/data</code></td><td class="mono"><code>//192.168.0.110/hsas01/Nextcloud/data</code></td><td class="wrap"><code>uid=</code> read from <code>homeserver.nextcloudUid</code> in <code>modules/nextcloud.nix</code> — change it there and the mount stays in sync</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <h3>Base packages</h3>
+        <p class="dim">vim, git, wget, curl, htop, ripgrep, claude-code, go, cifs-utils.</p>
+      </section>
+
       <section id="hardware">
-        <h2><span class="idx">01</span> Hardware</h2>
-        <p class="dim">Media and user data live on a Windows 10 machine at <code>192.168.0.110</code> with a SAS DAS attached via HBA. This box mounts it over CIFS at <code>/mnt/server-pc</code>.</p>
+        <h2><span class="idx">03</span> hardware-configuration.nix</h2>
+        <p class="dim">Generated by <code>nixos-generate-config</code>. Contains partition UUIDs, filesystem types, and kernel modules detected at install time. Do not hand-edit — regenerate if hardware changes.</p>
         <div class="table-wrap">
         <table>
           <thead><tr><th>Partition</th><th>UUID</th><th>Filesystem</th><th>Mount</th></tr></thead>
@@ -58,164 +110,131 @@
           </tbody>
         </table>
         </div>
-        <p class="dim">Swap: 4 GB swapfile at <code>/swapfile</code>.</p>
-        <h3>CIFS mounts</h3>
+      </section>
+
+      <section id="modules">
+        <h2><span class="idx">04</span> modules/</h2>
+        <p class="dim">Each file is a self-contained service — firewall rules, systemd units, users, and state dirs all declared together. All modules are loaded unconditionally by <code>flake.nix</code>.</p>
+
+        <h3>nginx.nix</h3>
+        <p class="dim">Reverse proxy and static file server. Hosts the homepage on port 5000, terminates TLS for <code>intrentaka.com</code> (Emby) and <code>cloud.intrentaka.com</code> (Nextcloud) with Let's Encrypt via NixOS ACME. Ports 80 and 443 must be forwarded from the router.</p>
+
+        <h3>nextcloud.nix</h3>
+        <p class="dim">Nextcloud 34 from <code>nixpkgs-unstable</code> (via overlay). MySQL backend, Redis cache, SMTP via Gmail. Declares <code>homeserver.nextcloudUid</code> (default 991) — this is the single source of truth for both the service user UID and the CIFS mount <code>uid=</code> in <code>configuration.nix</code>. Nextcloud services depend on the data CIFS mount before starting.</p>
+
+        <h3>emby.nix</h3>
+        <p class="dim">Emby media server in a Podman container (pinned digest). PUID=0, PGID=125. Media at <code>/mnt/server-pc</code>. Config at <code>/var/lib/emby/</code>. Exposed externally via nginx.</p>
+
+        <h3>audiobookshelf.nix</h3>
+        <p class="dim">Audiobookshelf in a Podman container (pinned digest). Port 13378. Media at <code>/mnt/server-pc/Media</code>. Library path <code>/media/Audio Books</code>.</p>
+
+        <h3>pihole-container.nix</h3>
+        <p class="dim">Pi-hole DNS ad-blocker in a Podman container. Admin UI at port 8083. Internal port pinned to 8080 via <code>FTLCONF_webserver_port</code> — Teleporter restores would otherwise flip it back to 80. LAN DNS at port 53. Split-horizon entries at <code>/var/lib/pihole/etc-pihole/custom.list</code> (not tracked in the repo — recreate after a full volume wipe).</p>
+
+        <h3>lan-apps.nix</h3>
+        <p class="dim">All custom LAN apps declared here. Sources are canonical copies in <code>apps/</code>.</p>
         <div class="table-wrap">
         <table>
-          <thead><tr><th>Mount point</th><th>Remote path</th><th>Purpose</th></tr></thead>
+          <thead><tr><th>Service</th><th>Port</th><th>Runtime</th></tr></thead>
           <tbody>
-            <tr><td class="mono"><code>/mnt/server-pc</code></td><td class="mono"><code>//192.168.0.110/hsas01</code></td><td class="wrap">General DAS access (media, backups, music)</td></tr>
-            <tr><td class="mono"><code>/var/lib/nextcloud/data</code></td><td class="mono"><code>//192.168.0.110/hsas01/Nextcloud/data</code></td><td class="wrap">Nextcloud user data; mounted with <code>uid=991</code> so ownership checks pass</td></tr>
+            <tr><td>typing-tutor</td><td class="mono">3000</td><td>Node/Express</td></tr>
+            <tr><td>math-tutor</td><td class="mono">3001</td><td>Node/Express</td></tr>
+            <tr><td>lan-pastebin</td><td class="mono">5001</td><td>Flask/waitress</td></tr>
+            <tr><td>music-info-library</td><td class="mono">5010</td><td>Flask/waitress</td></tr>
+            <tr><td>mc-control</td><td class="mono">5020</td><td>Flask/waitress</td></tr>
           </tbody>
         </table>
         </div>
-        <div class="callout warn">
-          <span class="tag">CIFS ownership note</span>
-          CIFS mounts don't support real UNIX ownership — ownership is set at mount time via <code>uid=</code>/<code>gid=</code> options. The Nextcloud data mount <code>uid=</code> is derived from <code>homeserver.nextcloudUid</code> (declared in <code>modules/nextcloud.nix</code>, default 991) — change it there and both the service user UID and the mount option update together.
-        </div>
-      </section>
+        <p class="dim">music-info secrets at <code>/var/lib/music-info/secrets.env</code>. Music scanner: <code>sudo systemctl start music-scanner</code> — reads <code>Artist/Album/NN&nbsp;-&nbsp;Title.mp3</code> with 16 parallel CIFS workers, ~27,000 tracks in ~13 minutes.</p>
 
-      <section id="repo">
-        <h2><span class="idx">02</span> Repository layout</h2>
-        <pre><code>flake.nix                    <span class="cmt">— single nixosConfigurations.homeserver</span>
-hosts/homeserver/            <span class="cmt">— hardware config + per-host settings</span>
-modules/                     <span class="cmt">— NixOS modules (all loaded by every build)</span>
-pkgs/                        <span class="cmt">— custom packages (brave-origin-nightly)</span>
-apps/                        <span class="cmt">— source for custom LAN apps (canonical copy)</span></code></pre>
+        <h3>minecraft.nix</h3>
+        <p class="dim">NeoForge 1.20.1 server via nix-minecraft. <code>autoStart = false</code> — never starts at boot; use mc-control or <code>systemctl start minecraft-server-survival</code>. <code>online-mode = false</code> for LAN. World and mods at <code>/var/lib/minecraft/survival/</code> — persistent state, never touched by a rebuild.</p>
+        <div class="callout danger">
+          <span class="tag">NixOS gotcha</span>
+          <code>mc-control</code> uses <code>/run/wrappers/bin/sudo</code> (the setuid wrapper), not <code>/run/current-system/sw/bin/sudo</code> which lacks the setuid bit. If mc-control returns <code>{"status":"unknown"}</code> after a reinstall, verify <code>/run/wrappers/bin/sudo</code> is setuid root.
+        </div>
+
+        <h3>mumble.nix</h3>
+        <p class="dim">Murmur voice server registered as "hometalk". Port 64738 TCP+UDP. Data at <code>/var/lib/murmur</code>. Connect to <code>192.168.0.120:64738</code>. SuperUser password is printed once to the journal on first start.</p>
+
+        <h3>databases.nix</h3>
+        <p class="dim">MySQL for Nextcloud.</p>
+
+        <h3>mjh-proxy.nix</h3>
+        <p class="dim">Internal proxy service. Source at <code>apps/mjh-proxy/</code>.</p>
       </section>
 
       <section id="rebuilding">
-        <h2><span class="idx">03</span> Rebuilding</h2>
-        <pre><code><span class="cmt"># Apply config changes</span>
+        <h2><span class="idx">05</span> Rebuilding</h2>
+        <p class="dim">Flakes only see git-tracked files — always <code>git add</code> before rebuilding.</p>
+        <pre><code><span class="cmt"># Stage, commit, and apply</span>
+sudo git -C /etc/nixos add &lt;file&gt;
+sudo git -C /etc/nixos commit -m "message"
 sudo nixos-rebuild switch --flake /etc/nixos#homeserver
 
 <span class="cmt"># Test without making it the boot default</span>
 sudo nixos-rebuild test --flake /etc/nixos#homeserver
 
-<span class="cmt"># Set as next boot without touching the running system</span>
-sudo nixos-rebuild boot --flake /etc/nixos#homeserver
-
 <span class="cmt"># Roll back to previous generation</span>
 sudo nixos-rebuild switch --rollback</code></pre>
-        <p class="dim">Flakes only see git-tracked files — stage changes before rebuilding:</p>
-        <pre><code>git add &lt;file&gt;</code></pre>
-      </section>
-
-      <section id="snapshots">
-        <h2><span class="idx">04</span> Known-good snapshots</h2>
-        <p class="dim">Tag the current state whenever things are stable:</p>
+        <p class="dim">Tag stable states:</p>
         <pre><code>git tag working-YYYY-MM-DD</code></pre>
-        <p class="dim">To restore:</p>
-        <pre><code>git checkout working-YYYY-MM-DD
-sudo nixos-rebuild switch --flake /etc/nixos#homeserver</code></pre>
-      </section>
-
-      <section id="services">
-        <h2><span class="idx">05</span> Services</h2>
-        <div class="table-wrap">
-        <table>
-          <thead><tr><th>Service</th><th>Port</th><th>URL</th><th>Notes</th></tr></thead>
-          <tbody>
-            <tr><td>homepage</td><td class="mono">5000</td><td><a href="http://homeserver:5000">homeserver:5000</a></td><td class="wrap">Static nginx; config reference at <code>/reference.html</code></td></tr>
-            <tr><td>typing-tutor</td><td class="mono">3000</td><td><a href="http://homeserver:3000">homeserver:3000</a></td><td class="wrap">Node/Express</td></tr>
-            <tr><td>math-tutor</td><td class="mono">3001</td><td><a href="http://homeserver:3001">homeserver:3001</a></td><td class="wrap">Node/Express</td></tr>
-            <tr><td>lan-pastebin</td><td class="mono">5001</td><td><a href="http://homeserver:5001">homeserver:5001</a></td><td class="wrap">Flask/waitress</td></tr>
-            <tr><td>music-info-library</td><td class="mono">5010</td><td><a href="http://homeserver:5010">homeserver:5010</a></td><td class="wrap">Flask/waitress</td></tr>
-            <tr><td>Emby</td><td class="mono">8096 / 8920</td><td><a href="https://intrentaka.com">intrentaka.com</a></td><td class="wrap">Podman container</td></tr>
-            <tr><td>Nextcloud</td><td class="mono">443</td><td><a href="https://cloud.intrentaka.com">cloud.intrentaka.com</a></td><td class="wrap">Native NixOS service</td></tr>
-            <tr><td>Pi-hole</td><td class="mono">8083</td><td><a href="http://homeserver:8083/admin">homeserver:8083/admin</a></td><td class="wrap">Podman container; internal port pinned to 8080 via <code>FTLCONF_webserver_port</code> (Teleporter restores would otherwise flip it back to 80)</td></tr>
-            <tr><td>mc-control</td><td class="mono">5020</td><td>LAN only</td><td class="wrap">Flask/waitress; start/stop Minecraft via HTTP</td></tr>
-            <tr><td>Minecraft</td><td class="mono">25565</td><td>LAN only</td><td class="wrap">Manual start, not on boot</td></tr>
-          </tbody>
-        </table>
-        </div>
-        <pre><code>systemctl --failed                 <span class="cmt"># anything that didn't start</span>
-journalctl -u &lt;service&gt; -f        <span class="cmt"># live logs for a service</span></code></pre>
+        <pre><code>systemctl --failed              <span class="cmt"># anything that didn't start</span>
+journalctl -u &lt;service&gt; -f     <span class="cmt"># live logs</span></code></pre>
       </section>
 
       <section id="secrets">
         <h2><span class="idx">06</span> Secrets</h2>
-        <p class="dim">Never stored in this repo. Copy machine-to-machine (scp/USB) — never paste values into chat or logs.</p>
+        <p class="dim">Never stored in the repo. Verify with <code>bash /home/kryt/check-secrets.sh</code>.</p>
 
         <div class="secret-card">
-          <div class="path">/home/kryt/.smbcredentials <span class="perm">chmod 600, owned kryt:kryt</span></div>
-          <p class="dim" style="margin:6px 0 8px;">Required for the CIFS mount.</p>
-          <pre><code>username=&lt;user&gt;
-password=&lt;password&gt;
+          <div class="path">/home/kryt/.smbcredentials <span class="perm">chmod 600 · kryt:kryt</span></div>
+          <pre><code>username=
+password=
 domain=WORKGROUP</code></pre>
         </div>
 
         <div class="secret-card">
-          <div class="path">/var/lib/music-info/secrets.env <span class="perm">chmod 600, owned music-info:music-info</span></div>
-          <pre><code>DISCOGS_TOKEN=&lt;your Discogs token&gt;
-EMBY_API_KEY=&lt;your Emby API key&gt;
+          <div class="path">/var/lib/music-info/secrets.env <span class="perm">chmod 600 · music-info:music-info</span></div>
+          <pre><code>DISCOGS_TOKEN=
+EMBY_API_KEY=
 EMBY_BASE_URL=http://localhost:8096
 EMBY_EXTERNAL_URL=https://intrentaka.com</code></pre>
-          <p class="dim" style="margin:8px 0 0;"><code>MUSIC_PATH</code> is set in the systemd unit in <code>modules/lan-apps.nix</code>, not here.</p>
         </div>
 
         <div class="secret-card">
-          <div class="path">/var/lib/pihole/secrets.env <span class="perm">chmod 600, owned root:root</span></div>
-          <pre><code>WEBPASSWORD=&lt;your Pi-hole admin password&gt;</code></pre>
+          <div class="path">/var/lib/pihole/secrets.env <span class="perm">chmod 600 · root:root</span></div>
+          <pre><code>WEBPASSWORD=</code></pre>
         </div>
 
         <div class="secret-card">
-          <div class="path">/var/lib/nextcloud-admin-pass <span class="perm">chmod 600, owned root:root</span></div>
-          <p class="dim" style="margin:6px 0 0;">Single line: the Nextcloud admin password.</p>
+          <div class="path">/var/lib/nextcloud-admin-pass <span class="perm">chmod 600 · root:root</span></div>
+          <p class="dim" style="margin:6px 0 0;">Single line: Nextcloud admin password.</p>
         </div>
 
         <div class="secret-card">
-          <div class="path">/var/lib/nextcloud/nc-secrets.php <span class="perm">chmod 400, owned nextcloud:nextcloud</span></div>
-          <p class="dim" style="margin:6px 0 8px;">JSON format (despite the <code>.php</code> extension — nextcloud34 module requirement). Must preserve the original <code>instanceid</code>, <code>passwordsalt</code>, and <code>secret</code> values from the backup; changing them invalidates all user passwords.</p>
+          <div class="path">/var/lib/nextcloud/nc-secrets.php <span class="perm">chmod 400 · nextcloud:nextcloud</span></div>
+          <p class="dim" style="margin:6px 0 8px;">JSON (despite the <code>.php</code> extension). Must preserve the original <code>instanceid</code>, <code>passwordsalt</code>, and <code>secret</code> from backup — changing them invalidates all user passwords.</p>
           <pre><code>{
-  "instanceid": "&lt;from backup config.php&gt;",
-  "passwordsalt": "&lt;from backup config.php&gt;",
-  "secret": "&lt;from backup config.php&gt;",
-  "mail_smtppassword": "&lt;Gmail app password&gt;"
+  "instanceid": "",
+  "passwordsalt": "",
+  "secret": "",
+  "mail_smtppassword": ""
 }</code></pre>
         </div>
       </section>
 
-      <section id="music">
-        <h2><span class="idx">07</span> Music library scanner</h2>
-        <p class="dim">Reads metadata from the directory structure (<code>Artist/Album/NN - Title.mp3</code>) and MP3/FLAC duration headers using 16 parallel CIFS workers. Scans ~27,000 tracks in ~13 minutes. Full wipe + rebuild of the <code>tracks</code> table on every run.</p>
-        <p class="dim">Rescan after adding music to the DAS:</p>
-        <pre><code>sudo systemctl start music-scanner
-journalctl -fu music-scanner       <span class="cmt"># live progress</span></code></pre>
-      </section>
-
-      <section id="ssl">
-        <h2><span class="idx">08</span> SSL / external access</h2>
-        <p class="dim">Let's Encrypt via NixOS ACME (auto-renews). Port 80 and 443 must be forwarded from the router to this machine.</p>
-        <ul style="color:var(--text-dim); padding-left: 20px;">
-          <li><code>intrentaka.com</code> / <code>www.intrentaka.com</code> &rarr; Emby (<code>localhost:8096</code>)</li>
-          <li><code>cloud.intrentaka.com</code> &rarr; Nextcloud</li>
-        </ul>
-      </section>
-
-      <section id="minecraft">
-        <h2><span class="idx">09</span> Minecraft</h2>
-        <pre><code>sudo systemctl start minecraft-server-survival
-sudo systemctl stop minecraft-server-survival</code></pre>
-        <p class="dim"><code>autoStart = false</code> — does not start at boot. Also controllable from the homepage Minecraft card via the <code>mc-control</code> API (port 5020).</p>
-        <p class="dim"><code>online-mode = false</code> for LAN clients without Mojang accounts. Do not expose port 25565 externally without re-enabling online mode first.</p>
-        <div class="callout danger">
-          <span class="tag">NixOS gotcha</span>
-          <code>mc-control</code> uses <code>/run/wrappers/bin/sudo</code> (the setuid wrapper NixOS creates at boot), not <code>/run/current-system/sw/bin/sudo</code>, which lacks the setuid bit. If <code>mc-control</code> ever returns <code>{"status":"unknown"}</code> after a reinstall, verify <code>/run/wrappers/bin/sudo</code> exists and is setuid root.
-        </div>
-      </section>
-
       <section id="fresh-install">
-        <h2><span class="idx">10</span> Fresh install</h2>
+        <h2><span class="idx">07</span> Fresh install</h2>
         <ol class="steps">
-          <li>Partition 256GB SSD: 512MB EFI (vfat) + btrfs root + btrfs <code>/home</code></li>
+          <li>Partition 256&nbsp;GB SSD: 512&nbsp;MB EFI (vfat) + btrfs root + btrfs <code>/home</code></li>
           <li>Mount at <code>/mnt</code>, <code>/mnt/boot</code>, <code>/mnt/home</code></li>
-          <li><code>nixos-generate-config --root /mnt</code> — overwrites <code>hosts/homeserver/hardware-configuration.nix</code></li>
           <li>Clone this repo to <code>/mnt/etc/nixos/</code></li>
+          <li><code>nixos-generate-config --root /mnt</code> — overwrites <code>hardware-configuration.nix</code> at repo root</li>
           <li>Create all secrets files listed above</li>
           <li><code>nixos-install --flake /mnt/etc/nixos#homeserver</code></li>
-          <li>Reboot &rarr; <code>passwd kryt</code> &rarr; place <code>.smbcredentials</code></li>
-          <li>Verify CIFS mount: <code>systemctl status 'mnt-server\x2dpc.mount'</code></li>
+          <li>Reboot → <code>passwd kryt</code> → place <code>.smbcredentials</code></li>
+          <li>Verify CIFS: <code>systemctl status 'mnt-server\x2dpc.mount'</code></li>
           <li>Run music scanner: <code>sudo systemctl start music-scanner</code></li>
           <li>Restore Nextcloud and Pi-hole from DAS backups at <code>/mnt/server-pc/Backups/</code></li>
         </ol>

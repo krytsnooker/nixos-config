@@ -1,4 +1,4 @@
-{ config, pkgs, lib, inputs, ... }:
+{ config, pkgs, lib, ... }:
 
 let
   mcServerName    = "survival";
@@ -114,8 +114,6 @@ let
   '';
 in
 {
-  nixpkgs.overlays = [ inputs.nix-minecraft.overlays.default ];
-
   services.minecraft-servers = {
     enable = true;
     eula = true;

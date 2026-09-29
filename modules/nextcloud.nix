@@ -1,16 +1,16 @@
-{ config, pkgs, lib, unstablePkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 {
   options.homeserver.nextcloudUid = lib.mkOption {
     type = lib.types.int;
     default = 991;
-    description = "UID for the nextcloud service user; must match the uid= option on the CIFS data mount in hosts/homeserver/configuration.nix.";
+    description = "UID for the nextcloud service user; must match the uid= option on the CIFS data mount in configuration.nix.";
   };
 
   config = {
     services.nextcloud = {
       enable = true;
-      package = unstablePkgs.nextcloud34;
+      package = pkgs.nextcloud34;
       hostName = "cloud.intrentaka.com";
       https = true;
       database.createLocally = true;

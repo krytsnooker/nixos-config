@@ -361,7 +361,7 @@ journalctl -u podman-audiobookshelf -f</code></pre>
 
       <div class="callout warn">
         <span class="tag">UID pin</span>
-        The Nextcloud service user UID (991) is declared once in <code>modules/nextcloud.nix</code> as <code>homeserver.nextcloudUid</code>. The CIFS data mount in <code>hosts/homeserver/configuration.nix</code> derives <code>uid=</code> from the same option. Never hardcode 991 in two places.
+        The Nextcloud service user UID (991) is declared once in <code>modules/nextcloud.nix</code> as <code>homeserver.nextcloudUid</code>. The CIFS data mount in <code>configuration.nix</code> derives <code>uid=</code> from the same option. Never hardcode 991 in two places.
       </div>
     </section>
 
