@@ -19,6 +19,7 @@
   # ── Networking ────────────────────────────────────────────────────────────
   networking.networkmanager.enable = true;
   networking.firewall.enable = true;
+  networking.nameservers = [ "192.168.0.120" ];
 
   # ── Users ─────────────────────────────────────────────────────────────────
   # UID 1000:1000 pinned to match DAS file ownership — never change without
