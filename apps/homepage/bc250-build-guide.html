@@ -73,7 +73,7 @@
   .gitignore
   hosts/bc250/
     hardware-configuration.nix   <span class="cmt">← generated during install, committed once</span>
-    configuration.nix            <span class="cmt">← hostname, user, timezone, boot, ACPI override</span>
+    configuration.nix            <span class="cmt">← hostname, user, timezone, boot, ACPI override, DHCP networking</span>
   modules/
     gaming.nix                   <span class="cmt">← always loaded</span>
     emulators.nix                <span class="cmt">← toggle in/out of flake.nix</span>
@@ -228,6 +228,14 @@ sudo git commit -m "bc250: add hardware configuration"</code></pre>
           <pre><code>sudo reboot</code></pre>
           <button class="copy-btn" onclick="copyCode(this)">Copy</button>
         </div>
+
+        <h3><span class="step-id">1i</span> Network</h3>
+        <p class="dim">The BC-250 uses DHCP. The router reserves <code>192.168.0.123</code> for MAC <code>a8:a1:59:b7:38:e1</code> (<code>enp4s0</code>). <code>networking.nameservers</code> in <code>configuration.nix</code> points to Pi-hole at <code>192.168.0.120</code> so LAN hostnames resolve. Verify after reboot:</p>
+        <div class="code-wrap">
+          <pre><code>ip addr show enp4s0     <span class="cmt"># should show 192.168.0.123</span>
+ping homeserver          <span class="cmt"># confirms Pi-hole DNS is working</span></code></pre>
+          <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+        </div>
       </section>
 
       <!-- ══════════════════════════════════════════════ HASHES -->
@@ -333,6 +341,7 @@ cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq</code></pre>
             <tr><td>CPU OC active</td><td><code>cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq</code></td></tr>
             <tr><td>Steam</td><td class="wrap">Launch from KDE menu — let it update</td></tr>
             <tr><td>Audio</td><td class="wrap">System Settings → Audio</td></tr>
+            <tr><td>Vulkan benchmark</td><td><code>vkmark</code> (expect ~12000+ score)</td></tr>
             <tr><td>Failed units</td><td><code>systemctl --failed</code></td></tr>
           </tbody>
         </table>

@@ -123,7 +123,7 @@ sudo nixos-rebuild switch --flake /etc/nixos#homeserver</code></pre>
             <tr><td>music-info-library</td><td class="mono">5010</td><td><a href="http://homeserver:5010">homeserver:5010</a></td><td class="wrap">Flask/waitress</td></tr>
             <tr><td>Emby</td><td class="mono">8096 / 8920</td><td><a href="https://intrentaka.com">intrentaka.com</a></td><td class="wrap">Podman container</td></tr>
             <tr><td>Nextcloud</td><td class="mono">443</td><td><a href="https://cloud.intrentaka.com">cloud.intrentaka.com</a></td><td class="wrap">Native NixOS service</td></tr>
-            <tr><td>Pi-hole</td><td class="mono">8083</td><td><a href="http://homeserver:8083/admin">homeserver:8083/admin</a></td><td class="wrap">Podman container; internal port pinned to 8080 via <code>FTLCONF_webserver_port</code> (Teleporter restores would otherwise flip it back to 80)</td></tr>
+            <tr><td>Pi-hole</td><td class="mono">8083</td><td><a href="http://homeserver:8083/admin">homeserver:8083/admin</a></td><td class="wrap">Podman container; internal port pinned to 8080 via <code>FTLCONF_webserver_port</code> (Teleporter restores would otherwise flip it back to 80). Router DHCP hands out <code>192.168.0.120</code> as primary DNS so all LAN clients use Pi-hole automatically.</td></tr>
             <tr><td>mc-control</td><td class="mono">5020</td><td>LAN only</td><td class="wrap">Flask/waitress; start/stop Minecraft via HTTP</td></tr>
             <tr><td>Minecraft</td><td class="mono">25565</td><td>LAN only</td><td class="wrap">Manual start, not on boot</td></tr>
           </tbody>
@@ -133,8 +133,26 @@ sudo nixos-rebuild switch --flake /etc/nixos#homeserver</code></pre>
 journalctl -u &lt;service&gt; -f        <span class="cmt"># live logs for a service</span></code></pre>
       </section>
 
+      <section id="lan-dns">
+        <h2><span class="idx">06</span> LAN DNS (split-horizon)</h2>
+        <p class="dim">Pi-hole serves DNS on port 53. Custom hostnames are in <code>/var/lib/pihole/etc-pihole/custom.list</code> — this file lives in the Pi-hole volume and survives rebuilds, but is not tracked in the NixOS config.</p>
+        <p class="dim">Current entries:</p>
+        <pre><code>192.168.0.120 intrentaka.com
+192.168.0.120 www.intrentaka.com
+192.168.0.120 cloud.intrentaka.com
+192.168.0.120 mumble
+192.168.0.123 bc250</code></pre>
+        <p class="dim">To add a new hostname:</p>
+        <pre><code>echo "192.168.0.x hostname" | sudo tee -a /var/lib/pihole/etc-pihole/custom.list
+sudo systemctl restart podman-pihole.service</code></pre>
+        <div class="callout info">
+          <span class="tag">Router DNS</span>
+          The ER605 DHCP is configured to hand out <code>192.168.0.120</code> (Pi-hole) as the primary DNS server to all DHCP clients. The homeserver resolves <code>bc250</code> via <code>networking.hosts</code> in its NixOS config (not DNS) since it predates that DHCP change.
+        </div>
+      </section>
+
       <section id="secrets">
-        <h2><span class="idx">06</span> Secrets</h2>
+        <h2><span class="idx">07</span> Secrets</h2>
         <p class="dim">Never stored in this repo. Copy machine-to-machine (scp/USB) — never paste values into chat or logs.</p>
 
         <div class="secret-card">
@@ -177,7 +195,7 @@ EMBY_EXTERNAL_URL=https://intrentaka.com</code></pre>
       </section>
 
       <section id="music">
-        <h2><span class="idx">07</span> Music library scanner</h2>
+        <h2><span class="idx">08</span> Music library scanner</h2>
         <p class="dim">Reads metadata from the directory structure (<code>Artist/Album/NN - Title.mp3</code>) and MP3/FLAC duration headers using 16 parallel CIFS workers. Scans ~27,000 tracks in ~13 minutes. Full wipe + rebuild of the <code>tracks</code> table on every run.</p>
         <p class="dim">Rescan after adding music to the DAS:</p>
         <pre><code>sudo systemctl start music-scanner
@@ -185,7 +203,7 @@ journalctl -fu music-scanner       <span class="cmt"># live progress</span></cod
       </section>
 
       <section id="ssl">
-        <h2><span class="idx">08</span> SSL / external access</h2>
+        <h2><span class="idx">09</span> SSL / external access</h2>
         <p class="dim">Let's Encrypt via NixOS ACME (auto-renews). Port 80 and 443 must be forwarded from the router to this machine.</p>
         <ul style="color:var(--text-dim); padding-left: 20px;">
           <li><code>intrentaka.com</code> / <code>www.intrentaka.com</code> &rarr; Emby (<code>localhost:8096</code>)</li>
@@ -194,7 +212,7 @@ journalctl -fu music-scanner       <span class="cmt"># live progress</span></cod
       </section>
 
       <section id="minecraft">
-        <h2><span class="idx">09</span> Minecraft</h2>
+        <h2><span class="idx">10</span> Minecraft</h2>
         <pre><code>sudo systemctl start minecraft-server-survival
 sudo systemctl stop minecraft-server-survival</code></pre>
         <p class="dim"><code>autoStart = false</code> — does not start at boot. Also controllable from the homepage Minecraft card via the <code>mc-control</code> API (port 5020).</p>
@@ -206,7 +224,7 @@ sudo systemctl stop minecraft-server-survival</code></pre>
       </section>
 
       <section id="fresh-install">
-        <h2><span class="idx">10</span> Fresh install</h2>
+        <h2><span class="idx">11</span> Fresh install</h2>
         <ol class="steps">
           <li>Partition 256GB SSD: 512MB EFI (vfat) + btrfs root + btrfs <code>/home</code></li>
           <li>Mount at <code>/mnt</code>, <code>/mnt/boot</code>, <code>/mnt/home</code></li>
