@@ -18,9 +18,8 @@
 
   # ── Networking ────────────────────────────────────────────────────────────
   networking.networkmanager.enable = true;
-  networking.networkmanager.dns = "none";
   networking.firewall.enable = true;
-  networking.nameservers = [ "192.168.0.120" "192.168.0.1" ];
+  networking.hosts."192.168.0.123" = [ "bc250" ];
 
   # ── Users ─────────────────────────────────────────────────────────────────
   # UID 1000:1000 pinned to match DAS file ownership — never change without
