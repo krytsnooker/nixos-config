@@ -11,7 +11,9 @@
     recommendedProxySettings = true;
     recommendedTlsSettings = true;
     recommendedGzipSettings = true;
-    appendHttpConfig = "limit_req_zone \$binary_remote_addr zone=emby_auth:10m rate=10r/m;";
+    logError = "/var/log/nginx/error.log";
+    commonHttpConfig = "access_log /var/log/nginx/access.log;";
+    appendHttpConfig = "limit_req_zone \$binary_remote_addr zone=emby_auth:10m rate=5r/s;";
 
     # Ported from the old box's /etc/nginx/sites-available/emby.
     virtualHosts."intrentaka.com" = {
@@ -27,7 +29,7 @@
         proxyPass = "http://127.0.0.1:8096";
         proxyWebsockets = true;
         extraConfig = ''
-          limit_req zone=emby_auth burst=5 nodelay;
+          limit_req zone=emby_auth burst=10 nodelay;
           limit_req_status 429;
           add_header Strict-Transport-Security "max-age=15552000; includeSubDomains" always;
           add_header X-Frame-Options "SAMEORIGIN" always;
@@ -37,7 +39,7 @@
           proxy_hide_header Access-Control-Allow-Origin;
           proxy_hide_header Access-Control-Allow-Credentials;
           proxy_hide_header Access-Control-Allow-Private-Network;
-          add_header Access-Control-Allow-Origin "https://intrentaka.com" always;
+          add_header Access-Control-Allow-Origin "*" always;
         '';
       };
 
@@ -53,7 +55,7 @@
           proxy_hide_header Access-Control-Allow-Origin;
           proxy_hide_header Access-Control-Allow-Credentials;
           proxy_hide_header Access-Control-Allow-Private-Network;
-          add_header Access-Control-Allow-Origin "https://intrentaka.com" always;
+          add_header Access-Control-Allow-Origin "*" always;
         '';
       };
     };
