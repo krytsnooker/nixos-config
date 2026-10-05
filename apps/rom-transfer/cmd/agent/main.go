@@ -18,7 +18,7 @@ import (
 	"sync/atomic"
 )
 
-const version = "1.4"
+const version = "1.5"
 
 var reTimestamp = regexp.MustCompile(`_\d{8}-\d{6}$`)
 
@@ -189,7 +189,7 @@ func loopbackOrigin(origin string) bool {
 
 func (a *Agent) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"status":"ok"}`))
+	fmt.Fprintf(w, `{"status":"ok","version":%q}`, version)
 }
 
 func (a *Agent) handleConfig(w http.ResponseWriter, r *http.Request) {
@@ -671,6 +671,25 @@ func (a *Agent) handleScan(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(results)
 }
 
+func (a *Agent) handleUpdate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	a.mu.RLock()
+	serverURL := strings.TrimRight(a.cfg.ServerURL, "/")
+	a.mu.RUnlock()
+	if serverURL == "" {
+		http.Error(w, "server URL not configured", http.StatusBadRequest)
+		return
+	}
+	if err := doUpdate(serverURL); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func fmtBytes(b int64) string {
 	const MB = 1024 * 1024
 	const GB = 1024 * MB
@@ -723,6 +742,7 @@ func main() {
 	mux.HandleFunc("/saves/push", a.cors(a.handleSavesPush))
 	mux.HandleFunc("/saves/pull", a.cors(a.handleSavesPull))
 	mux.HandleFunc("/scan", a.cors(a.handleScan))
+	mux.HandleFunc("/update", a.cors(a.handleUpdate))
 
 	srv := &http.Server{Addr: *addr, Handler: mux}
 	startServer(srv, *addr)

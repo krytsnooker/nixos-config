@@ -5,9 +5,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -156,6 +158,64 @@ func installService(exePath, addr string) error {
 	defer s.Close()
 	eventlog.InstallAsEventCreate(svcName, eventlog.Error|eventlog.Warning|eventlog.Info)
 	return nil
+}
+
+func doUpdate(serverURL string) error {
+	exePath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("cannot determine exe path: %w", err)
+	}
+	exeDir := filepath.Dir(exePath)
+	newExe := filepath.Join(exeDir, "rom-agent-update.exe")
+
+	resp, err := http.Get(serverURL + "/downloads/rom-agent.exe")
+	if err != nil {
+		return fmt.Errorf("download failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("download returned %d", resp.StatusCode)
+	}
+	f, err := os.Create(newExe)
+	if err != nil {
+		return fmt.Errorf("cannot create temp file: %w", err)
+	}
+	if _, err := io.Copy(f, resp.Body); err != nil {
+		f.Close()
+		os.Remove(newExe)
+		return fmt.Errorf("download write failed: %w", err)
+	}
+	f.Close()
+
+	batPath := filepath.Join(exeDir, "rom-agent-update.bat")
+	bat := fmt.Sprintf(`@echo off
+timeout /t 2 /nobreak >nul
+sc query rom-agent >nul 2>&1
+if errorlevel 1 goto replace
+sc stop rom-agent
+:waitstop
+sc query rom-agent | find "STOPPED" >nul
+if errorlevel 1 (
+  timeout /t 1 /nobreak >nul
+  goto waitstop
+)
+:replace
+move /y "%s" "%s"
+sc query rom-agent >nul 2>&1
+if not errorlevel 1 sc start rom-agent
+del "%%~f0"
+`, newExe, exePath)
+
+	if err := os.WriteFile(batPath, []byte(bat), 0755); err != nil {
+		os.Remove(newExe)
+		return fmt.Errorf("cannot write update script: %w", err)
+	}
+
+	cmd := exec.Command("cmd", "/c", batPath)
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		CreationFlags: 0x08000000 | 0x00000200, // CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP
+	}
+	return cmd.Start()
 }
 
 func uninstallService() error {

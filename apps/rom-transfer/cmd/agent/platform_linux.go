@@ -62,3 +62,7 @@ func installService(exePath, addr string) error {
 func uninstallService() error {
 	return fmt.Errorf("service uninstall is not supported on Linux")
 }
+
+func doUpdate(serverURL string) error {
+	return fmt.Errorf("one-click update is not supported on Linux")
+}

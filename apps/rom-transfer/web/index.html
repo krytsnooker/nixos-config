@@ -77,6 +77,8 @@ header button {
   border: 1px solid var(--border); border-radius: 5px; cursor: pointer; white-space: nowrap;
 }
 header button:hover { color: var(--text); border-color: var(--text-faint); }
+.update-btn { background: var(--accent) !important; color: var(--bg) !important; border-color: var(--accent) !important; font-weight: 600 !important; }
+.update-btn:hover { opacity: 0.85; }
 
 /* ── App body ── */
 .app-body { display: flex; flex: 1; overflow: hidden; }
@@ -279,6 +281,7 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
     <option value="">— select —</option>
   </select>
   <div class="hdr-spacer"></div>
+  <button id="update-btn" class="update-btn" style="display:none" onclick="doAgentUpdate()">Update agent</button>
   <span style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text-faint);letter-spacing:0.06em;text-transform:uppercase">Agent</span>
   <a class="dl-btn" href="/downloads/rom-agent.exe" download>Windows</a>
   <a class="dl-btn" href="/downloads/rom-agent-linux" download>Linux</a>
@@ -559,6 +562,53 @@ function setupSavesSearch() {
   });
 }
 
+async function checkAgentVersion() {
+  try {
+    const [agentRes, serverRes] = await Promise.all([
+      fetch(AGENT + '/health'),
+      fetch('/api/agent-version')
+    ]);
+    if (!agentRes.ok || !serverRes.ok) return;
+    const agentData  = await agentRes.json();
+    const serverData = await serverRes.json();
+    if (agentData.version && serverData.version && agentData.version !== serverData.version) {
+      const btn = document.getElementById('update-btn');
+      btn.textContent = 'Update agent (' + agentData.version + ' → ' + serverData.version + ')';
+      btn.style.display = '';
+    }
+  } catch (e) { /* silent */ }
+}
+
+async function doAgentUpdate() {
+  const btn = document.getElementById('update-btn');
+  btn.textContent = 'Updating…';
+  btn.disabled = true;
+  try {
+    await apiFetch(AGENT + '/update', { method: 'POST' });
+  } catch (e) {
+    btn.textContent = 'Update failed: ' + e.message;
+    btn.disabled = false;
+    return;
+  }
+  btn.textContent = 'Restarting…';
+  // Poll until agent comes back
+  for (let i = 0; i < 30; i++) {
+    await new Promise(r => setTimeout(r, 1000));
+    try {
+      const r = await fetch(AGENT + '/health');
+      if (r.ok) {
+        btn.style.display = 'none';
+        btn.disabled = false;
+        setStatus('Agent updated successfully.');
+        checkAgentVersion();
+        return;
+      }
+    } catch (e) { /* still restarting */ }
+  }
+  btn.textContent = 'Restart timed out — refresh page';
+  btn.disabled = false;
+}
+
 async function init() {
   setupSearch('search-local',  'local-body');
   setupSearch('search-server', 'server-body');
@@ -567,6 +617,7 @@ async function init() {
     setStatus('Agent not reachable at ' + AGENT + ' — is it running?', true);
   }
   await Promise.all([loadConsoles(), loadFileTypes()]);
+  checkAgentVersion();
 }
 
 async function loadConsoles() {

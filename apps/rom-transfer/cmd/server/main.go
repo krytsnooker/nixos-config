@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -127,6 +128,7 @@ func main() {
 	mux.HandleFunc("/api/saves/upload", s.lanOnly(s.handleSavesUpload))
 	mux.HandleFunc("/api/filetypes", s.lanOnly(s.handleFileTypes))
 	mux.HandleFunc("/api/scanpaths", s.lanOnly(s.handleScanPaths))
+	mux.HandleFunc("/api/agent-version", s.lanOnly(s.handleAgentVersion))
 	mux.Handle("/", http.FileServer(http.Dir(*webDir)))
 
 	log.Printf("rom-transfer server on %s", *addr)
@@ -461,6 +463,17 @@ func (s *Server) handleFileTypes(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ft)
+}
+
+func (s *Server) handleAgentVersion(w http.ResponseWriter, r *http.Request) {
+	versionFile := filepath.Join(s.webDir, "downloads", "agent-version.txt")
+	data, err := os.ReadFile(versionFile)
+	if err != nil {
+		http.Error(w, "version file not found", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"version":%q}`, strings.TrimSpace(string(data)))
 }
 
 func (s *Server) handleScanPaths(w http.ResponseWriter, r *http.Request) {
