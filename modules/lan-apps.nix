@@ -122,7 +122,7 @@ in
         version = "0.1.0";
         src = ../apps/rom-transfer;
         subPackages = [ "cmd/server" ];
-        vendorHash = null;
+        vendorHash = "sha256-4r7OLCeF7PrfDJv1ROKt766Xod/jr8twLa3gTQ4ED0c=";
       };
     in {
       User = "rom-transfer";

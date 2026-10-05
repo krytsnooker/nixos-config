@@ -3,6 +3,9 @@
 package main
 
 import (
+	"fmt"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,4 +48,17 @@ func defaultBrowseRoot() string {
 		return "/"
 	}
 	return home
+}
+
+func startServer(srv *http.Server, addr string) {
+	log.Printf("rom-agent v%s listening on %s", version, addr)
+	log.Fatal(srv.ListenAndServe())
+}
+
+func installService(exePath, addr string) error {
+	return fmt.Errorf("service installation is not supported on Linux")
+}
+
+func uninstallService() error {
+	return fmt.Errorf("service uninstall is not supported on Linux")
 }

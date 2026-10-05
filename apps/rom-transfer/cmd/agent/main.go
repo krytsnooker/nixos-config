@@ -666,8 +666,29 @@ func fmtBytes(b int64) string {
 }
 
 func main() {
-	addr := flag.String("addr", "127.0.0.1:5031", "listen address")
+	addr    := flag.String("addr", "127.0.0.1:5031", "listen address")
+	install := flag.Bool("install", false, "install as a system service (Windows, run as administrator)")
+	uninst  := flag.Bool("uninstall", false, "uninstall the system service (Windows, run as administrator)")
 	flag.Parse()
+
+	if *install {
+		exe, err := os.Executable()
+		if err != nil {
+			log.Fatalf("cannot determine executable path: %v", err)
+		}
+		if err := installService(exe, *addr); err != nil {
+			log.Fatalf("install failed: %v", err)
+		}
+		log.Println("Service installed. Start it with: sc start rom-agent")
+		return
+	}
+	if *uninst {
+		if err := uninstallService(); err != nil {
+			log.Fatalf("uninstall failed: %v", err)
+		}
+		log.Println("Service uninstalled.")
+		return
+	}
 
 	a := newAgent(configFilePath())
 	go a.runWorker()
@@ -684,6 +705,6 @@ func main() {
 	mux.HandleFunc("/saves/pull", a.cors(a.handleSavesPull))
 	mux.HandleFunc("/scan", a.cors(a.handleScan))
 
-	log.Printf("rom-agent v%s listening on %s", version, *addr)
-	log.Fatal(http.ListenAndServe(*addr, mux))
+	srv := &http.Server{Addr: *addr, Handler: mux}
+	startServer(srv, *addr)
 }

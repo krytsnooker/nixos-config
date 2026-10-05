@@ -3,14 +3,29 @@
 package main
 
 import (
+	"context"
+	"fmt"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 	"unsafe"
+
+	"golang.org/x/sys/windows/svc"
+	"golang.org/x/sys/windows/svc/eventlog"
+	"golang.org/x/sys/windows/svc/mgr"
 )
 
 const agentOS = "windows"
+
+const (
+	svcName        = "rom-agent"
+	svcDisplayName = "ROM Transfer Agent"
+	svcDesc        = "Serves local file access to the ROM Transfer web app"
+)
 
 func expandPath(path string) string {
 	var b strings.Builder
@@ -73,4 +88,87 @@ func defaultBrowseRoot() string {
 		return `C:\`
 	}
 	return profile
+}
+
+// ── Windows service ───────────────────────────────────────────────────────────
+
+type agentSvc struct{ srv *http.Server }
+
+func (s *agentSvc) Execute(_ []string, r <-chan svc.ChangeRequest, status chan<- svc.Status) (bool, uint32) {
+	status <- svc.Status{State: svc.StartPending}
+	go s.srv.ListenAndServe()
+	status <- svc.Status{State: svc.Running, Accepts: svc.AcceptStop | svc.AcceptShutdown}
+	for c := range r {
+		switch c.Cmd {
+		case svc.Stop, svc.Shutdown:
+			status <- svc.Status{State: svc.StopPending}
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			s.srv.Shutdown(ctx)
+			return false, 0
+		}
+	}
+	return false, 0
+}
+
+func startServer(srv *http.Server, addr string) {
+	ok, err := svc.IsWindowsService()
+	if err != nil {
+		log.Fatalf("cannot detect service mode: %v", err)
+	}
+	if ok {
+		elog, _ := eventlog.Open(svcName)
+		if elog != nil {
+			elog.Info(1, fmt.Sprintf("rom-agent v%s starting on %s", version, addr))
+			defer elog.Close()
+		}
+		if err := svc.Run(svcName, &agentSvc{srv: srv}); err != nil {
+			if elog != nil {
+				elog.Error(1, err.Error())
+			}
+			log.Fatalf("service run failed: %v", err)
+		}
+		return
+	}
+	log.Printf("rom-agent v%s listening on %s", version, addr)
+	log.Fatal(srv.ListenAndServe())
+}
+
+func installService(exePath, addr string) error {
+	m, err := mgr.Connect()
+	if err != nil {
+		return fmt.Errorf("cannot connect to service manager: %w", err)
+	}
+	defer m.Disconnect()
+	s, err := m.OpenService(svcName)
+	if err == nil {
+		s.Close()
+		return fmt.Errorf("service %q already exists", svcName)
+	}
+	s, err = m.CreateService(svcName, exePath, mgr.Config{
+		DisplayName: svcDisplayName,
+		Description: svcDesc,
+		StartType:   mgr.StartAutomatic,
+	}, "-addr", addr)
+	if err != nil {
+		return fmt.Errorf("cannot create service: %w", err)
+	}
+	defer s.Close()
+	eventlog.InstallAsEventCreate(svcName, eventlog.Error|eventlog.Warning|eventlog.Info)
+	return nil
+}
+
+func uninstallService() error {
+	m, err := mgr.Connect()
+	if err != nil {
+		return fmt.Errorf("cannot connect to service manager: %w", err)
+	}
+	defer m.Disconnect()
+	s, err := m.OpenService(svcName)
+	if err != nil {
+		return fmt.Errorf("service %q not found", svcName)
+	}
+	defer s.Close()
+	eventlog.Remove(svcName)
+	return s.Delete()
 }
