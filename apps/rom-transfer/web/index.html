@@ -211,6 +211,7 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
 /* scan results */
 .scan-result-path { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--text-dim); word-break: break-all; }
 .scan-count { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--text-faint); }
+.scan-console-sel { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px; width: 100%; }
 
 /* ── Modals ── */
 .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; }
@@ -383,7 +384,7 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
       <div class="panel-section">
         <h3>Local folders per console</h3>
         <table class="edit-table">
-          <thead><tr><th>Console</th><th>Local folder</th><th></th></tr></thead>
+          <thead><tr><th>Console</th><th></th><th>Path</th><th></th></tr></thead>
           <tbody id="client-rows"></tbody>
         </table>
         <div class="panel-actions">
@@ -858,19 +859,33 @@ async function loadClientPanel() {
     const tbody = document.getElementById('client-rows');
     tbody.innerHTML = '';
     for (const c of consoles) {
-      const dest = (cfg.destinations || {})[c.name] || '';
+      const romPath  = (cfg.roms  || {})[c.name] || '';
+      const savePath = (cfg.saves || {})[c.name] || '';
       const tr = document.createElement('tr');
-      const inp = document.createElement('input');
-      inp.type = 'text'; inp.dataset.console = c.name; inp.value = dest;
-      inp.placeholder = 'path to local folder'; inp.className = 'panel-input';
-      const browseBtn = document.createElement('button');
-      browseBtn.className = 'panel-btn'; browseBtn.textContent = 'Browse';
-      browseBtn.style.whiteSpace = 'nowrap';
-      browseBtn.addEventListener('click', () => openBrowse(inp));
-      tr.innerHTML = '<td style="width:8rem;font-family:\'IBM Plex Mono\',monospace;font-size:0.85rem">' + esc(c.name) + '</td><td></td><td style="width:6rem;text-align:right"></td>';
-      tr.cells[1].appendChild(inp);
-      tr.cells[2].appendChild(browseBtn);
+      const romInp = document.createElement('input');
+      romInp.type = 'text'; romInp.dataset.console = c.name; romInp.dataset.kind = 'rom';
+      romInp.value = romPath; romInp.placeholder = 'ROMs folder'; romInp.className = 'panel-input';
+      const romBrowse = document.createElement('button');
+      romBrowse.className = 'panel-btn'; romBrowse.textContent = 'Browse';
+      romBrowse.style.whiteSpace = 'nowrap';
+      romBrowse.addEventListener('click', () => openBrowse(romInp));
+      const saveInp = document.createElement('input');
+      saveInp.type = 'text'; saveInp.dataset.console = c.name; saveInp.dataset.kind = 'save';
+      saveInp.value = savePath; saveInp.placeholder = 'Saves folder'; saveInp.className = 'panel-input';
+      const saveBrowse = document.createElement('button');
+      saveBrowse.className = 'panel-btn'; saveBrowse.textContent = 'Browse';
+      saveBrowse.style.whiteSpace = 'nowrap';
+      saveBrowse.addEventListener('click', () => openBrowse(saveInp));
+      tr.innerHTML = '<td style="width:7rem;font-family:\'IBM Plex Mono\',monospace;font-size:0.85rem" rowspan="2">' + esc(c.name) + '</td>' +
+                     '<td style="width:3.5rem;color:var(--text-faint);font-size:0.78rem">ROMs</td><td></td><td style="width:5.5rem;text-align:right"></td>';
+      tr.cells[2].appendChild(romInp);
+      tr.cells[3].appendChild(romBrowse);
+      const tr2 = document.createElement('tr');
+      tr2.innerHTML = '<td style="width:3.5rem;color:var(--text-faint);font-size:0.78rem">Saves</td><td></td><td style="width:5.5rem;text-align:right"></td>';
+      tr2.cells[1].appendChild(saveInp);
+      tr2.cells[2].appendChild(saveBrowse);
       tbody.appendChild(tr);
+      tbody.appendChild(tr2);
     }
     document.getElementById('scan-results-section').style.display = 'none';
   } catch (e) { setStatus('Cannot load client config: ' + e.message, true); }
@@ -878,13 +893,15 @@ async function loadClientPanel() {
 
 async function saveClientPanel() {
   const serverUrl = document.getElementById('client-server-url').value.trim();
-  const destinations = {};
+  const roms = {}, saves = {};
   for (const inp of document.querySelectorAll('#client-rows input[data-console]')) {
     const v = inp.value.trim();
-    if (v) destinations[inp.dataset.console] = v;
+    if (!v) continue;
+    if (inp.dataset.kind === 'save') saves[inp.dataset.console] = v;
+    else roms[inp.dataset.console] = v;
   }
   try {
-    await apiFetch(AGENT + '/config', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({server_url: serverUrl, destinations}) });
+    await apiFetch(AGENT + '/config', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({server_url: serverUrl, roms, saves}) });
     setStatus('Client config saved.');
   } catch (e) { setStatus('Save failed: ' + e.message, true); }
 }
@@ -904,13 +921,23 @@ async function runScan() {
     }
     for (const res of results) {
       const tr = document.createElement('tr');
+      const sel = document.createElement('select');
+      sel.className = 'scan-console-sel';
+      sel.innerHTML = '<option value="">— select —</option>';
+      for (const c of consoles) {
+        const opt = document.createElement('option');
+        opt.value = c.name; opt.textContent = c.name;
+        if (c.name === res.console) opt.selected = true;
+        sel.appendChild(opt);
+      }
       const applyBtn = document.createElement('button');
       applyBtn.className = 'panel-btn primary'; applyBtn.textContent = 'Apply';
-      applyBtn.addEventListener('click', () => applyScanResult(res.path, res.console));
+      applyBtn.addEventListener('click', () => applyScanResult(res.path, sel.value));
       tr.innerHTML = '<td style="font-size:0.82rem">' + esc(res.emulator) + '</td>' +
                      '<td class="scan-result-path">' + esc(res.path) + '</td>' +
-                     '<td style="font-size:0.82rem">' + esc(res.console || '—') + '</td>' +
+                     '<td></td>' +
                      '<td class="scan-count">' + res.file_count + '</td><td></td>';
+      tr.children[2].appendChild(sel);
       tr.lastChild.appendChild(applyBtn);
       tbody.appendChild(tr);
     }
@@ -920,8 +947,8 @@ async function runScan() {
 }
 
 function applyScanResult(path, console_) {
-  if (!console_) return;
-  const inp = document.querySelector('#client-rows input[data-console="' + CSS.escape(console_) + '"]');
+  if (!console_) { setStatus('Select a console first.', true); return; }
+  const inp = document.querySelector('#client-rows input[data-console="' + CSS.escape(console_) + '"][data-kind="save"]');
   if (inp) { inp.value = path; setStatus('Applied: ' + console_ + ' → ' + path); }
   else { setStatus('Console "' + console_ + '" not in configured list — add it in Consoles first.', true); }
 }

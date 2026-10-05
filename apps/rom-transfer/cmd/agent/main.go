@@ -16,7 +16,7 @@ import (
 	"sync/atomic"
 )
 
-const version = "1.3"
+const version = "1.4"
 
 var reTimestamp = regexp.MustCompile(`_\d{8}-\d{6}$`)
 
@@ -27,8 +27,9 @@ func stripTimestamp(name string) string {
 }
 
 type Config struct {
-	ServerURL    string            `json:"server_url"`
-	Destinations map[string]string `json:"destinations"`
+	ServerURL string            `json:"server_url"`
+	Roms      map[string]string `json:"roms"`
+	Saves     map[string]string `json:"saves"`
 }
 
 type ScanResult struct {
@@ -101,15 +102,28 @@ func newAgent(configPath string) *Agent {
 func (a *Agent) loadConfig() {
 	data, err := os.ReadFile(a.configPath)
 	if err != nil {
-		a.cfg = Config{Destinations: map[string]string{}}
+		a.cfg = Config{Roms: map[string]string{}, Saves: map[string]string{}}
 		return
 	}
+	// migration: old config had a flat "destinations" field
+	var raw map[string]json.RawMessage
 	var cfg Config
+	if err := json.Unmarshal(data, &raw); err == nil {
+		if dest, ok := raw["destinations"]; ok && raw["roms"] == nil {
+			var destinations map[string]string
+			if json.Unmarshal(dest, &destinations) == nil {
+				cfg.Roms = destinations
+			}
+		}
+	}
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return
 	}
-	if cfg.Destinations == nil {
-		cfg.Destinations = map[string]string{}
+	if cfg.Roms == nil {
+		cfg.Roms = map[string]string{}
+	}
+	if cfg.Saves == nil {
+		cfg.Saves = map[string]string{}
 	}
 	a.cfg = cfg
 }
@@ -175,8 +189,11 @@ func (a *Agent) handleConfig(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		if cfg.Destinations == nil {
-			cfg.Destinations = map[string]string{}
+		if cfg.Roms == nil {
+			cfg.Roms = map[string]string{}
+		}
+		if cfg.Saves == nil {
+			cfg.Saves = map[string]string{}
 		}
 		if err := a.writeConfig(cfg); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -223,7 +240,7 @@ func (a *Agent) handleFiles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.mu.RLock()
-	dir := a.cfg.Destinations[console]
+	dir := a.cfg.Roms[console]
 	a.mu.RUnlock()
 
 	switch r.Method {
@@ -345,7 +362,7 @@ func (a *Agent) handleBrowse(w http.ResponseWriter, r *http.Request) {
 func (a *Agent) handleSaves(w http.ResponseWriter, r *http.Request) {
 	console := r.URL.Query().Get("console")
 	a.mu.RLock()
-	folder := a.cfg.Destinations[console]
+	folder := a.cfg.Saves[console]
 	a.mu.RUnlock()
 	if folder == "" {
 		folder = defaultDownloadsDir()
@@ -380,7 +397,7 @@ func (a *Agent) handleSavesPush(w http.ResponseWriter, r *http.Request) {
 	a.mu.RLock()
 	cfg := a.cfg
 	a.mu.RUnlock()
-	folder := cfg.Destinations[req.Console]
+	folder := cfg.Saves[req.Console]
 	if folder == "" {
 		folder = defaultDownloadsDir()
 	}
@@ -425,7 +442,7 @@ func (a *Agent) handleSavesPull(w http.ResponseWriter, r *http.Request) {
 	a.mu.RLock()
 	cfg := a.cfg
 	a.mu.RUnlock()
-	folder := cfg.Destinations[req.Console]
+	folder := cfg.Saves[req.Console]
 	if folder == "" {
 		folder = defaultDownloadsDir()
 	}
@@ -505,7 +522,7 @@ func (a *Agent) doTransfer(at *ActiveTransfer) error {
 	cfg := a.cfg
 	a.mu.RUnlock()
 
-	destDir := cfg.Destinations[at.Console]
+	destDir := cfg.Roms[at.Console]
 	if destDir == "" {
 		return fmt.Errorf("no destination configured for %s", at.Console)
 	}
