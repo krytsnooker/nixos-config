@@ -128,7 +128,8 @@ in
       User = "rom-transfer";
       Group = "rom-transfer";
       StateDirectory = "rom-transfer";
-      ExecStart = "${pkg}/bin/server -addr 0.0.0.0:5035 -config /var/lib/rom-transfer/hostconfig.json -web ${../apps/rom-transfer/web}";
+      ExecStartPre = "${pkgs.bash}/bin/bash -c 'cp -r ${../apps/rom-transfer/web}/. /var/lib/rom-transfer/web/'";
+      ExecStart = "${pkg}/bin/server -addr 0.0.0.0:5035 -config /var/lib/rom-transfer/hostconfig.json -web /var/lib/rom-transfer/web";
       Restart = "on-failure";
     };
   };
