@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"io"
@@ -33,6 +35,7 @@ type SaveFileInfo struct {
 	Name string `json:"name"`
 	Size int64  `json:"size"`
 	Game string `json:"game"`
+	Hash string `json:"hash,omitempty"`
 }
 
 type ConsoleFileTypes struct {
@@ -218,6 +221,19 @@ func listDir(dir string) ([]FileInfo, error) {
 	return files, nil
 }
 
+func fileHash(path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(h.Sum(nil))
+}
+
 // safePath validates a bare filename and returns its full path inside dir.
 // Rejects path separators, "..", and symlinks escaping dir.
 func safePath(dir, filename string) (string, bool) {
@@ -315,17 +331,22 @@ func (s *Server) handleSaves(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			continue
 		}
-		game := ""
+		game, hash := "", ""
 		sidecarPath := filepath.Join(dir, strings.TrimSuffix(name, filepath.Ext(name))+".json")
 		if data, err := os.ReadFile(sidecarPath); err == nil {
 			var sc struct {
 				Game string `json:"game"`
+				Hash string `json:"hash"`
 			}
 			if json.Unmarshal(data, &sc) == nil {
 				game = sc.Game
+				hash = sc.Hash
 			}
 		}
-		result = append(result, SaveFileInfo{Name: name, Size: info.Size(), Game: game})
+		if hash == "" {
+			hash = fileHash(filepath.Join(dir, name))
+		}
+		result = append(result, SaveFileInfo{Name: name, Size: info.Size(), Game: game, Hash: hash})
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(result)
@@ -386,23 +407,23 @@ func (s *Server) handleSavesUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if game := r.URL.Query().Get("game"); game != "" {
-		type sidecar struct {
-			Game         string `json:"game"`
-			Console      string `json:"console"`
-			PushedAt     string `json:"pushed_at"`
-			OriginalFile string `json:"original_file"`
-		}
-		sc := sidecar{
-			Game:         game,
-			Console:      console,
-			PushedAt:     time.Now().Format(time.RFC3339),
-			OriginalFile: file,
-		}
-		if data, err := json.Marshal(sc); err == nil {
-			sidecarPath := strings.TrimSuffix(dest, filepath.Ext(dest)) + ".json"
-			os.WriteFile(sidecarPath, data, 0644)
-		}
+	type sidecar struct {
+		Game         string `json:"game"`
+		Console      string `json:"console"`
+		PushedAt     string `json:"pushed_at"`
+		OriginalFile string `json:"original_file"`
+		Hash         string `json:"hash,omitempty"`
+	}
+	sc := sidecar{
+		Game:         r.URL.Query().Get("game"),
+		Console:      console,
+		PushedAt:     time.Now().Format(time.RFC3339),
+		OriginalFile: file,
+		Hash:         fileHash(dest),
+	}
+	if data, err := json.Marshal(sc); err == nil {
+		sidecarPath := strings.TrimSuffix(dest, filepath.Ext(dest)) + ".json"
+		os.WriteFile(sidecarPath, data, 0644)
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

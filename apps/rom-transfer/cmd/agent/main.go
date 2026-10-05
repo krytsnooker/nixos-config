@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -42,6 +44,20 @@ type ScanResult struct {
 type FileInfo struct {
 	Name string `json:"name"`
 	Size int64  `json:"size"`
+	Hash string `json:"hash,omitempty"`
+}
+
+func fileHash(path string) string {
+	f, err := os.Open(path)
+	if err != nil {
+		return ""
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 type DiskInfo struct {
@@ -371,6 +387,9 @@ func (a *Agent) handleSaves(w http.ResponseWriter, r *http.Request) {
 	files, _, _ := listDir(folder)
 	if files == nil {
 		files = []FileInfo{}
+	}
+	for i := range files {
+		files[i].Hash = fileHash(filepath.Join(folder, files[i].Name))
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(files)

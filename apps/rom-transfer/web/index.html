@@ -129,6 +129,17 @@ header button:hover { color: var(--text); border-color: var(--text-faint); }
   text-transform: uppercase; color: var(--text-faint); margin: 0 0 0.5rem; font-weight: 500;
 }
 .disk-info { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--text-faint); margin-bottom: 0.6rem; }
+.file-search { width: 100%; box-sizing: border-box; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; margin-bottom: 0.5rem; outline: none; }
+.file-search:focus { border-color: var(--accent); }
+.save-ind { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; margin-right: 0.4rem; flex-shrink: 0; vertical-align: middle; cursor: default; position: relative; }
+.save-ind.exact    { background: #4caf7d; }
+.save-ind.stale    { background: #e0a03a; }
+.save-ind.unpushed { background: #7a8a90; }
+.save-ind.server-match { background: #4caf7d; }
+tr.save-row { cursor: pointer; }
+tr.save-row:hover { background: var(--surface-2); }
+tr.save-row.selected { background: var(--surface-3); outline: 1px solid var(--accent); }
+.save-tooltip { position: fixed; background: var(--surface-3); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; font-family: "IBM Plex Sans", sans-serif; pointer-events: none; white-space: nowrap; z-index: 1000; display: none; box-shadow: var(--shadow); }
 
 /* ── Config panels ── */
 .config-panel { flex: 1; overflow-y: auto; padding: 1.4rem 1.6rem; }
@@ -295,15 +306,18 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
         <button id="tab-saves" onclick="switchTab('saves')">Saves</button>
       </div>
       <div id="status-bar">Ready.</div>
+      <input type="search" class="file-search" id="search-saves" placeholder="Filter saves…" style="display:none;margin:0.4rem 1.2rem 0;width:calc(100% - 2.4rem);box-sizing:border-box">
       <div id="panes-roms" class="panes">
         <div class="pane">
           <h2>Local</h2>
           <div class="disk-info" id="local-disk-info"></div>
+          <input type="search" class="file-search" id="search-local" placeholder="Filter…">
           <table><thead><tr><th class="name-cell">Name</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
           <tbody id="local-body"></tbody></table>
         </div>
         <div class="pane">
           <h2>Server</h2>
+          <input type="search" class="file-search" id="search-server" placeholder="Filter…">
           <table><thead><tr><th class="name-cell">Name</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
           <tbody id="server-body"></tbody></table>
         </div>
@@ -525,7 +539,30 @@ function setView(view) {
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 
+function setupSearch(inputId, tbodyId) {
+  document.getElementById(inputId).addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    for (const tr of document.getElementById(tbodyId).rows) {
+      tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+    }
+  });
+}
+
+function setupSavesSearch() {
+  document.getElementById('search-saves').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    for (const tbody of ['saves-local-body', 'saves-server-body']) {
+      for (const tr of document.getElementById(tbody).rows) {
+        tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+      }
+    }
+  });
+}
+
 async function init() {
+  setupSearch('search-local',  'local-body');
+  setupSearch('search-server', 'server-body');
+  setupSavesSearch();
   try { await fetch(AGENT + '/health'); } catch (e) {
     setStatus('Agent not reachable at ' + AGENT + ' — is it running?', true);
   }
@@ -559,12 +596,19 @@ function switchTab(tab) {
   document.getElementById('tab-saves').classList.toggle('active', tab === 'saves');
   document.getElementById('panes-roms').style.display = tab === 'roms' ? '' : 'none';
   document.getElementById('panes-saves').style.display = tab === 'saves' ? '' : 'none';
+  document.getElementById('search-saves').style.display = tab === 'saves' ? '' : 'none';
   if (currentConsole) loadPanes();
 }
 
 function loadPanes() {
-  if (currentTab === 'roms') { loadLocalFiles(); loadServerFiles(); }
-  else { loadLocalSaves(); loadServerSaves(); }
+  if (currentTab === 'roms') {
+    document.getElementById('search-local').value = '';
+    document.getElementById('search-server').value = '';
+    loadLocalFiles(); loadServerFiles();
+  } else {
+    document.getElementById('search-saves').value = '';
+    loadSavesPanes();
+  }
 }
 
 // ── ROMs ─────────────────────────────────────────────────────────────────────
@@ -658,42 +702,149 @@ async function pollStatus() {
 
 // ── Saves ────────────────────────────────────────────────────────────────────
 
+const tooltip = document.createElement('div');
+
+function showTooltip(e, text) {
+  const t = document.getElementById('save-tooltip');
+  t.textContent = text;
+  t.style.display = 'block';
+  t.style.left = (e.clientX + 12) + 'px';
+  t.style.top  = (e.clientY + 12) + 'px';
+}
+
+function hideTooltip() {
+  document.getElementById('save-tooltip').style.display = 'none';
+}
+
+function makeInd(cls, tipText) {
+  const span = document.createElement('span');
+  span.className = 'save-ind ' + cls;
+  span.addEventListener('mouseenter', e => showTooltip(e, tipText));
+  span.addEventListener('mousemove',  e => { const t = document.getElementById('save-tooltip'); t.style.left = (e.clientX + 12) + 'px'; t.style.top = (e.clientY + 12) + 'px'; });
+  span.addEventListener('mouseleave', hideTooltip);
+  return span;
+}
+
+let selectedSaveBase = null;
+
+function saveBaseName(filename) {
+  const dot = filename.lastIndexOf('.');
+  const base = dot >= 0 ? filename.slice(0, dot) : filename;
+  return base.replace(/_\d{8}-\d{6}$/, '');
+}
+
 async function loadLocalSaves() {
-  const tbody = document.getElementById('saves-local-body');
-  tbody.innerHTML = '';
   if (!currentConsole) return;
   try {
     const r = await apiFetch(AGENT + '/saves?console=' + encodeURIComponent(currentConsole));
-    const files = filterByExts(await r.json() || [], 'save');
-    for (const f of files) {
-      const tr = document.createElement('tr');
-      const btn = document.createElement('button');
-      btn.className = 'action primary'; btn.textContent = 'Push';
-      btn.addEventListener('click', () => openPushModal(f.name));
-      tr.innerHTML = '<td class="name-cell">' + esc(f.name) + '</td><td class="size-cell">' + fmt(f.size) + '</td><td class="btn-cell"></td>';
-      tr.lastChild.appendChild(btn);
-      tbody.appendChild(tr);
-    }
-  } catch (e) { setStatus('Cannot load local saves: ' + e.message, true); }
+    return filterByExts(await r.json() || [], 'save');
+  } catch (e) { setStatus('Cannot load local saves: ' + e.message, true); return []; }
 }
 
 async function loadServerSaves() {
-  const tbody = document.getElementById('saves-server-body');
-  tbody.innerHTML = '';
   if (!currentConsole) return;
   try {
     const r = await apiFetch('/api/saves?console=' + encodeURIComponent(currentConsole));
-    const files = filterByExts(await r.json() || [], 'save');
-    for (const f of files) {
-      const tr = document.createElement('tr');
-      const btn = document.createElement('button');
-      btn.className = 'action primary'; btn.textContent = 'Pull';
-      btn.addEventListener('click', () => pullSave(f.name));
-      tr.innerHTML = '<td style="font-size:0.82rem;color:var(--text-dim)">' + esc(f.game || '—') + '</td><td class="name-cell">' + esc(f.name) + '</td><td class="size-cell">' + fmt(f.size) + '</td><td class="btn-cell"></td>';
-      tr.lastChild.appendChild(btn);
-      tbody.appendChild(tr);
+    return filterByExts(await r.json() || [], 'save');
+  } catch (e) { setStatus('Cannot load server saves: ' + e.message, true); return []; }
+}
+
+async function loadSavesPanes() {
+  selectedSaveBase = null;
+  document.getElementById('saves-local-body').innerHTML = '';
+  document.getElementById('saves-server-body').innerHTML = '';
+  if (!currentConsole) return;
+
+  const [localFiles, serverFiles] = await Promise.all([loadLocalSaves(), loadServerSaves()]);
+
+  const serverHashes = new Set((serverFiles || []).filter(f => f.hash).map(f => f.hash));
+  const serverBases  = new Set((serverFiles || []).map(f => saveBaseName(f.name)));
+
+  const localTbody = document.getElementById('saves-local-body');
+  for (const f of (localFiles || [])) {
+    const base = saveBaseName(f.name);
+    let indCls, tipText;
+    if (f.hash && serverHashes.has(f.hash)) {
+      indCls = 'exact';    tipText = 'Exact match exists on the server';
+    } else if (serverBases.has(base)) {
+      indCls = 'stale';   tipText = 'A different version of this file is on the server';
+    } else {
+      indCls = 'unpushed'; tipText = 'This file has not been pushed to the server';
     }
-  } catch (e) { setStatus('Cannot load server saves: ' + e.message, true); }
+    const tr = document.createElement('tr');
+    tr.className = 'save-row';
+    tr.dataset.base = base;
+    tr.dataset.hash = f.hash || '';
+    const btn = document.createElement('button');
+    btn.className = 'action primary'; btn.textContent = 'Push';
+    btn.addEventListener('click', e => { e.stopPropagation(); openPushModal(f.name); });
+    const ind = makeInd(indCls, tipText);
+    tr.innerHTML = '<td class="name-cell"></td><td class="size-cell">' + fmt(f.size) + '</td><td class="btn-cell"></td>';
+    tr.cells[0].appendChild(ind);
+    tr.cells[0].appendChild(document.createTextNode(f.name));
+    tr.lastChild.appendChild(btn);
+    tr.addEventListener('click', () => selectSaveRow(base, f.hash || ''));
+    localTbody.appendChild(tr);
+  }
+
+  const serverTbody = document.getElementById('saves-server-body');
+  for (const f of (serverFiles || [])) {
+    const base = saveBaseName(f.name);
+    const tr = document.createElement('tr');
+    tr.dataset.base = base;
+    tr.dataset.hash = f.hash || '';
+    const btn = document.createElement('button');
+    btn.className = 'action primary'; btn.textContent = 'Pull';
+    btn.addEventListener('click', () => pullSave(f.name));
+    tr.innerHTML = '<td style="font-size:0.82rem;color:var(--text-dim)">' + esc(f.game || '—') + '</td>' +
+                   '<td class="name-cell">' + esc(f.name) + '</td>' +
+                   '<td class="size-cell">' + fmt(f.size) + '</td><td class="btn-cell"></td>';
+    tr.lastChild.appendChild(btn);
+    serverTbody.appendChild(tr);
+  }
+}
+
+let selectedSaveHash = '';
+
+function selectSaveRow(base, hash) {
+  if (selectedSaveBase === base) {
+    selectedSaveBase = null;
+    selectedSaveHash = '';
+  } else {
+    selectedSaveBase = base;
+    selectedSaveHash = hash;
+  }
+  for (const tr of document.getElementById('saves-local-body').rows) {
+    tr.classList.toggle('selected', tr.dataset.base === selectedSaveBase);
+  }
+  const searchBox = document.getElementById('search-saves');
+  if (selectedSaveBase) {
+    searchBox.style.display = 'none';
+    for (const tr of document.getElementById('saves-server-body').rows) {
+      const nameMatch = tr.dataset.base === selectedSaveBase;
+      tr.style.display = nameMatch ? '' : 'none';
+      let ind = tr.querySelector('.save-ind.server-match');
+      if (nameMatch) {
+        const exactMatch = selectedSaveHash && tr.dataset.hash === selectedSaveHash;
+        if (!ind) {
+          ind = makeInd('server-match', '');
+          tr.cells[1].prepend(ind);
+        }
+        ind.className = 'save-ind server-match ' + (exactMatch ? 'exact' : 'stale');
+        ind._tipText = exactMatch ? 'Exact match with local file' : 'Different version of this file';
+        ind.onmouseenter = e => showTooltip(e, ind._tipText);
+      } else if (ind) {
+        ind.remove();
+      }
+    }
+  } else {
+    searchBox.style.display = '';
+    for (const tr of document.getElementById('saves-server-body').rows) {
+      tr.style.display = '';
+      const ind = tr.querySelector('.save-ind.server-match');
+      if (ind) ind.remove();
+    }
+  }
 }
 
 function openPushModal(filename) {
@@ -720,7 +871,7 @@ async function doPushSave() {
     setStatus('Pushing ' + filename + '…');
     await apiFetch(AGENT + '/saves/push', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({console: console_, file: filename, game}) });
     setStatus('Pushed: ' + filename);
-    loadServerSaves();
+    loadSavesPanes();
   } catch (e) { setStatus('Push failed: ' + e.message, true); }
 }
 
@@ -729,7 +880,7 @@ async function pullSave(filename) {
     setStatus('Pulling ' + filename + '…');
     await apiFetch(AGENT + '/saves/pull', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({console: currentConsole, file: filename}) });
     setStatus('Pulled: ' + filename);
-    loadLocalSaves();
+    loadSavesPanes();
   } catch (e) { setStatus('Pull failed: ' + e.message, true); }
 }
 
@@ -1012,5 +1163,6 @@ document.addEventListener('keydown', e => {
 
 init();
 </script>
+<div class="save-tooltip" id="save-tooltip"></div>
 </body>
 </html>
