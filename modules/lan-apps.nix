@@ -105,5 +105,26 @@ in
     };
   };
 
-  networking.firewall.allowedTCPPorts = [ 3000 3001 5000 5001 5010 ];
+  systemd.services.rom-transfer = {
+    description = "ROM Transfer Server";
+    after = [ "network.target" "mnt-server\\x2dpc.mount" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = let
+      pkg = pkgs.buildGoModule {
+        pname = "rom-transfer";
+        version = "0.1.0";
+        src = ../apps/rom-transfer;
+        subPackages = [ "cmd/server" ];
+        vendorHash = null;
+      };
+    in {
+      DynamicUser = true;
+      SupplementaryGroups = [ "sambashare" ];
+      StateDirectory = "rom-transfer";
+      ExecStart = "${pkg}/bin/server -addr 0.0.0.0:5035 -config /var/lib/rom-transfer/hostconfig.json -web ${../apps/rom-transfer/web}";
+      Restart = "on-failure";
+    };
+  };
+
+  networking.firewall.allowedTCPPorts = [ 3000 3001 5000 5001 5010 5035 ];
 }

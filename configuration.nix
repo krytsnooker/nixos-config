@@ -1,8 +1,6 @@
 { config, pkgs, lib, ... }:
 
 {
-  imports = [ ./hardware-configuration.nix ];
-
   # ── Identity ──────────────────────────────────────────────────────────────
   networking.hostName = "homeserver";
   networking.hosts."192.168.0.120" = [ "homeserver" ];
