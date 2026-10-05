@@ -15,6 +15,7 @@
   --accent: #5fd6c4; --accent-dim: #3a8f81;
   --danger: #e07a6b; --danger-bg: rgba(224,122,107,0.12);
   --shadow: 0 8px 24px rgba(0,0,0,0.35);
+  --header-h: 48px; --sidebar-w: 170px;
 }
 @media (prefers-color-scheme: light) {
   :root {
@@ -44,94 +45,172 @@ html[data-theme="light"] {
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html, body { margin: 0; background: var(--bg); color: var(--text); }
-body { font-family: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); }
+body { font-family: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif; line-height: 1.55; -webkit-font-smoothing: antialiased; display: flex; flex-direction: column; }
 a:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ── Header ── */
 header {
-  display: flex; align-items: center; gap: 0.8rem;
-  padding: 0.7rem 1.2rem; background: var(--surface);
-  border-bottom: 1px solid var(--border); flex-wrap: wrap;
+  height: var(--header-h); display: flex; align-items: center; gap: 0.7rem;
+  padding: 0 1rem; background: var(--surface); border-bottom: 1px solid var(--border);
+  flex-shrink: 0; flex-wrap: nowrap; overflow: hidden;
 }
-header .eyebrow {
-  font-family: "IBM Plex Mono", monospace; font-size: 0.72rem;
-  letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent);
-  margin-right: 0.4rem;
-}
-header label { font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; color: var(--text-dim); }
+.back-link { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--accent); text-decoration: none; white-space: nowrap; }
+.back-link:hover { text-decoration: underline; }
+.eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
+header label { font-family: "IBM Plex Mono", monospace; font-size: 0.8rem; color: var(--text-dim); white-space: nowrap; }
 header select {
-  font-family: "IBM Plex Sans", sans-serif; font-size: 1rem;
-  padding: 0.35rem 0.6rem; background: var(--surface-2); color: var(--text);
-  border: 1px solid var(--border); border-radius: 6px;
+  font-family: "IBM Plex Mono", monospace; font-size: 0.85rem;
+  padding: 0.25rem 0.5rem; background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 5px;
 }
-header .spacer { flex: 1; }
+.hdr-spacer { flex: 1; }
+header a.dl-btn {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--accent);
+  border: 1px solid var(--accent-dim); border-radius: 5px; padding: 0.25rem 0.6rem;
+  text-decoration: none; white-space: nowrap;
+}
+header a.dl-btn:hover { border-color: var(--accent); }
 header button {
-  font-family: "IBM Plex Mono", monospace; font-size: 0.78rem;
-  padding: 0.35rem 0.9rem; background: var(--surface-2); color: var(--text-dim);
-  border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
-  letter-spacing: 0.02em;
+  font-family: "IBM Plex Mono", monospace; font-size: 0.75rem;
+  padding: 0.25rem 0.7rem; background: var(--surface-2); color: var(--text-dim);
+  border: 1px solid var(--border); border-radius: 5px; cursor: pointer; white-space: nowrap;
 }
 header button:hover { color: var(--text); border-color: var(--text-faint); }
-.theme-toggle { margin-left: 0.4rem; }
 
-/* ── Tabs ── */
-.tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); }
+/* ── App body ── */
+.app-body { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border);
+  flex-shrink: 0; overflow-y: auto; padding: 0.5rem 0;
+  display: flex; flex-direction: column;
+}
+.sidebar-group {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.63rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-faint);
+  padding: 1rem 1rem 0.25rem; margin-top: 0.25rem;
+}
+.sidebar-item {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.82rem;
+  padding: 0.45rem 1rem; cursor: pointer; color: var(--text-dim);
+  border-left: 2px solid transparent; user-select: none;
+}
+.sidebar-item:hover { color: var(--text); background: var(--surface-2); }
+.sidebar-item.active { color: var(--accent); border-left-color: var(--accent); background: var(--surface-2); }
+
+/* ── Content area ── */
+.content-area { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+/* ── Transfer view ── */
+.tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .tabs button {
   font-family: "IBM Plex Mono", monospace; font-size: 0.85rem;
-  padding: 0.65rem 1.8rem; background: none; border: none;
+  padding: 0.6rem 1.6rem; background: none; border: none;
   color: var(--text-faint); cursor: pointer; letter-spacing: 0.04em;
   border-bottom: 2px solid transparent; margin-bottom: -1px;
 }
 .tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
 .tabs button:hover:not(.active) { color: var(--text-dim); }
 
-/* ── Status bar ── */
 #status-bar {
-  padding: 0.4rem 1.2rem; background: var(--surface-2);
+  padding: 0.35rem 1.2rem; background: var(--surface-2); flex-shrink: 0;
   font-family: "IBM Plex Mono", monospace; font-size: 0.8rem;
-  color: var(--text-faint); min-height: 2rem; border-bottom: 1px solid var(--border);
+  color: var(--text-faint); border-bottom: 1px solid var(--border);
 }
 #status-bar.error { color: var(--danger); }
 
-/* ── Panes ── */
-.panes { display: grid; grid-template-columns: 1fr 1fr; height: calc(100vh - 8rem); }
-.pane { overflow-y: auto; padding: 1rem 1.2rem; }
+.panes { display: grid; grid-template-columns: 1fr 1fr; flex: 1; overflow: hidden; }
+.pane { overflow-y: auto; padding: 0.8rem 1.2rem; }
 .pane:first-child { border-right: 1px solid var(--border); }
 .pane h2 {
-  font-family: "IBM Plex Mono", monospace; font-size: 0.72rem;
-  letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--text-faint); margin: 0 0 0.6rem; font-weight: 500;
+  font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-faint); margin: 0 0 0.5rem; font-weight: 500;
 }
-.disk-info { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--text-faint); margin-bottom: 0.8rem; }
+.disk-info { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--text-faint); margin-bottom: 0.6rem; }
+
+/* ── Config panels ── */
+.config-panel { flex: 1; overflow-y: auto; padding: 1.4rem 1.6rem; }
+.config-panel h2 {
+  font-family: "IBM Plex Mono", monospace; font-size: 1rem; font-weight: 600;
+  margin: 0 0 0.3rem; color: var(--text);
+}
+.config-panel .panel-desc { font-size: 0.85rem; color: var(--text-dim); margin: 0 0 1.2rem; }
+.panel-section { margin-bottom: 1.8rem; }
+.panel-section h3 {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-faint); margin: 0 0 0.6rem; font-weight: 500;
+}
 
 /* ── Tables ── */
 table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
 th {
-  text-align: left; padding: 0.45rem 0.5rem;
-  font-family: "IBM Plex Mono", monospace; font-size: 0.68rem;
+  text-align: left; padding: 0.4rem 0.5rem;
+  font-family: "IBM Plex Mono", monospace; font-size: 0.67rem;
   letter-spacing: 0.06em; text-transform: uppercase;
   color: var(--text-faint); border-bottom: 1px solid var(--border); font-weight: 500;
 }
-td { padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+td { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
 tr:focus-within td { background: var(--surface-2); }
 .name-cell { word-break: break-all; }
 .size-cell { white-space: nowrap; color: var(--text-faint); width: 7rem; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; }
-.btn-cell { width: 6.5rem; text-align: right; }
+.btn-cell { width: 7rem; text-align: right; white-space: nowrap; }
 
 /* ── Action buttons ── */
 button.action {
   font-family: "IBM Plex Mono", monospace; font-size: 0.78rem;
-  padding: 0.28rem 0.8rem; border-radius: 5px; cursor: pointer;
+  padding: 0.25rem 0.7rem; border-radius: 5px; cursor: pointer;
   border: 1px solid var(--border); background: var(--surface-2);
   color: var(--text-dim); letter-spacing: 0.02em;
 }
 button.action:hover, button.action:focus { color: var(--text); border-color: var(--text-faint); }
 button.action.danger { color: var(--danger); border-color: var(--danger); }
-button.action.danger:hover, button.action.danger:focus { background: var(--danger-bg); }
-button.action.primary { color: var(--accent); border-color: var(--accent-dim); background: var(--surface-2); }
-button.action.primary:hover, button.action.primary:focus { background: rgba(95,214,196,0.08); border-color: var(--accent); }
+button.action.danger:hover { background: var(--danger-bg); }
+button.action.primary { color: var(--accent); border-color: var(--accent-dim); }
+button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: var(--accent); }
+
+/* ── Panel inputs ── */
+.panel-input {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.88rem;
+  padding: 0.4rem 0.6rem; background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 5px; width: 100%;
+}
+.panel-input:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+.panel-label {
+  display: block; margin: 0 0 0.3rem;
+  font-family: "IBM Plex Mono", monospace; font-size: 0.7rem;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint);
+}
+.panel-actions { display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; align-items: center; }
+.panel-btn {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.82rem;
+  padding: 0.4rem 1rem; border-radius: 5px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim);
+}
+.panel-btn:hover { color: var(--text); border-color: var(--text-faint); }
+.panel-btn.primary { color: var(--accent); border-color: var(--accent-dim); }
+.panel-btn.primary:hover { background: rgba(95,214,196,0.08); border-color: var(--accent); }
+.panel-btn.danger { color: var(--danger); border-color: var(--danger); }
+.panel-btn.danger:hover { background: var(--danger-bg); }
+
+/* inline editable table */
+.edit-table input[type=text] {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.82rem;
+  padding: 0.25rem 0.4rem; background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 4px; width: 100%;
+}
+.edit-table input[type=text]:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+.edit-table select {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.82rem;
+  padding: 0.25rem 0.4rem; background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 4px; width: 100%;
+}
+
+/* scan results */
+.scan-result-path { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--text-dim); word-break: break-all; }
+.scan-count { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--text-faint); }
 
 /* ── Modals ── */
 .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; }
@@ -142,10 +221,7 @@ button.action.primary:hover, button.action.primary:focus { background: rgba(95,2
   min-width: 380px; max-width: 92vw; max-height: 90vh; overflow-y: auto;
   box-shadow: var(--shadow);
 }
-.modal h2 {
-  font-family: "IBM Plex Mono", monospace; font-size: 1rem; font-weight: 600;
-  margin: 0 0 0.8rem; color: var(--text);
-}
+.modal h2 { font-family: "IBM Plex Mono", monospace; font-size: 1rem; font-weight: 600; margin: 0 0 0.8rem; }
 .modal p { font-size: 0.88rem; color: var(--text-dim); margin: 0 0 0.8rem; }
 .modal input[type=text], .modal select {
   width: 100%; font-family: "IBM Plex Mono", monospace; font-size: 0.88rem;
@@ -159,101 +235,173 @@ button.action.primary:hover, button.action.primary:focus { background: rgba(95,2
   border-radius: 5px; cursor: pointer;
   border: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim);
 }
-.modal button:hover, .modal button:focus { color: var(--text); border-color: var(--text-faint); }
+.modal button:hover { color: var(--text); border-color: var(--text-faint); }
 .modal button.primary { color: var(--accent); border-color: var(--accent-dim); }
 .modal button.primary:hover { background: rgba(95,214,196,0.08); border-color: var(--accent); }
-.modal button.confirm-delete {
-  color: var(--danger); border-color: var(--danger);
-  font-size: 0.9rem; padding: 0.5rem 1.5rem;
-}
+.modal button.confirm-delete { color: var(--danger); border-color: var(--danger); font-size: 0.9rem; padding: 0.5rem 1.5rem; }
 .modal button.confirm-delete:hover { background: var(--danger-bg); }
-.modal table { margin-bottom: 0.6rem; }
-.modal th, .modal td { padding: 0.35rem 0.3rem; }
 .modal label { display: block; margin: 0.7rem 0 0.2rem; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
 
 /* ── Browse modal ── */
 #browse-modal { z-index: 200; }
 #browse-modal .modal { min-width: 480px; }
-.browse-path {
-  font-family: "IBM Plex Mono", monospace; font-size: 0.8rem;
-  color: var(--text-dim); background: var(--surface-2);
-  border: 1px solid var(--border); border-radius: 5px;
-  padding: 0.4rem 0.7rem; margin-bottom: 0.6rem; word-break: break-all;
-}
+.browse-path { font-family: "IBM Plex Mono", monospace; font-size: 0.8rem; color: var(--text-dim); background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; padding: 0.4rem 0.7rem; margin-bottom: 0.6rem; word-break: break-all; }
 .browse-list { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; }
-.browse-list li button {
-  width: 100%; text-align: left; background: none; border: none; border-bottom: 1px solid var(--border);
-  padding: 0.5rem 0.8rem; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem;
-  color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; margin: 0;
-}
+.browse-list li button { width: 100%; text-align: left; background: none; border: none; border-bottom: 1px solid var(--border); padding: 0.5rem 0.8rem; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; margin: 0; }
 .browse-list li:last-child button { border-bottom: none; }
-.browse-list li button:hover, .browse-list li button:focus { background: var(--surface-2); color: var(--accent); }
+.browse-list li button:hover { background: var(--surface-2); color: var(--accent); }
 .browse-list li.parent button { color: var(--text-faint); }
-.browse-actions { display: flex; gap: 0.5rem; margin-top: 0.8rem; align-items: center; }
+.browse-actions { display: flex; gap: 0.5rem; margin-top: 0.8rem; }
 
+#view-transfer { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
 
 <header>
-  <a href="http://homeserver:5000" style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--accent);text-decoration:none;margin-right:0.4rem">← homeserver</a>
+  <a class="back-link" href="http://homeserver:5000">← homeserver</a>
   <span class="eyebrow">ROM Transfer</span>
-  <label for="console-sel">Console</label>
+  <label id="console-label" for="console-sel">Console</label>
   <select id="console-sel" onchange="onConsoleChange()">
     <option value="">— select —</option>
   </select>
-  <button onclick="openHostConfig()">Host config</button>
-  <button onclick="openClientConfig()">Client config</button>
-  <div class="spacer"></div>
-  <span style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--text-faint);letter-spacing:0.06em;text-transform:uppercase">Agent</span>
-  <a href="/downloads/rom-agent.exe" download style="font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--accent);border:1px solid var(--accent-dim);border-radius:5px;padding:0.3rem 0.7rem;text-decoration:none" title="Windows agent">Windows</a>
-  <a href="/downloads/rom-agent-linux" download style="font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--accent);border:1px solid var(--accent-dim);border-radius:5px;padding:0.3rem 0.7rem;text-decoration:none" title="Linux agent">Linux</a>
-  <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">theme</button>
+  <div class="hdr-spacer"></div>
+  <span style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text-faint);letter-spacing:0.06em;text-transform:uppercase">Agent</span>
+  <a class="dl-btn" href="/downloads/rom-agent.exe" download>Windows</a>
+  <a class="dl-btn" href="/downloads/rom-agent-linux" download>Linux</a>
+  <button onclick="toggleTheme()">theme</button>
 </header>
 
-<div class="tabs">
-  <button class="active" id="tab-roms" onclick="switchTab('roms')">ROMs</button>
-  <button id="tab-saves" onclick="switchTab('saves')">Saves</button>
-</div>
+<div class="app-body">
 
-<div id="status-bar">Ready.</div>
+  <nav class="sidebar">
+    <div class="sidebar-item active" data-view="transfer" onclick="setView('transfer')">Transfer</div>
+    <div class="sidebar-group">Server</div>
+    <div class="sidebar-item" data-view="consoles" onclick="setView('consoles')">Consoles</div>
+    <div class="sidebar-item" data-view="filetypes" onclick="setView('filetypes')">File Types</div>
+    <div class="sidebar-item" data-view="scanpaths" onclick="setView('scanpaths')">Scan Paths</div>
+    <div class="sidebar-group">Client</div>
+    <div class="sidebar-item" data-view="client" onclick="setView('client')">Destinations</div>
+  </nav>
 
-<div id="panes-roms" class="panes">
-  <div class="pane">
-    <h2>Local</h2>
-    <div class="disk-info" id="local-disk-info"></div>
-    <table>
-      <thead><tr><th class="name-cell">Name</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
-      <tbody id="local-body"></tbody>
-    </table>
-  </div>
-  <div class="pane">
-    <h2>Server</h2>
-    <table>
-      <thead><tr><th class="name-cell">Name</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
-      <tbody id="server-body"></tbody>
-    </table>
-  </div>
-</div>
+  <div class="content-area">
 
-<div id="panes-saves" class="panes" style="display:none">
-  <div class="pane">
-    <h2>Local Saves</h2>
-    <div class="disk-info" id="saves-local-info"></div>
-    <table>
-      <thead><tr><th class="name-cell">Name</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
-      <tbody id="saves-local-body"></tbody>
-    </table>
-  </div>
-  <div class="pane">
-    <h2>Server Saves</h2>
-    <table>
-      <thead><tr><th style="width:8rem">Game</th><th class="name-cell">File</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
-      <tbody id="saves-server-body"></tbody>
-    </table>
-  </div>
-</div>
+    <!-- ── Transfer view ── -->
+    <div id="view-transfer">
+      <div class="tabs">
+        <button class="active" id="tab-roms" onclick="switchTab('roms')">ROMs</button>
+        <button id="tab-saves" onclick="switchTab('saves')">Saves</button>
+      </div>
+      <div id="status-bar">Ready.</div>
+      <div id="panes-roms" class="panes">
+        <div class="pane">
+          <h2>Local</h2>
+          <div class="disk-info" id="local-disk-info"></div>
+          <table><thead><tr><th class="name-cell">Name</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
+          <tbody id="local-body"></tbody></table>
+        </div>
+        <div class="pane">
+          <h2>Server</h2>
+          <table><thead><tr><th class="name-cell">Name</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
+          <tbody id="server-body"></tbody></table>
+        </div>
+      </div>
+      <div id="panes-saves" class="panes" style="display:none">
+        <div class="pane">
+          <h2>Local Saves</h2>
+          <div class="disk-info" id="saves-local-info"></div>
+          <table><thead><tr><th class="name-cell">Name</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
+          <tbody id="saves-local-body"></tbody></table>
+        </div>
+        <div class="pane">
+          <h2>Server Saves</h2>
+          <table><thead><tr><th style="width:8rem">Game</th><th class="name-cell">File</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
+          <tbody id="saves-server-body"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Consoles panel ── -->
+    <div id="view-consoles" class="config-panel" style="display:none">
+      <h2>Consoles</h2>
+      <p class="panel-desc">ROM directories on the server. Each console name must match the entries in File Types.</p>
+      <div class="panel-section">
+        <table class="edit-table" id="consoles-table">
+          <thead><tr><th>Console</th><th>Server ROM path</th><th></th></tr></thead>
+          <tbody id="consoles-rows"></tbody>
+        </table>
+        <div class="panel-actions">
+          <button class="panel-btn" onclick="addConsoleRow('','')">+ Add console</button>
+        </div>
+      </div>
+      <div class="panel-section">
+        <label class="panel-label">Saves root path</label>
+        <input type="text" class="panel-input" id="saves-root-path" placeholder="/mnt/server-pc/Games/SAVEFILES">
+      </div>
+      <div class="panel-actions">
+        <button class="panel-btn primary" onclick="saveConsolesPanel()">Save</button>
+      </div>
+    </div>
+
+    <!-- ── File Types panel ── -->
+    <div id="view-filetypes" class="config-panel" style="display:none">
+      <h2>File Types</h2>
+      <p class="panel-desc">Stored at <code style="font-family:'IBM Plex Mono',monospace;background:var(--surface-3);padding:0.1em 0.4em;border-radius:3px;font-size:0.85em">/var/lib/rom-transfer/filetypes.json</code>. Changes save immediately.</p>
+      <table class="edit-table" id="filetypes-table">
+        <thead><tr><th style="width:9rem">Console</th><th>ROM extensions</th><th>Save extensions</th><th></th></tr></thead>
+        <tbody id="filetypes-rows"></tbody>
+      </table>
+      <div class="panel-actions">
+        <button class="panel-btn" onclick="addFileTypeRow('','','')">+ Add console</button>
+        <button class="panel-btn primary" onclick="saveFileTypesPanel()">Save</button>
+      </div>
+    </div>
+
+    <!-- ── Scan Paths panel ── -->
+    <div id="view-scanpaths" class="config-panel" style="display:none">
+      <h2>Scan Paths</h2>
+      <p class="panel-desc">Stored at <code style="font-family:'IBM Plex Mono',monospace;background:var(--surface-3);padding:0.1em 0.4em;border-radius:3px;font-size:0.85em">/var/lib/rom-transfer/scanpaths.json</code>. The agent checks these paths when scanning for saves.</p>
+      <table class="edit-table" id="scanpaths-table">
+        <thead><tr><th style="width:8rem">Emulator</th><th>Path</th><th style="width:7rem">Console</th><th style="width:6rem">OS</th><th></th></tr></thead>
+        <tbody id="scanpaths-rows"></tbody>
+      </table>
+      <div class="panel-actions">
+        <button class="panel-btn" onclick="addScanPathRow('','','','')">+ Add path</button>
+        <button class="panel-btn primary" onclick="saveScanPathsPanel()">Save</button>
+      </div>
+    </div>
+
+    <!-- ── Client / Destinations panel ── -->
+    <div id="view-client" class="config-panel" style="display:none">
+      <h2>Destinations</h2>
+      <p class="panel-desc">Configure the agent on this client machine.</p>
+      <div class="panel-section">
+        <label class="panel-label">Server URL</label>
+        <input type="text" class="panel-input" id="client-server-url" placeholder="http://192.168.0.120:5035">
+      </div>
+      <div class="panel-section">
+        <h3>Local folders per console</h3>
+        <table class="edit-table">
+          <thead><tr><th>Console</th><th>Local folder</th><th></th></tr></thead>
+          <tbody id="client-rows"></tbody>
+        </table>
+        <div class="panel-actions">
+          <button class="panel-btn" onclick="runScan()">Scan for saves</button>
+          <button class="panel-btn primary" onclick="saveClientPanel()">Save</button>
+        </div>
+      </div>
+      <div class="panel-section" id="scan-results-section" style="display:none">
+        <h3>Scan results — click Apply to use a path</h3>
+        <table id="scan-results-table">
+          <thead><tr><th style="width:8rem">Emulator</th><th>Path</th><th style="width:7rem">Console</th><th style="width:4rem">Files</th><th style="width:5rem"></th></tr></thead>
+          <tbody id="scan-results-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- .content-area -->
+</div><!-- .app-body -->
 
 <!-- Push save modal -->
 <div class="modal-bg" id="push-modal" role="dialog" aria-modal="true">
@@ -269,7 +417,7 @@ button.action.primary:hover, button.action.primary:focus { background: rgba(95,2
   </div>
 </div>
 
-<!-- Folder browser modal -->
+<!-- Browse modal -->
 <div class="modal-bg" id="browse-modal" role="dialog" aria-modal="true">
   <div class="modal">
     <h2>Select Folder</h2>
@@ -292,56 +440,16 @@ button.action.primary:hover, button.action.primary:focus { background: rgba(95,2
   </div>
 </div>
 
-<!-- Host config modal -->
-<div class="modal-bg" id="host-modal" role="dialog" aria-modal="true">
-  <div class="modal">
-    <h2>Host Config</h2>
-    <p style="color:#aaa;font-size:0.9rem">ROM folders on the server. One row per console.</p>
-    <table id="host-table">
-      <thead><tr><th>Console name</th><th>Server ROM path</th><th></th></tr></thead>
-      <tbody id="host-rows"></tbody>
-    </table>
-    <button onclick="addHostRow('','')">+ Add row</button>
-    <label>Saves root path</label>
-    <input type="text" id="host-saves-path" placeholder="/mnt/server-pc/Games/ROM-SAVES">
-    <br>
-    <button class="primary" onclick="saveHostConfig()">Save</button>
-    <button onclick="closeModal('host-modal')">Cancel</button>
-  </div>
-</div>
-
-<!-- Client config modal -->
-<div class="modal-bg" id="client-modal" role="dialog" aria-modal="true">
-  <div class="modal">
-    <h2>Client Config</h2>
-    <label>Server URL</label>
-    <input type="text" id="client-server-url" placeholder="http://192.168.0.120:5030">
-    <label style="margin-top:1rem">Local folders for each console</label>
-    <table style="margin-top:0.4rem">
-      <thead><tr><th>Console</th><th>Local folder</th><th></th></tr></thead>
-      <tbody id="client-rows"></tbody>
-    </table>
-    <label style="margin-top:1rem">Saves folder (for Saves tab)</label>
-    <div style="display:flex;gap:0.4rem;align-items:center">
-      <input type="text" id="client-saves-folder" placeholder="~/Downloads/saves" style="margin:0">
-      <button onclick="openBrowse(document.getElementById('client-saves-folder'))" style="white-space:nowrap;flex-shrink:0">Browse</button>
-    </div>
-    <br>
-    <button class="primary" onclick="saveClientConfig()">Save</button>
-    <button onclick="closeModal('client-modal')">Cancel</button>
-  </div>
-</div>
-
 <script>
 const AGENT = 'http://127.0.0.1:5031';
 let currentConsole = '';
 let currentTab = 'roms';
+let currentView = 'transfer';
 let statusPoll = null;
 let consoles = [];
-
-// ── Console file type filters ────────────────────────────────────────────────
-
 let fileTypes = {};
+
+// ── File type filters ────────────────────────────────────────────────────────
 
 async function loadFileTypes() {
   try {
@@ -364,20 +472,18 @@ function filterByExts(files, type) {
   return files.filter(f => exts.some(e => f.name.toLowerCase().endsWith(e)));
 }
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
+// ── Utilities ────────────────────────────────────────────────────────────────
 
 function fmt(bytes) {
   if (bytes == null || bytes < 0) return '—';
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
-  return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
 }
 
 function esc(s) {
-  return String(s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function setStatus(msg, isError) {
@@ -398,12 +504,28 @@ async function apiFetch(url, opts) {
   return r;
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// ── Navigation ───────────────────────────────────────────────────────────────
+
+function setView(view) {
+  currentView = view;
+  document.querySelectorAll('[id^="view-"]').forEach(el => el.style.display = 'none');
+  document.getElementById('view-' + view).style.display = '';
+  document.querySelectorAll('.sidebar-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.view === view);
+  });
+  const showConsole = view === 'transfer';
+  document.getElementById('console-label').style.display = showConsole ? '' : 'none';
+  document.getElementById('console-sel').style.display = showConsole ? '' : 'none';
+  if (view === 'consoles')  loadConsolesPanel();
+  if (view === 'filetypes') loadFileTypesPanel();
+  if (view === 'scanpaths') loadScanPathsPanel();
+  if (view === 'client')    loadClientPanel();
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
 
 async function init() {
-  try {
-    await fetch(AGENT + '/health');
-  } catch (e) {
+  try { await fetch(AGENT + '/health'); } catch (e) {
     setStatus('Agent not reachable at ' + AGENT + ' — is it running?', true);
   }
   await Promise.all([loadConsoles(), loadFileTypes()]);
@@ -418,14 +540,11 @@ async function loadConsoles() {
     sel.innerHTML = '<option value="">— select —</option>';
     for (const c of consoles) {
       const opt = document.createElement('option');
-      opt.value = c.name;
-      opt.textContent = c.name;
+      opt.value = c.name; opt.textContent = c.name;
       if (c.name === prev) opt.selected = true;
       sel.appendChild(opt);
     }
-  } catch (e) {
-    setStatus('Cannot load consoles: ' + e.message, true);
-  }
+  } catch (e) { setStatus('Cannot load consoles: ' + e.message, true); }
 }
 
 function onConsoleChange() {
@@ -443,16 +562,11 @@ function switchTab(tab) {
 }
 
 function loadPanes() {
-  if (currentTab === 'roms') {
-    loadLocalFiles();
-    loadServerFiles();
-  } else {
-    loadLocalSaves();
-    loadServerSaves();
-  }
+  if (currentTab === 'roms') { loadLocalFiles(); loadServerFiles(); }
+  else { loadLocalSaves(); loadServerSaves(); }
 }
 
-// ── ROMs ──────────────────────────────────────────────────────────────────────
+// ── ROMs ─────────────────────────────────────────────────────────────────────
 
 async function loadLocalFiles() {
   try {
@@ -460,28 +574,21 @@ async function loadLocalFiles() {
     const data = await r.json();
     const files = filterByExts(data.files || [], 'rom');
     const di = data.disk_info;
-    const info = document.getElementById('local-disk-info');
-    if (di) {
-      info.textContent = 'Folder: ' + fmt(di.folder_size) + '  ·  Free: ' + fmt(di.free_space);
-    } else {
-      info.textContent = 'No local folder configured for this console.';
-    }
+    document.getElementById('local-disk-info').textContent =
+      di ? 'Folder: ' + fmt(di.folder_size) + '  ·  Free: ' + fmt(di.free_space)
+         : 'No local folder configured for this console.';
     const tbody = document.getElementById('local-body');
     tbody.innerHTML = '';
     for (const f of files) {
       const tr = document.createElement('tr');
       const btn = document.createElement('button');
-      btn.className = 'action danger';
-      btn.textContent = 'Delete';
-      btn.dataset.file = f.name;
+      btn.className = 'action danger'; btn.textContent = 'Delete';
       btn.addEventListener('click', () => confirmDelete(f.name));
       tr.innerHTML = '<td class="name-cell">' + esc(f.name) + '</td><td class="size-cell">' + fmt(f.size) + '</td><td class="btn-cell"></td>';
       tr.lastChild.appendChild(btn);
       tbody.appendChild(tr);
     }
-  } catch (e) {
-    setStatus('Cannot load local files: ' + e.message, true);
-  }
+  } catch (e) { setStatus('Cannot load local files: ' + e.message, true); }
 }
 
 async function loadServerFiles() {
@@ -493,25 +600,20 @@ async function loadServerFiles() {
     for (const f of files) {
       const tr = document.createElement('tr');
       const btn = document.createElement('button');
-      btn.className = 'action primary';
-      btn.textContent = 'Transfer';
-      btn.dataset.file = f.name;
+      btn.className = 'action primary'; btn.textContent = 'Transfer';
       btn.addEventListener('click', () => startTransfer(f.name));
       tr.innerHTML = '<td class="name-cell">' + esc(f.name) + '</td><td class="size-cell">' + fmt(f.size) + '</td><td class="btn-cell"></td>';
       tr.lastChild.appendChild(btn);
       tbody.appendChild(tr);
     }
-  } catch (e) {
-    setStatus('Cannot load server files: ' + e.message, true);
-  }
+  } catch (e) { setStatus('Cannot load server files: ' + e.message, true); }
 }
 
 function confirmDelete(filename) {
   document.getElementById('confirm-msg').textContent = '"' + filename + '"';
-  const yes = document.getElementById('confirm-yes');
-  yes.onclick = () => doDelete(filename);
+  document.getElementById('confirm-yes').onclick = () => doDelete(filename);
   openModal('confirm-modal');
-  yes.focus();
+  document.getElementById('confirm-yes').focus();
 }
 
 async function doDelete(filename) {
@@ -520,23 +622,15 @@ async function doDelete(filename) {
     await apiFetch(AGENT + '/files?console=' + encodeURIComponent(currentConsole) + '&file=' + encodeURIComponent(filename), { method: 'DELETE' });
     setStatus('Deleted: ' + filename);
     loadLocalFiles();
-  } catch (e) {
-    setStatus('Delete failed: ' + e.message, true);
-  }
+  } catch (e) { setStatus('Delete failed: ' + e.message, true); }
 }
 
 async function startTransfer(filename) {
   try {
-    await apiFetch(AGENT + '/transfer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ console: currentConsole, file: filename }),
-    });
+    await apiFetch(AGENT + '/transfer', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({console: currentConsole, file: filename}) });
     setStatus('Queued: ' + filename);
     startStatusPoll();
-  } catch (e) {
-    setStatus('Transfer failed: ' + e.message, true);
-  }
+  } catch (e) { setStatus('Transfer failed: ' + e.message, true); }
 }
 
 function startStatusPoll() {
@@ -550,23 +644,18 @@ async function pollStatus() {
     const data = await r.json();
     if (data.active) {
       const a = data.active;
-      const pct = Math.round(a.percent || 0);
-      setStatus('Transferring ' + a.file + ': ' + pct + '%  (' + fmt(a.bytes) + ' / ' + fmt(a.total) + ')');
+      setStatus('Transferring ' + a.file + ': ' + Math.round(a.percent || 0) + '%  (' + fmt(a.bytes) + ' / ' + fmt(a.total) + ')');
     } else if (data.queue && data.queue.length > 0) {
       setStatus('Queued: ' + data.queue.length + ' file(s) waiting');
     } else {
       setStatus('Ready.');
-      clearInterval(statusPoll);
-      statusPoll = null;
+      clearInterval(statusPoll); statusPoll = null;
       loadLocalFiles();
     }
-  } catch (e) {
-    clearInterval(statusPoll);
-    statusPoll = null;
-  }
+  } catch (e) { clearInterval(statusPoll); statusPoll = null; }
 }
 
-// ── Saves ─────────────────────────────────────────────────────────────────────
+// ── Saves ────────────────────────────────────────────────────────────────────
 
 async function loadLocalSaves() {
   const tbody = document.getElementById('saves-local-body');
@@ -578,16 +667,13 @@ async function loadLocalSaves() {
     for (const f of files) {
       const tr = document.createElement('tr');
       const btn = document.createElement('button');
-      btn.className = 'action primary';
-      btn.textContent = 'Push';
+      btn.className = 'action primary'; btn.textContent = 'Push';
       btn.addEventListener('click', () => openPushModal(f.name));
       tr.innerHTML = '<td class="name-cell">' + esc(f.name) + '</td><td class="size-cell">' + fmt(f.size) + '</td><td class="btn-cell"></td>';
       tr.lastChild.appendChild(btn);
       tbody.appendChild(tr);
     }
-  } catch (e) {
-    setStatus('Cannot load local saves: ' + e.message, true);
-  }
+  } catch (e) { setStatus('Cannot load local saves: ' + e.message, true); }
 }
 
 async function loadServerSaves() {
@@ -600,29 +686,24 @@ async function loadServerSaves() {
     for (const f of files) {
       const tr = document.createElement('tr');
       const btn = document.createElement('button');
-      btn.className = 'action primary';
-      btn.textContent = 'Pull';
+      btn.className = 'action primary'; btn.textContent = 'Pull';
       btn.addEventListener('click', () => pullSave(f.name));
       tr.innerHTML = '<td style="font-size:0.82rem;color:var(--text-dim)">' + esc(f.game || '—') + '</td><td class="name-cell">' + esc(f.name) + '</td><td class="size-cell">' + fmt(f.size) + '</td><td class="btn-cell"></td>';
       tr.lastChild.appendChild(btn);
       tbody.appendChild(tr);
     }
-  } catch (e) {
-    setStatus('Cannot load server saves: ' + e.message, true);
-  }
+  } catch (e) { setStatus('Cannot load server saves: ' + e.message, true); }
 }
 
 function openPushModal(filename) {
   const ext = filename.lastIndexOf('.');
-  const base = ext > 0 ? filename.slice(0, ext) : filename;
-  document.getElementById('push-game-name').value = base;
+  document.getElementById('push-game-name').value = ext > 0 ? filename.slice(0, ext) : filename;
   document.getElementById('push-modal').dataset.file = filename;
   const sel = document.getElementById('push-console-sel');
   sel.innerHTML = '';
   for (const c of consoles) {
     const opt = document.createElement('option');
-    opt.value = c.name;
-    opt.textContent = c.name;
+    opt.value = c.name; opt.textContent = c.name;
     if (c.name === currentConsole) opt.selected = true;
     sel.appendChild(opt);
   }
@@ -632,229 +713,274 @@ function openPushModal(filename) {
 async function doPushSave() {
   const filename = document.getElementById('push-modal').dataset.file;
   const game = document.getElementById('push-game-name').value.trim();
-  const console = document.getElementById('push-console-sel').value;
+  const console_ = document.getElementById('push-console-sel').value;
   closeModal('push-modal');
   try {
     setStatus('Pushing ' + filename + '…');
-    await apiFetch(AGENT + '/saves/push', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ console, file: filename, game }),
-    });
+    await apiFetch(AGENT + '/saves/push', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({console: console_, file: filename, game}) });
     setStatus('Pushed: ' + filename);
     loadServerSaves();
-  } catch (e) {
-    setStatus('Push failed: ' + e.message, true);
-  }
+  } catch (e) { setStatus('Push failed: ' + e.message, true); }
 }
 
 async function pullSave(filename) {
   try {
     setStatus('Pulling ' + filename + '…');
-    await apiFetch(AGENT + '/saves/pull', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ console: currentConsole, file: filename }),
-    });
+    await apiFetch(AGENT + '/saves/pull', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({console: currentConsole, file: filename}) });
     setStatus('Pulled: ' + filename);
     loadLocalSaves();
-  } catch (e) {
-    setStatus('Pull failed: ' + e.message, true);
-  }
+  } catch (e) { setStatus('Pull failed: ' + e.message, true); }
 }
 
-// ── Host config ───────────────────────────────────────────────────────────────
+// ── Consoles panel ────────────────────────────────────────────────────────────
 
-async function openHostConfig() {
+async function loadConsolesPanel() {
   try {
     const r = await apiFetch('/api/hostconfig');
     const cfg = await r.json();
-    document.getElementById('host-rows').innerHTML = '';
-    for (const c of (cfg.consoles || [])) {
-      addHostRow(c.name, c.server_path);
-    }
-    document.getElementById('host-saves-path').value = cfg.saves_path || '';
-    openModal('host-modal');
-  } catch (e) {
-    setStatus('Cannot load host config: ' + e.message, true);
-  }
+    document.getElementById('consoles-rows').innerHTML = '';
+    for (const c of (cfg.consoles || [])) addConsoleRow(c.name, c.server_path);
+    document.getElementById('saves-root-path').value = cfg.saves_path || '';
+  } catch (e) { setStatus('Cannot load consoles: ' + e.message, true); }
 }
 
-function addHostRow(name, path) {
+function addConsoleRow(name, path) {
   const tr = document.createElement('tr');
-  const nameTd = document.createElement('td');
-  const pathTd = document.createElement('td');
-  const btnTd = document.createElement('td');
-  const nameIn = document.createElement('input');
-  nameIn.type = 'text';
-  nameIn.value = name || '';
-  nameIn.placeholder = 'PS2';
-  const pathIn = document.createElement('input');
-  pathIn.type = 'text';
-  pathIn.value = path || '';
-  pathIn.placeholder = '/mnt/server-pc/Games/ROMS/PS2';
-  const rem = document.createElement('button');
-  rem.textContent = 'Remove';
-  rem.addEventListener('click', () => tr.remove());
-  nameTd.appendChild(nameIn);
-  pathTd.appendChild(pathIn);
-  btnTd.appendChild(rem);
-  tr.append(nameTd, pathTd, btnTd);
-  document.getElementById('host-rows').appendChild(tr);
+  tr.innerHTML = '<td><input type="text" value="' + esc(name) + '" placeholder="PS2"></td>' +
+                 '<td><input type="text" value="' + esc(path) + '" placeholder="/mnt/server-pc/Games/ROMS/PS2"></td>' +
+                 '<td><button class="panel-btn danger" onclick="this.closest(\'tr\').remove()">Remove</button></td>';
+  document.getElementById('consoles-rows').appendChild(tr);
 }
 
-async function saveHostConfig() {
-  const rows = document.querySelectorAll('#host-rows tr');
-  const consoleList = [];
+async function saveConsolesPanel() {
+  const rows = document.querySelectorAll('#consoles-rows tr');
+  const consolList = [];
   for (const tr of rows) {
     const inputs = tr.querySelectorAll('input');
-    const name = inputs[0].value.trim();
-    const path = inputs[1].value.trim();
-    if (name && path) consoleList.push({ name, server_path: path });
+    const name = inputs[0].value.trim(), path = inputs[1].value.trim();
+    if (name && path) consolList.push({name, server_path: path});
   }
-  const saves_path = document.getElementById('host-saves-path').value.trim();
+  const saves_path = document.getElementById('saves-root-path').value.trim();
   try {
-    await apiFetch('/api/hostconfig', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ consoles: consoleList, saves_path }),
-    });
-    closeModal('host-modal');
+    await apiFetch('/api/hostconfig', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({consoles: consolList, saves_path}) });
+    setStatus('Consoles saved.');
     await loadConsoles();
-  } catch (e) {
-    setStatus('Save failed: ' + e.message, true);
-  }
+  } catch (e) { setStatus('Save failed: ' + e.message, true); }
 }
 
-// ── Client config ─────────────────────────────────────────────────────────────
+// ── File Types panel ──────────────────────────────────────────────────────────
 
-async function openClientConfig() {
+async function loadFileTypesPanel() {
+  try {
+    const r = await apiFetch('/api/filetypes');
+    const ft = await r.json();
+    const tbody = document.getElementById('filetypes-rows');
+    tbody.innerHTML = '';
+    for (const [name, exts] of Object.entries(ft)) {
+      addFileTypeRow(name, (exts.rom || []).join(', '), (exts.save || []).join(', '));
+    }
+  } catch (e) { setStatus('Cannot load file types: ' + e.message, true); }
+}
+
+function addFileTypeRow(name, rom, save) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = '<td><input type="text" value="' + esc(name) + '" placeholder="PS2"></td>' +
+                 '<td><input type="text" value="' + esc(rom) + '" placeholder=".iso, .bin"></td>' +
+                 '<td><input type="text" value="' + esc(save) + '" placeholder=".ps2, .mcr"></td>' +
+                 '<td><button class="panel-btn danger" onclick="this.closest(\'tr\').remove()">Remove</button></td>';
+  document.getElementById('filetypes-rows').appendChild(tr);
+}
+
+async function saveFileTypesPanel() {
+  const ft = {};
+  for (const tr of document.querySelectorAll('#filetypes-rows tr')) {
+    const inputs = tr.querySelectorAll('input');
+    const name = inputs[0].value.trim();
+    if (!name) continue;
+    const rom = inputs[1].value.split(',').map(s => s.trim()).filter(Boolean);
+    const save = inputs[2].value.split(',').map(s => s.trim()).filter(Boolean);
+    ft[name] = {rom, save};
+  }
+  try {
+    await apiFetch('/api/filetypes', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(ft) });
+    fileTypes = ft;
+    setStatus('File types saved.');
+  } catch (e) { setStatus('Save failed: ' + e.message, true); }
+}
+
+// ── Scan Paths panel ──────────────────────────────────────────────────────────
+
+async function loadScanPathsPanel() {
+  try {
+    const r = await apiFetch('/api/scanpaths');
+    const paths = await r.json();
+    const tbody = document.getElementById('scanpaths-rows');
+    tbody.innerHTML = '';
+    for (const p of paths) addScanPathRow(p.emulator, p.path, p.console, p.os);
+  } catch (e) { setStatus('Cannot load scan paths: ' + e.message, true); }
+}
+
+function addScanPathRow(emulator, path, console_, os) {
+  const tr = document.createElement('tr');
+  const osOpts = ['', 'windows', 'linux'].map(o =>
+    '<option value="' + o + '"' + (o === os ? ' selected' : '') + '>' + (o || 'any') + '</option>'
+  ).join('');
+  tr.innerHTML = '<td><input type="text" value="' + esc(emulator) + '" placeholder="RetroArch"></td>' +
+                 '<td><input type="text" value="' + esc(path) + '" placeholder="%APPDATA%\\RetroArch\\saves"></td>' +
+                 '<td><input type="text" value="' + esc(console_) + '" placeholder="SNES"></td>' +
+                 '<td><select>' + osOpts + '</select></td>' +
+                 '<td><button class="panel-btn danger" onclick="this.closest(\'tr\').remove()">Remove</button></td>';
+  document.getElementById('scanpaths-rows').appendChild(tr);
+}
+
+async function saveScanPathsPanel() {
+  const paths = [];
+  for (const tr of document.querySelectorAll('#scanpaths-rows tr')) {
+    const inputs = tr.querySelectorAll('input');
+    const sel = tr.querySelector('select');
+    const emulator = inputs[0].value.trim(), path = inputs[1].value.trim();
+    if (!emulator || !path) continue;
+    paths.push({emulator, path, console: inputs[2].value.trim(), os: sel.value});
+  }
+  try {
+    await apiFetch('/api/scanpaths', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(paths) });
+    setStatus('Scan paths saved.');
+  } catch (e) { setStatus('Save failed: ' + e.message, true); }
+}
+
+// ── Client / Destinations panel ───────────────────────────────────────────────
+
+async function loadClientPanel() {
   try {
     const r = await apiFetch(AGENT + '/config');
     const cfg = await r.json();
     document.getElementById('client-server-url').value = cfg.server_url || window.location.origin;
-    document.getElementById('client-saves-folder').value = cfg.saves_folder || '';
     const tbody = document.getElementById('client-rows');
     tbody.innerHTML = '';
     for (const c of consoles) {
       const dest = (cfg.destinations || {})[c.name] || '';
       const tr = document.createElement('tr');
-      const nameTd = document.createElement('td');
-      nameTd.textContent = c.name;
-      const inTd = document.createElement('td');
       const inp = document.createElement('input');
-      inp.type = 'text';
-      inp.dataset.console = c.name;
-      inp.value = dest;
-      inp.placeholder = 'path to local folder';
-      inTd.appendChild(inp);
-      const btnTd = document.createElement('td');
-      const btn = document.createElement('button');
-      btn.textContent = 'Browse';
-      btn.style.whiteSpace = 'nowrap';
-      btn.addEventListener('click', () => openBrowse(inp));
-      btnTd.appendChild(btn);
-      tr.append(nameTd, inTd, btnTd);
+      inp.type = 'text'; inp.dataset.console = c.name; inp.value = dest;
+      inp.placeholder = 'path to local folder'; inp.className = 'panel-input';
+      const browseBtn = document.createElement('button');
+      browseBtn.className = 'panel-btn'; browseBtn.textContent = 'Browse';
+      browseBtn.style.whiteSpace = 'nowrap';
+      browseBtn.addEventListener('click', () => openBrowse(inp));
+      tr.innerHTML = '<td style="width:8rem;font-family:\'IBM Plex Mono\',monospace;font-size:0.85rem">' + esc(c.name) + '</td><td></td><td style="width:6rem;text-align:right"></td>';
+      tr.cells[1].appendChild(inp);
+      tr.cells[2].appendChild(browseBtn);
       tbody.appendChild(tr);
     }
-    openModal('client-modal');
-  } catch (e) {
-    setStatus('Cannot load client config: ' + e.message, true);
-  }
+    document.getElementById('scan-results-section').style.display = 'none';
+  } catch (e) { setStatus('Cannot load client config: ' + e.message, true); }
 }
 
-async function saveClientConfig() {
+async function saveClientPanel() {
   const serverUrl = document.getElementById('client-server-url').value.trim();
-  const savesFolder = document.getElementById('client-saves-folder').value.trim();
   const destinations = {};
   for (const inp of document.querySelectorAll('#client-rows input[data-console]')) {
     const v = inp.value.trim();
     if (v) destinations[inp.dataset.console] = v;
   }
   try {
-    await apiFetch(AGENT + '/config', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ server_url: serverUrl, destinations, saves_folder: savesFolder }),
-    });
-    closeModal('client-modal');
-  } catch (e) {
-    setStatus('Save failed: ' + e.message, true);
-  }
+    await apiFetch(AGENT + '/config', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({server_url: serverUrl, destinations}) });
+    setStatus('Client config saved.');
+  } catch (e) { setStatus('Save failed: ' + e.message, true); }
 }
 
-// ── Folder browser ───────────────────────────────────────────────────────────
+async function runScan() {
+  setStatus('Scanning…');
+  try {
+    const r = await apiFetch(AGENT + '/scan');
+    const results = await r.json();
+    const tbody = document.getElementById('scan-results-body');
+    tbody.innerHTML = '';
+    const section = document.getElementById('scan-results-section');
+    if (!results.length) {
+      setStatus('Scan complete — no matching paths found.');
+      section.style.display = 'none';
+      return;
+    }
+    for (const res of results) {
+      const tr = document.createElement('tr');
+      const applyBtn = document.createElement('button');
+      applyBtn.className = 'panel-btn primary'; applyBtn.textContent = 'Apply';
+      applyBtn.addEventListener('click', () => applyScanResult(res.path, res.console));
+      tr.innerHTML = '<td style="font-size:0.82rem">' + esc(res.emulator) + '</td>' +
+                     '<td class="scan-result-path">' + esc(res.path) + '</td>' +
+                     '<td style="font-size:0.82rem">' + esc(res.console || '—') + '</td>' +
+                     '<td class="scan-count">' + res.file_count + '</td><td></td>';
+      tr.lastChild.appendChild(applyBtn);
+      tbody.appendChild(tr);
+    }
+    section.style.display = '';
+    setStatus('Scan complete — ' + results.length + ' path(s) found.');
+  } catch (e) { setStatus('Scan failed: ' + e.message, true); }
+}
+
+function applyScanResult(path, console_) {
+  if (!console_) return;
+  const inp = document.querySelector('#client-rows input[data-console="' + CSS.escape(console_) + '"]');
+  if (inp) { inp.value = path; setStatus('Applied: ' + console_ + ' → ' + path); }
+  else { setStatus('Console "' + console_ + '" not in configured list — add it in Consoles first.', true); }
+}
+
+// ── Folder browser ────────────────────────────────────────────────────────────
 
 let browseTargetInput = null;
 
-async function openBrowse(targetInput) {
+function openBrowse(targetInput) {
   browseTargetInput = targetInput;
-  await browseTo('');
+  browseTo('');
   openModal('browse-modal');
 }
 
 async function browseTo(path) {
   try {
-    const url = AGENT + '/browse' + (path ? '?path=' + encodeURIComponent(path) : '');
-    const r = await apiFetch(url);
+    const r = await apiFetch(AGENT + '/browse' + (path ? '?path=' + encodeURIComponent(path) : ''));
     const data = await r.json();
     document.getElementById('browse-current-path').textContent = data.path;
     const list = document.getElementById('browse-list');
     list.innerHTML = '';
     if (data.parent && data.parent !== data.path) {
-      const li = document.createElement('li');
-      li.className = 'parent';
-      const btn = document.createElement('button');
-      btn.innerHTML = '↑ ..';
+      const li = document.createElement('li'); li.className = 'parent';
+      const btn = document.createElement('button'); btn.innerHTML = '↑ ..';
       btn.addEventListener('click', () => browseTo(data.parent));
-      li.appendChild(btn);
-      list.appendChild(li);
+      li.appendChild(btn); list.appendChild(li);
     }
     for (const dir of (data.dirs || [])) {
-      const name = dir.replace(/\\/g, '/').split('/').pop() || dir.replace(/\\/g, '/').split('\\').pop() || dir;
+      const name = dir.replace(/\\/g, '/').split('/').pop() || dir;
       const li = document.createElement('li');
-      const btn = document.createElement('button');
-      btn.innerHTML = '📁 ' + esc(name);
+      const btn = document.createElement('button'); btn.innerHTML = '📁 ' + esc(name);
       btn.addEventListener('click', () => browseTo(dir));
-      li.appendChild(btn);
-      list.appendChild(li);
+      li.appendChild(btn); list.appendChild(li);
     }
-  } catch (e) {
-    setStatus('Browse failed: ' + e.message, true);
-  }
+  } catch (e) { setStatus('Browse failed: ' + e.message, true); }
 }
 
 function browseSelect() {
-  if (browseTargetInput) {
-    browseTargetInput.value = document.getElementById('browse-current-path').textContent;
-  }
+  if (browseTargetInput) browseTargetInput.value = document.getElementById('browse-current-path').textContent;
   closeModal('browse-modal');
 }
 
-// ── Theme toggle ─────────────────────────────────────────────────────────────
+// ── Theme ─────────────────────────────────────────────────────────────────────
 
 function toggleTheme() {
   const html = document.documentElement;
-  const current = html.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  const next = current === 'dark' ? 'light' : 'dark';
+  const cur = html.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const next = cur === 'dark' ? 'light' : 'dark';
   html.dataset.theme = next;
   localStorage.setItem('theme', next);
 }
-(function() {
-  const saved = localStorage.getItem('theme');
-  if (saved) document.documentElement.dataset.theme = saved;
-})();
+(function() { const s = localStorage.getItem('theme'); if (s) document.documentElement.dataset.theme = s; })();
 
-// Close modal when clicking outside
+// Close on backdrop / Escape
 document.querySelectorAll('.modal-bg').forEach(bg => {
   bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
 });
-
-// Close modal on Escape
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
-  }
+  if (e.key === 'Escape') document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
 });
 
 init();

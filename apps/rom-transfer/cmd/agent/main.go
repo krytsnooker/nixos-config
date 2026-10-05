@@ -16,7 +16,7 @@ import (
 	"sync/atomic"
 )
 
-const version = "1.2"
+const version = "1.3"
 
 var reTimestamp = regexp.MustCompile(`_\d{8}-\d{6}$`)
 
@@ -29,7 +29,13 @@ func stripTimestamp(name string) string {
 type Config struct {
 	ServerURL    string            `json:"server_url"`
 	Destinations map[string]string `json:"destinations"`
-	SavesFolder  string            `json:"saves_folder"`
+}
+
+type ScanResult struct {
+	Emulator  string `json:"emulator"`
+	Path      string `json:"path"`
+	Console   string `json:"console"`
+	FileCount int    `json:"file_count"`
 }
 
 type FileInfo struct {
@@ -337,15 +343,12 @@ func (a *Agent) handleBrowse(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *Agent) handleSaves(w http.ResponseWriter, r *http.Request) {
+	console := r.URL.Query().Get("console")
 	a.mu.RLock()
-	folder := a.cfg.SavesFolder
+	folder := a.cfg.Destinations[console]
 	a.mu.RUnlock()
 	if folder == "" {
 		folder = defaultDownloadsDir()
-	}
-	console := r.URL.Query().Get("console")
-	if console != "" {
-		folder = filepath.Join(folder, console)
 	}
 	os.MkdirAll(folder, 0755)
 	files, _, _ := listDir(folder)
@@ -377,11 +380,10 @@ func (a *Agent) handleSavesPush(w http.ResponseWriter, r *http.Request) {
 	a.mu.RLock()
 	cfg := a.cfg
 	a.mu.RUnlock()
-	folder := cfg.SavesFolder
+	folder := cfg.Destinations[req.Console]
 	if folder == "" {
 		folder = defaultDownloadsDir()
 	}
-	folder = filepath.Join(folder, req.Console)
 	f, err := os.Open(filepath.Join(folder, req.File))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -423,7 +425,7 @@ func (a *Agent) handleSavesPull(w http.ResponseWriter, r *http.Request) {
 	a.mu.RLock()
 	cfg := a.cfg
 	a.mu.RUnlock()
-	folder := cfg.SavesFolder
+	folder := cfg.Destinations[req.Console]
 	if folder == "" {
 		folder = defaultDownloadsDir()
 	}
@@ -438,7 +440,6 @@ func (a *Agent) handleSavesPull(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("server returned %d", resp.StatusCode), http.StatusInternalServerError)
 		return
 	}
-	folder = filepath.Join(folder, req.Console)
 	os.MkdirAll(folder, 0755)
 	dest := filepath.Join(folder, stripTimestamp(req.File))
 	tmp := dest + ".tmp"
@@ -583,6 +584,57 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 	return n, err
 }
 
+func (a *Agent) handleScan(w http.ResponseWriter, r *http.Request) {
+	a.mu.RLock()
+	serverURL := strings.TrimRight(a.cfg.ServerURL, "/")
+	a.mu.RUnlock()
+	if serverURL == "" {
+		http.Error(w, "server URL not configured", http.StatusBadRequest)
+		return
+	}
+	resp, err := http.Get(serverURL + "/api/scanpaths")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+	var paths []struct {
+		Emulator string `json:"emulator"`
+		Path     string `json:"path"`
+		Console  string `json:"console"`
+		OS       string `json:"os"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&paths); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	results := []ScanResult{}
+	for _, p := range paths {
+		if p.OS != "" && p.OS != agentOS {
+			continue
+		}
+		expanded := expandPath(p.Path)
+		entries, err := os.ReadDir(expanded)
+		if err != nil {
+			continue
+		}
+		count := 0
+		for _, e := range entries {
+			if !e.IsDir() {
+				count++
+			}
+		}
+		results = append(results, ScanResult{
+			Emulator:  p.Emulator,
+			Path:      expanded,
+			Console:   p.Console,
+			FileCount: count,
+		})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(results)
+}
+
 func fmtBytes(b int64) string {
 	const MB = 1024 * 1024
 	const GB = 1024 * MB
@@ -613,6 +665,7 @@ func main() {
 	mux.HandleFunc("/saves", a.cors(a.handleSaves))
 	mux.HandleFunc("/saves/push", a.cors(a.handleSavesPush))
 	mux.HandleFunc("/saves/pull", a.cors(a.handleSavesPull))
+	mux.HandleFunc("/scan", a.cors(a.handleScan))
 
 	log.Printf("rom-agent v%s listening on %s", version, *addr)
 	log.Fatal(http.ListenAndServe(*addr, mux))

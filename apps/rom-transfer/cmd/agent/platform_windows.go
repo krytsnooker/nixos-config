@@ -5,9 +5,35 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"unsafe"
 )
+
+const agentOS = "windows"
+
+func expandPath(path string) string {
+	var b strings.Builder
+	i := 0
+	for i < len(path) {
+		if path[i] == '%' {
+			j := strings.Index(path[i+1:], "%")
+			if j >= 0 {
+				key := path[i+1 : i+1+j]
+				if val := os.Getenv(key); val != "" {
+					b.WriteString(val)
+				} else {
+					b.WriteString("%" + key + "%")
+				}
+				i = i + 1 + j + 1
+				continue
+			}
+		}
+		b.WriteByte(path[i])
+		i++
+	}
+	return b.String()
+}
 
 var (
 	kernel32            = syscall.NewLazyDLL("kernel32.dll")

@@ -40,6 +40,32 @@ type ConsoleFileTypes struct {
 	Save []string `json:"save"`
 }
 
+type ScanPath struct {
+	Emulator string `json:"emulator"`
+	Path     string `json:"path"`
+	Console  string `json:"console"`
+	OS       string `json:"os"`
+}
+
+var defaultScanPaths = []ScanPath{
+	{Emulator: "RetroArch", Path: `%APPDATA%\RetroArch\saves`, Console: "", OS: "windows"},
+	{Emulator: "PCSX2", Path: `%USERPROFILE%\Documents\PCSX2\memcards`, Console: "PS2", OS: "windows"},
+	{Emulator: "DuckStation", Path: `%APPDATA%\DuckStation\memcards`, Console: "PS1", OS: "windows"},
+	{Emulator: "Flycast", Path: `%APPDATA%\flycast\data`, Console: "Dreamcast", OS: "windows"},
+	{Emulator: "Project64", Path: `%APPDATA%\Project64\Save`, Console: "N64", OS: "windows"},
+	{Emulator: "Dolphin", Path: `%APPDATA%\Dolphin Emulator\GC`, Console: "", OS: "windows"},
+	{Emulator: "Mednafen", Path: `%APPDATA%\Mednafen\sav`, Console: "", OS: "windows"},
+	{Emulator: "ePSXe", Path: `%APPDATA%\ePSXe\memcards`, Console: "PS1", OS: "windows"},
+	{Emulator: "Snes9x", Path: `%APPDATA%\Snes9x`, Console: "SNES", OS: "windows"},
+	{Emulator: "RetroArch", Path: `~/.config/retroarch/saves`, Console: "", OS: "linux"},
+	{Emulator: "PCSX2", Path: `~/.config/PCSX2/memcards`, Console: "PS2", OS: "linux"},
+	{Emulator: "DuckStation", Path: `~/.local/share/duckstation/memcards`, Console: "PS1", OS: "linux"},
+	{Emulator: "Flycast", Path: `~/.local/share/flycast/data`, Console: "Dreamcast", OS: "linux"},
+	{Emulator: "Mupen64Plus", Path: `~/.local/share/mupen64plus/save`, Console: "N64", OS: "linux"},
+	{Emulator: "Dolphin", Path: `~/.local/share/dolphin-emu/GC`, Console: "", OS: "linux"},
+	{Emulator: "Mednafen", Path: `~/.mednafen/sav`, Console: "", OS: "linux"},
+}
+
 var defaultFileTypes = map[string]ConsoleFileTypes{
 	"NES":       {Rom: []string{".nes"}, Save: []string{".sav"}},
 	"SNES":      {Rom: []string{".smc", ".sfc"}, Save: []string{".srm", ".sav"}},
@@ -58,6 +84,7 @@ type Server struct {
 	configPath    string
 	webDir        string
 	fileTypesPath string
+	scanPathsPath string
 }
 
 func main() {
@@ -66,10 +93,12 @@ func main() {
 	webDir := flag.String("web", "web", "web files directory")
 	flag.Parse()
 
+	stateDir := filepath.Dir(*configPath)
 	s := &Server{
 		configPath:    *configPath,
 		webDir:        *webDir,
-		fileTypesPath: filepath.Join(filepath.Dir(*configPath), "filetypes.json"),
+		fileTypesPath: filepath.Join(stateDir, "filetypes.json"),
+		scanPathsPath: filepath.Join(stateDir, "scanpaths.json"),
 	}
 	if data, err := os.ReadFile(*configPath); err == nil {
 		json.Unmarshal(data, &s.cfg)
@@ -77,6 +106,11 @@ func main() {
 	if _, err := os.Stat(s.fileTypesPath); os.IsNotExist(err) {
 		if data, err := json.MarshalIndent(defaultFileTypes, "", "  "); err == nil {
 			os.WriteFile(s.fileTypesPath, data, 0644)
+		}
+	}
+	if _, err := os.Stat(s.scanPathsPath); os.IsNotExist(err) {
+		if data, err := json.MarshalIndent(defaultScanPaths, "", "  "); err == nil {
+			os.WriteFile(s.scanPathsPath, data, 0644)
 		}
 	}
 
@@ -89,6 +123,7 @@ func main() {
 	mux.HandleFunc("/api/saves/download", s.lanOnly(s.handleSavesDownload))
 	mux.HandleFunc("/api/saves/upload", s.lanOnly(s.handleSavesUpload))
 	mux.HandleFunc("/api/filetypes", s.lanOnly(s.handleFileTypes))
+	mux.HandleFunc("/api/scanpaths", s.lanOnly(s.handleScanPaths))
 	mux.Handle("/", http.FileServer(http.Dir(*webDir)))
 
 	log.Printf("rom-transfer server on %s", *addr)
@@ -373,6 +408,24 @@ func (s *Server) handleSavesUpload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleFileTypes(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPut {
+		var ft map[string]ConsoleFileTypes
+		if err := json.NewDecoder(r.Body).Decode(&ft); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		data, err := json.MarshalIndent(ft, "", "  ")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err := os.WriteFile(s.fileTypesPath, data, 0644); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	ft := make(map[string]ConsoleFileTypes)
 	for k, v := range defaultFileTypes {
 		ft[k] = v
@@ -387,4 +440,34 @@ func (s *Server) handleFileTypes(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ft)
+}
+
+func (s *Server) handleScanPaths(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPut {
+		var paths []ScanPath
+		if err := json.NewDecoder(r.Body).Decode(&paths); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		data, err := json.MarshalIndent(paths, "", "  ")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if err := os.WriteFile(s.scanPathsPath, data, 0644); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	var paths []ScanPath
+	if data, err := os.ReadFile(s.scanPathsPath); err == nil {
+		json.Unmarshal(data, &paths)
+	}
+	if paths == nil {
+		paths = defaultScanPaths
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(paths)
 }

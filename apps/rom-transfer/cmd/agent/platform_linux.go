@@ -5,8 +5,20 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 )
+
+const agentOS = "linux"
+
+func expandPath(path string) string {
+	if strings.HasPrefix(path, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			path = filepath.Join(home, path[2:])
+		}
+	}
+	return os.ExpandEnv(path)
+}
 
 func freeSpace(path string) (uint64, error) {
 	var stat syscall.Statfs_t
