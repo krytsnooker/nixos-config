@@ -35,11 +35,29 @@ type SaveFileInfo struct {
 	Game string `json:"game"`
 }
 
+type ConsoleFileTypes struct {
+	Rom  []string `json:"rom"`
+	Save []string `json:"save"`
+}
+
+var defaultFileTypes = map[string]ConsoleFileTypes{
+	"NES":       {Rom: []string{".nes"}, Save: []string{".sav"}},
+	"SNES":      {Rom: []string{".smc", ".sfc"}, Save: []string{".srm", ".sav"}},
+	"Mega Drive": {Rom: []string{".md", ".bin", ".gen", ".smd"}, Save: []string{".srm", ".sav"}},
+	"Saturn":    {Rom: []string{".iso", ".bin", ".cue", ".mdf", ".chd"}, Save: []string{".bkr", ".srm", ".sav"}},
+	"N64":       {Rom: []string{".z64", ".n64", ".v64"}, Save: []string{".sra", ".fla", ".eep", ".mpk", ".srm"}},
+	"Dreamcast": {Rom: []string{".gdi", ".cdi", ".iso", ".chd"}, Save: []string{".vmu", ".bin"}},
+	"PS1":       {Rom: []string{".iso", ".bin", ".cue", ".img", ".chd"}, Save: []string{".mcr", ".mcd", ".srm", ".mem"}},
+	"PS2":       {Rom: []string{".iso", ".bin", ".chd"}, Save: []string{".ps2", ".mcr", ".xps", ".max", ".psu"}},
+	"Switch":    {Rom: []string{".nsp", ".xci", ".nsz"}, Save: []string{".sav", ".bin"}},
+}
+
 type Server struct {
-	mu         sync.RWMutex
-	cfg        HostConfig
-	configPath string
-	webDir     string
+	mu            sync.RWMutex
+	cfg           HostConfig
+	configPath    string
+	webDir        string
+	fileTypesPath string
 }
 
 func main() {
@@ -49,11 +67,17 @@ func main() {
 	flag.Parse()
 
 	s := &Server{
-		configPath: *configPath,
-		webDir:     *webDir,
+		configPath:    *configPath,
+		webDir:        *webDir,
+		fileTypesPath: filepath.Join(filepath.Dir(*configPath), "filetypes.json"),
 	}
 	if data, err := os.ReadFile(*configPath); err == nil {
 		json.Unmarshal(data, &s.cfg)
+	}
+	if _, err := os.Stat(s.fileTypesPath); os.IsNotExist(err) {
+		if data, err := json.MarshalIndent(defaultFileTypes, "", "  "); err == nil {
+			os.WriteFile(s.fileTypesPath, data, 0644)
+		}
 	}
 
 	mux := http.NewServeMux()
@@ -64,6 +88,7 @@ func main() {
 	mux.HandleFunc("/api/saves", s.lanOnly(s.handleSaves))
 	mux.HandleFunc("/api/saves/download", s.lanOnly(s.handleSavesDownload))
 	mux.HandleFunc("/api/saves/upload", s.lanOnly(s.handleSavesUpload))
+	mux.HandleFunc("/api/filetypes", s.lanOnly(s.handleFileTypes))
 	mux.Handle("/", http.FileServer(http.Dir(*webDir)))
 
 	log.Printf("rom-transfer server on %s", *addr)
@@ -345,4 +370,21 @@ func (s *Server) handleSavesUpload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleFileTypes(w http.ResponseWriter, r *http.Request) {
+	ft := make(map[string]ConsoleFileTypes)
+	for k, v := range defaultFileTypes {
+		ft[k] = v
+	}
+	if data, err := os.ReadFile(s.fileTypesPath); err == nil {
+		var loaded map[string]ConsoleFileTypes
+		if json.Unmarshal(data, &loaded) == nil {
+			for k, v := range loaded {
+				ft[k] = v
+			}
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ft)
 }

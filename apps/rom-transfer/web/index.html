@@ -147,12 +147,12 @@ button.action.primary:hover, button.action.primary:focus { background: rgba(95,2
   margin: 0 0 0.8rem; color: var(--text);
 }
 .modal p { font-size: 0.88rem; color: var(--text-dim); margin: 0 0 0.8rem; }
-.modal input[type=text] {
+.modal input[type=text], .modal select {
   width: 100%; font-family: "IBM Plex Mono", monospace; font-size: 0.88rem;
   padding: 0.4rem 0.6rem; background: var(--surface-2); color: var(--text);
   border: 1px solid var(--border); border-radius: 5px; margin: 0.2rem 0;
 }
-.modal input[type=text]:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+.modal input[type=text]:focus, .modal select:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
 .modal button {
   font-family: "IBM Plex Mono", monospace; font-size: 0.82rem;
   padding: 0.4rem 1.1rem; margin: 0.5rem 0.3rem 0 0;
@@ -197,6 +197,7 @@ button.action.primary:hover, button.action.primary:focus { background: rgba(95,2
 <body>
 
 <header>
+  <a href="http://homeserver:5000" style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--accent);text-decoration:none;margin-right:0.4rem">← homeserver</a>
   <span class="eyebrow">ROM Transfer</span>
   <label for="console-sel">Console</label>
   <select id="console-sel" onchange="onConsoleChange()">
@@ -261,7 +262,7 @@ button.action.primary:hover, button.action.primary:focus { background: rgba(95,2
     <label>Game Name</label>
     <input type="text" id="push-game-name" placeholder="Game name">
     <label>Console</label>
-    <select id="push-console-sel" style="width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:0.88rem;padding:0.4rem 0.6rem;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:5px;margin:0.2rem 0"></select>
+    <select id="push-console-sel"></select>
     <br>
     <button class="primary" onclick="doPushSave()">Push</button>
     <button onclick="closeModal('push-modal')">Cancel</button>
@@ -338,6 +339,31 @@ let currentTab = 'roms';
 let statusPoll = null;
 let consoles = [];
 
+// ── Console file type filters ────────────────────────────────────────────────
+
+let fileTypes = {};
+
+async function loadFileTypes() {
+  try {
+    const r = await fetch('/api/filetypes');
+    if (r.ok) fileTypes = await r.json();
+  } catch (e) {}
+}
+
+function getConsoleExts(type) {
+  const entry = fileTypes[currentConsole];
+  if (entry) return entry[type] || null;
+  const norm = currentConsole.toLowerCase().replace(/[\s\-_.]/g, '');
+  const match = Object.entries(fileTypes).find(([k]) => k.toLowerCase().replace(/[\s\-_.]/g, '') === norm);
+  return match ? match[1][type] || null : null;
+}
+
+function filterByExts(files, type) {
+  const exts = getConsoleExts(type);
+  if (!exts || !exts.length) return files;
+  return files.filter(f => exts.some(e => f.name.toLowerCase().endsWith(e)));
+}
+
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
 function fmt(bytes) {
@@ -380,7 +406,7 @@ async function init() {
   } catch (e) {
     setStatus('Agent not reachable at ' + AGENT + ' — is it running?', true);
   }
-  await loadConsoles();
+  await Promise.all([loadConsoles(), loadFileTypes()]);
 }
 
 async function loadConsoles() {
@@ -432,7 +458,7 @@ async function loadLocalFiles() {
   try {
     const r = await apiFetch(AGENT + '/files?console=' + encodeURIComponent(currentConsole));
     const data = await r.json();
-    const files = data.files || [];
+    const files = filterByExts(data.files || [], 'rom');
     const di = data.disk_info;
     const info = document.getElementById('local-disk-info');
     if (di) {
@@ -461,7 +487,7 @@ async function loadLocalFiles() {
 async function loadServerFiles() {
   try {
     const r = await apiFetch('/api/files?console=' + encodeURIComponent(currentConsole));
-    const files = await r.json() || [];
+    const files = filterByExts(await r.json() || [], 'rom');
     const tbody = document.getElementById('server-body');
     tbody.innerHTML = '';
     for (const f of files) {
@@ -548,7 +574,7 @@ async function loadLocalSaves() {
   if (!currentConsole) return;
   try {
     const r = await apiFetch(AGENT + '/saves?console=' + encodeURIComponent(currentConsole));
-    const files = await r.json() || [];
+    const files = filterByExts(await r.json() || [], 'save');
     for (const f of files) {
       const tr = document.createElement('tr');
       const btn = document.createElement('button');
@@ -570,7 +596,7 @@ async function loadServerSaves() {
   if (!currentConsole) return;
   try {
     const r = await apiFetch('/api/saves?console=' + encodeURIComponent(currentConsole));
-    const files = await r.json() || [];
+    const files = filterByExts(await r.json() || [], 'save');
     for (const f of files) {
       const tr = document.createElement('tr');
       const btn = document.createElement('button');
@@ -706,7 +732,7 @@ async function openClientConfig() {
   try {
     const r = await apiFetch(AGENT + '/config');
     const cfg = await r.json();
-    document.getElementById('client-server-url').value = cfg.server_url || '';
+    document.getElementById('client-server-url').value = cfg.server_url || window.location.origin;
     document.getElementById('client-saves-folder').value = cfg.saves_folder || '';
     const tbody = document.getElementById('client-rows');
     tbody.innerHTML = '';
