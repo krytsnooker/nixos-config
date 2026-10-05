@@ -105,6 +105,13 @@ in
     };
   };
 
+  users.groups.rom-transfer = { };
+  users.users.rom-transfer = {
+    isSystemUser = true;
+    group = "rom-transfer";
+    extraGroups = [ "sambashare" ];
+  };
+
   systemd.services.rom-transfer = {
     description = "ROM Transfer Server";
     after = [ "network.target" "mnt-server\\x2dpc.mount" ];
@@ -118,8 +125,8 @@ in
         vendorHash = null;
       };
     in {
-      DynamicUser = true;
-      SupplementaryGroups = [ "sambashare" ];
+      User = "rom-transfer";
+      Group = "rom-transfer";
       StateDirectory = "rom-transfer";
       ExecStart = "${pkg}/bin/server -addr 0.0.0.0:5035 -config /var/lib/rom-transfer/hostconfig.json -web ${../apps/rom-transfer/web}";
       Restart = "on-failure";
