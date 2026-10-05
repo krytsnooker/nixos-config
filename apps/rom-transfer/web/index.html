@@ -136,12 +136,19 @@ header button:hover { color: var(--text); border-color: var(--text-faint); }
 .save-ind { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; margin-right: 0.4rem; flex-shrink: 0; vertical-align: middle; cursor: default; position: relative; }
 .save-ind.exact    { background: #4caf7d; }
 .save-ind.stale    { background: #e0a03a; }
-.save-ind.unpushed { background: #7a8a90; }
-.save-ind.server-match { background: #4caf7d; }
+.save-ind.unpushed { background: #e07a6b; }
+.save-ind.srv-diff { background: #e0a03a; }
 tr.save-row { cursor: pointer; }
 tr.save-row:hover { background: var(--surface-2); }
 tr.save-row.selected { background: var(--surface-3); outline: 1px solid var(--accent); }
 .save-tooltip { position: fixed; background: var(--surface-3); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; font-size: 0.75rem; font-family: "IBM Plex Sans", sans-serif; pointer-events: none; white-space: nowrap; z-index: 1000; display: none; box-shadow: var(--shadow); }
+.pane-heading { display: flex; align-items: center; gap: 0.4rem; margin: 0 0 0.5rem; }
+.pane-heading h2 { margin: 0; }
+.legend-btn { font-family: "IBM Plex Mono", monospace; font-size: 0.65rem; color: var(--text-faint); background: var(--surface-2); border: 1px solid var(--border); border-radius: 50%; width: 1.1rem; height: 1.1rem; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; padding: 0; }
+.legend-btn:hover { color: var(--text); border-color: var(--text-faint); }
+.legend-popup { position: fixed; background: var(--surface-3); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; font-size: 0.78rem; font-family: "IBM Plex Sans", sans-serif; z-index: 1001; box-shadow: var(--shadow); min-width: 16rem; }
+.legend-popup .legend-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.2rem 0; }
+.legend-popup .save-ind { flex-shrink: 0; }
 
 /* ── Config panels ── */
 .config-panel { flex: 1; overflow-y: auto; padding: 1.4rem 1.6rem; }
@@ -282,9 +289,6 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
   </select>
   <div class="hdr-spacer"></div>
   <button id="update-btn" class="update-btn" style="display:none" onclick="doAgentUpdate()">Update agent</button>
-  <span style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text-faint);letter-spacing:0.06em;text-transform:uppercase">Agent</span>
-  <a class="dl-btn" href="/downloads/rom-agent.exe" download>Windows</a>
-  <a class="dl-btn" href="/downloads/rom-agent-linux" download>Linux</a>
   <button onclick="toggleTheme()">theme</button>
 </header>
 
@@ -298,6 +302,7 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
     <div class="sidebar-item" data-view="scanpaths" onclick="setView('scanpaths')">Scan Paths</div>
     <div class="sidebar-group">Client</div>
     <div class="sidebar-item" data-view="client" onclick="setView('client')">Destinations</div>
+    <div class="sidebar-item" data-view="agent-status" onclick="setView('agent-status')">Agent Status</div>
   </nav>
 
   <div class="content-area">
@@ -327,13 +332,19 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
       </div>
       <div id="panes-saves" class="panes" style="display:none">
         <div class="pane">
-          <h2>Local Saves</h2>
+          <div class="pane-heading">
+            <h2>Local Saves</h2>
+            <button class="legend-btn" onclick="toggleLegend('legend-local', this)">?</button>
+          </div>
           <div class="disk-info" id="saves-local-info"></div>
           <table><thead><tr><th class="name-cell">Name</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
           <tbody id="saves-local-body"></tbody></table>
         </div>
         <div class="pane">
-          <h2>Server Saves</h2>
+          <div class="pane-heading">
+            <h2>Server Saves</h2>
+            <button class="legend-btn" onclick="toggleLegend('legend-server', this)">?</button>
+          </div>
           <table><thead><tr><th style="width:8rem">Game</th><th class="name-cell">File</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
           <tbody id="saves-server-body"></tbody></table>
         </div>
@@ -415,6 +426,27 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
           <thead><tr><th style="width:8rem">Emulator</th><th>Path</th><th style="width:7rem">Console</th><th style="width:4rem">Files</th><th style="width:5rem"></th></tr></thead>
           <tbody id="scan-results-body"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- ── Agent Status panel ── -->
+    <div id="view-agent-status" class="config-panel" style="display:none">
+      <h2>Agent Status</h2>
+      <p class="panel-desc">Live status of the agent running on this client machine.</p>
+      <div class="panel-section">
+        <table class="edit-table" id="agent-status-table">
+          <tbody id="agent-status-body"></tbody>
+        </table>
+      </div>
+      <div class="panel-section">
+        <label class="panel-label">Download Agent</label>
+        <div style="display:flex;gap:0.5rem;margin-top:0.4rem">
+          <a class="panel-btn" href="/downloads/rom-agent.exe" download>Windows</a>
+          <a class="panel-btn" href="/downloads/rom-agent-linux" download>Linux</a>
+        </div>
+      </div>
+      <div class="panel-actions">
+        <button class="panel-btn primary" onclick="loadAgentStatus()">Refresh</button>
       </div>
     </div>
 
@@ -534,10 +566,11 @@ function setView(view) {
   const showConsole = view === 'transfer';
   document.getElementById('console-label').style.display = showConsole ? '' : 'none';
   document.getElementById('console-sel').style.display = showConsole ? '' : 'none';
-  if (view === 'consoles')  loadConsolesPanel();
-  if (view === 'filetypes') loadFileTypesPanel();
-  if (view === 'scanpaths') loadScanPathsPanel();
-  if (view === 'client')    loadClientPanel();
+  if (view === 'consoles')     loadConsolesPanel();
+  if (view === 'filetypes')    loadFileTypesPanel();
+  if (view === 'scanpaths')    loadScanPathsPanel();
+  if (view === 'client')       loadClientPanel();
+  if (view === 'agent-status') loadAgentStatus();
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
@@ -751,6 +784,52 @@ async function pollStatus() {
   } catch (e) { clearInterval(statusPoll); statusPoll = null; }
 }
 
+// ── Save legend ───────────────────────────────────────────────────────────────
+
+const legends = {
+  'legend-local': [
+    ['exact',    'Exact match exists on the server'],
+    ['stale',    'A different version is on the server'],
+    ['unpushed', 'Not yet pushed to the server'],
+  ],
+  'legend-server': [
+    ['exact',    'Exact match with selected local file'],
+    ['srv-diff', 'Different version of selected local file'],
+  ],
+};
+
+let activeLegend = null;
+
+function toggleLegend(id, btn) {
+  if (activeLegend && activeLegend.id === id) {
+    activeLegend.el.remove();
+    activeLegend = null;
+    return;
+  }
+  if (activeLegend) {
+    activeLegend.el.remove();
+    activeLegend = null;
+  }
+  const popup = document.createElement('div');
+  popup.className = 'legend-popup';
+  for (const [cls, label] of legends[id]) {
+    const row = document.createElement('div');
+    row.className = 'legend-row';
+    const dot = document.createElement('span');
+    dot.className = 'save-ind ' + cls;
+    row.appendChild(dot);
+    row.appendChild(document.createTextNode(label));
+    popup.appendChild(row);
+  }
+  document.body.appendChild(popup);
+  const rect = btn.getBoundingClientRect();
+  popup.style.top  = (rect.bottom + 6) + 'px';
+  popup.style.left = Math.min(rect.left, window.innerWidth - popup.offsetWidth - 8) + 'px';
+  activeLegend = { id, el: popup };
+  const close = e => { if (!popup.contains(e.target) && e.target !== btn) { popup.remove(); activeLegend = null; document.removeEventListener('click', close); } };
+  setTimeout(() => document.addEventListener('click', close), 0);
+}
+
 // ── Saves ────────────────────────────────────────────────────────────────────
 
 const tooltip = document.createElement('div');
@@ -818,7 +897,7 @@ async function loadSavesPanes() {
     if (f.hash && serverHashes.has(f.hash)) {
       indCls = 'exact';    tipText = 'Exact match exists on the server';
     } else if (serverBases.has(base)) {
-      indCls = 'stale';   tipText = 'A different version of this file is on the server';
+      indCls = 'stale';    tipText = 'A different version of this file is on the server';
     } else {
       indCls = 'unpushed'; tipText = 'This file has not been pushed to the server';
     }
@@ -881,7 +960,7 @@ function selectSaveRow(base, hash) {
           ind = makeInd('server-match', '');
           tr.cells[1].prepend(ind);
         }
-        ind.className = 'save-ind server-match ' + (exactMatch ? 'exact' : 'stale');
+        ind.className = 'save-ind server-match ' + (exactMatch ? 'exact' : 'srv-diff');
         ind._tipText = exactMatch ? 'Exact match with local file' : 'Different version of this file';
         ind.onmouseenter = e => showTooltip(e, ind._tipText);
       } else if (ind) {
@@ -1106,6 +1185,51 @@ async function saveClientPanel() {
     await apiFetch(AGENT + '/config', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({server_url: serverUrl, roms, saves}) });
     setStatus('Client config saved.');
   } catch (e) { setStatus('Save failed: ' + e.message, true); }
+}
+
+// ── Agent Status panel ────────────────────────────────────────────────────────
+
+async function loadAgentStatus() {
+  const tbody = document.getElementById('agent-status-body');
+  tbody.innerHTML = '<tr><td colspan="2" style="color:var(--text-faint)">Loading…</td></tr>';
+  const row = (label, value, ok) => {
+    const tr = document.createElement('tr');
+    const valStyle = ok === false ? 'color:var(--danger)' : ok === true ? 'color:#4caf7d' : 'color:var(--text-dim)';
+    tr.innerHTML = '<td style="width:10rem;font-size:0.82rem;color:var(--text-faint)">' + esc(label) + '</td>' +
+                   '<td style="font-family:\'IBM Plex Mono\',monospace;font-size:0.82rem;' + valStyle + '">' + esc(String(value)) + '</td>';
+    return tr;
+  };
+  try {
+    const [healthRes, serverVerRes] = await Promise.all([
+      fetch(AGENT + '/health'),
+      fetch('/api/agent-version').catch(() => null)
+    ]);
+    tbody.innerHTML = '';
+    if (!healthRes.ok) throw new Error('Agent returned ' + healthRes.status);
+    const health = await healthRes.json();
+    const serverVer = serverVerRes && serverVerRes.ok ? (await serverVerRes.json()).version : null;
+    tbody.appendChild(row('Status', health.status === 'ok' ? 'Running' : health.status, health.status === 'ok'));
+    tbody.appendChild(row('Agent version', health.version || '—'));
+    if (serverVer) {
+      const upToDate = health.version === serverVer;
+      tbody.appendChild(row('Latest version', serverVer, upToDate));
+      tbody.appendChild(row('Up to date', upToDate ? 'Yes' : 'No — click "Update agent" in header', upToDate));
+    }
+    tbody.appendChild(row('Address', AGENT));
+    const cfgRes = await fetch(AGENT + '/config');
+    if (cfgRes.ok) {
+      const cfg = await cfgRes.json();
+      tbody.appendChild(row('Server URL', cfg.server_url || '(not set)', !!cfg.server_url));
+      const roms = cfg.roms || {}, saves = cfg.saves || {};
+      for (const c of consoles) {
+        tbody.appendChild(row(c.name + ' ROMs',  roms[c.name]  || '(not set)', !!roms[c.name]));
+        tbody.appendChild(row(c.name + ' Saves', saves[c.name] || '(not set)', !!saves[c.name]));
+      }
+    }
+  } catch (e) {
+    tbody.innerHTML = '';
+    tbody.appendChild(row('Status', 'Unreachable — ' + e.message, false));
+  }
 }
 
 async function runScan() {
