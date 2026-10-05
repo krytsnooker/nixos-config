@@ -10,10 +10,21 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
 )
+
+const version = "1.2"
+
+var reTimestamp = regexp.MustCompile(`_\d{8}-\d{6}$`)
+
+func stripTimestamp(name string) string {
+	ext := filepath.Ext(name)
+	base := strings.TrimSuffix(name, ext)
+	return reTimestamp.ReplaceAllString(base, "") + ext
+}
 
 type Config struct {
 	ServerURL    string            `json:"server_url"`
@@ -114,17 +125,9 @@ func (a *Agent) writeConfig(cfg Config) error {
 // the LAN IP. Non-loopback origins must match the configured server_url.
 func (a *Agent) cors(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		a.mu.RLock()
-		serverURL := strings.TrimRight(a.cfg.ServerURL, "/")
-		a.mu.RUnlock()
-
 		origin := r.Header.Get("Origin")
 		if origin != "" {
-			allow := origin // echo back the actual origin by default
-			if serverURL != "" && !loopbackOrigin(origin) {
-				allow = serverURL
-			}
-			w.Header().Set("Access-Control-Allow-Origin", allow)
+			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 			w.Header().Set("Access-Control-Allow-Private-Network", "true")
@@ -132,11 +135,6 @@ func (a *Agent) cors(next http.HandlerFunc) http.HandlerFunc {
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		if origin != "" && serverURL != "" && !loopbackOrigin(origin) && origin != serverURL {
-			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
 
@@ -345,6 +343,10 @@ func (a *Agent) handleSaves(w http.ResponseWriter, r *http.Request) {
 	if folder == "" {
 		folder = defaultDownloadsDir()
 	}
+	console := r.URL.Query().Get("console")
+	if console != "" {
+		folder = filepath.Join(folder, console)
+	}
 	os.MkdirAll(folder, 0755)
 	files, _, _ := listDir(folder)
 	if files == nil {
@@ -362,6 +364,7 @@ func (a *Agent) handleSavesPush(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Console string `json:"console"`
 		File    string `json:"file"`
+		Game    string `json:"game"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -378,13 +381,14 @@ func (a *Agent) handleSavesPush(w http.ResponseWriter, r *http.Request) {
 	if folder == "" {
 		folder = defaultDownloadsDir()
 	}
+	folder = filepath.Join(folder, req.Console)
 	f, err := os.Open(filepath.Join(folder, req.File))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	defer f.Close()
-	uploadURL := cfg.ServerURL + "/api/saves/upload?console=" + url.QueryEscape(req.Console) + "&file=" + url.QueryEscape(req.File)
+	uploadURL := cfg.ServerURL + "/api/saves/upload?console=" + url.QueryEscape(req.Console) + "&file=" + url.QueryEscape(req.File) + "&game=" + url.QueryEscape(req.Game)
 	resp, err := http.Post(uploadURL, "application/octet-stream", f)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -434,8 +438,9 @@ func (a *Agent) handleSavesPull(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("server returned %d", resp.StatusCode), http.StatusInternalServerError)
 		return
 	}
+	folder = filepath.Join(folder, req.Console)
 	os.MkdirAll(folder, 0755)
-	dest := filepath.Join(folder, req.File)
+	dest := filepath.Join(folder, stripTimestamp(req.File))
 	tmp := dest + ".tmp"
 	f, err := os.Create(tmp)
 	if err != nil {
@@ -609,6 +614,6 @@ func main() {
 	mux.HandleFunc("/saves/push", a.cors(a.handleSavesPush))
 	mux.HandleFunc("/saves/pull", a.cors(a.handleSavesPull))
 
-	log.Printf("rom-agent listening on %s", *addr)
+	log.Printf("rom-agent v%s listening on %s", version, *addr)
 	log.Fatal(http.ListenAndServe(*addr, mux))
 }

@@ -248,9 +248,23 @@ button.action.primary:hover, button.action.primary:focus { background: rgba(95,2
   <div class="pane">
     <h2>Server Saves</h2>
     <table>
-      <thead><tr><th class="name-cell">Name</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
+      <thead><tr><th style="width:8rem">Game</th><th class="name-cell">File</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
       <tbody id="saves-server-body"></tbody>
     </table>
+  </div>
+</div>
+
+<!-- Push save modal -->
+<div class="modal-bg" id="push-modal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h2>Push Save</h2>
+    <label>Game Name</label>
+    <input type="text" id="push-game-name" placeholder="Game name">
+    <label>Console</label>
+    <select id="push-console-sel" style="width:100%;font-family:'IBM Plex Sans',sans-serif;font-size:0.88rem;padding:0.4rem 0.6rem;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:5px;margin:0.2rem 0"></select>
+    <br>
+    <button class="primary" onclick="doPushSave()">Push</button>
+    <button onclick="closeModal('push-modal')">Cancel</button>
   </div>
 </div>
 
@@ -529,18 +543,18 @@ async function pollStatus() {
 // ── Saves ─────────────────────────────────────────────────────────────────────
 
 async function loadLocalSaves() {
+  const tbody = document.getElementById('saves-local-body');
+  tbody.innerHTML = '';
+  if (!currentConsole) return;
   try {
-    const r = await apiFetch(AGENT + '/saves');
+    const r = await apiFetch(AGENT + '/saves?console=' + encodeURIComponent(currentConsole));
     const files = await r.json() || [];
-    const tbody = document.getElementById('saves-local-body');
-    tbody.innerHTML = '';
     for (const f of files) {
       const tr = document.createElement('tr');
       const btn = document.createElement('button');
       btn.className = 'action primary';
       btn.textContent = 'Push';
-      btn.dataset.file = f.name;
-      btn.addEventListener('click', () => pushSave(f.name));
+      btn.addEventListener('click', () => openPushModal(f.name));
       tr.innerHTML = '<td class="name-cell">' + esc(f.name) + '</td><td class="size-cell">' + fmt(f.size) + '</td><td class="btn-cell"></td>';
       tr.lastChild.appendChild(btn);
       tbody.appendChild(tr);
@@ -551,20 +565,19 @@ async function loadLocalSaves() {
 }
 
 async function loadServerSaves() {
+  const tbody = document.getElementById('saves-server-body');
+  tbody.innerHTML = '';
   if (!currentConsole) return;
   try {
     const r = await apiFetch('/api/saves?console=' + encodeURIComponent(currentConsole));
     const files = await r.json() || [];
-    const tbody = document.getElementById('saves-server-body');
-    tbody.innerHTML = '';
     for (const f of files) {
       const tr = document.createElement('tr');
       const btn = document.createElement('button');
       btn.className = 'action primary';
       btn.textContent = 'Pull';
-      btn.dataset.file = f.name;
       btn.addEventListener('click', () => pullSave(f.name));
-      tr.innerHTML = '<td class="name-cell">' + esc(f.name) + '</td><td class="size-cell">' + fmt(f.size) + '</td><td class="btn-cell"></td>';
+      tr.innerHTML = '<td style="font-size:0.82rem;color:var(--text-dim)">' + esc(f.game || '—') + '</td><td class="name-cell">' + esc(f.name) + '</td><td class="size-cell">' + fmt(f.size) + '</td><td class="btn-cell"></td>';
       tr.lastChild.appendChild(btn);
       tbody.appendChild(tr);
     }
@@ -573,13 +586,34 @@ async function loadServerSaves() {
   }
 }
 
-async function pushSave(filename) {
+function openPushModal(filename) {
+  const ext = filename.lastIndexOf('.');
+  const base = ext > 0 ? filename.slice(0, ext) : filename;
+  document.getElementById('push-game-name').value = base;
+  document.getElementById('push-modal').dataset.file = filename;
+  const sel = document.getElementById('push-console-sel');
+  sel.innerHTML = '';
+  for (const c of consoles) {
+    const opt = document.createElement('option');
+    opt.value = c.name;
+    opt.textContent = c.name;
+    if (c.name === currentConsole) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  openModal('push-modal');
+}
+
+async function doPushSave() {
+  const filename = document.getElementById('push-modal').dataset.file;
+  const game = document.getElementById('push-game-name').value.trim();
+  const console = document.getElementById('push-console-sel').value;
+  closeModal('push-modal');
   try {
     setStatus('Pushing ' + filename + '…');
     await apiFetch(AGENT + '/saves/push', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ console: currentConsole, file: filename }),
+      body: JSON.stringify({ console, file: filename, game }),
     });
     setStatus('Pushed: ' + filename);
     loadServerSaves();

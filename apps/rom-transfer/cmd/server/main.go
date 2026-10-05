@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Console struct {
@@ -26,6 +27,12 @@ type HostConfig struct {
 type FileInfo struct {
 	Name string `json:"name"`
 	Size int64  `json:"size"`
+}
+
+type SaveFileInfo struct {
+	Name string `json:"name"`
+	Size int64  `json:"size"`
+	Game string `json:"game"`
 }
 
 type Server struct {
@@ -230,16 +237,38 @@ func (s *Server) handleSaves(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	os.MkdirAll(dir, 0755)
-	files, err := listDir(dir)
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if files == nil {
-		files = []FileInfo{}
+	result := []SaveFileInfo{}
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if filepath.Ext(name) == ".json" {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		game := ""
+		sidecarPath := filepath.Join(dir, strings.TrimSuffix(name, filepath.Ext(name))+".json")
+		if data, err := os.ReadFile(sidecarPath); err == nil {
+			var sc struct {
+				Game string `json:"game"`
+			}
+			if json.Unmarshal(data, &sc) == nil {
+				game = sc.Game
+			}
+		}
+		result = append(result, SaveFileInfo{Name: name, Size: info.Size(), Game: game})
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(files)
+	json.NewEncoder(w).Encode(result)
 }
 
 func (s *Server) handleSavesDownload(w http.ResponseWriter, r *http.Request) {
@@ -275,7 +304,10 @@ func (s *Server) handleSavesUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	os.MkdirAll(dir, 0755)
-	dest := filepath.Join(dir, file)
+	ext := filepath.Ext(file)
+	base := strings.TrimSuffix(file, ext)
+	stamped := base + "_" + time.Now().Format("20060102-150405") + ext
+	dest := filepath.Join(dir, stamped)
 	tmp := dest + ".tmp"
 	f, err := os.Create(tmp)
 	if err != nil {
@@ -293,6 +325,24 @@ func (s *Server) handleSavesUpload(w http.ResponseWriter, r *http.Request) {
 		os.Remove(tmp)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if game := r.URL.Query().Get("game"); game != "" {
+		type sidecar struct {
+			Game         string `json:"game"`
+			Console      string `json:"console"`
+			PushedAt     string `json:"pushed_at"`
+			OriginalFile string `json:"original_file"`
+		}
+		sc := sidecar{
+			Game:         game,
+			Console:      console,
+			PushedAt:     time.Now().Format(time.RFC3339),
+			OriginalFile: file,
+		}
+		if data, err := json.Marshal(sc); err == nil {
+			sidecarPath := strings.TrimSuffix(dest, filepath.Ext(dest)) + ".json"
+			os.WriteFile(sidecarPath, data, 0644)
+		}
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
