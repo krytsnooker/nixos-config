@@ -171,6 +171,25 @@ button.action.primary:hover, button.action.primary:focus { background: rgba(95,2
 .modal th, .modal td { padding: 0.35rem 0.3rem; }
 .modal label { display: block; margin: 0.7rem 0 0.2rem; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-faint); }
 
+/* ── Browse modal ── */
+#browse-modal .modal { min-width: 480px; }
+.browse-path {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.8rem;
+  color: var(--text-dim); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 5px;
+  padding: 0.4rem 0.7rem; margin-bottom: 0.6rem; word-break: break-all;
+}
+.browse-list { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; }
+.browse-list li button {
+  width: 100%; text-align: left; background: none; border: none; border-bottom: 1px solid var(--border);
+  padding: 0.5rem 0.8rem; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem;
+  color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; margin: 0;
+}
+.browse-list li:last-child button { border-bottom: none; }
+.browse-list li button:hover, .browse-list li button:focus { background: var(--surface-2); color: var(--accent); }
+.browse-list li.parent button { color: var(--text-faint); }
+.browse-actions { display: flex; gap: 0.5rem; margin-top: 0.8rem; align-items: center; }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -185,6 +204,9 @@ button.action.primary:hover, button.action.primary:focus { background: rgba(95,2
   <button onclick="openHostConfig()">Host config</button>
   <button onclick="openClientConfig()">Client config</button>
   <div class="spacer"></div>
+  <span style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem;color:var(--text-faint);letter-spacing:0.06em;text-transform:uppercase">Agent</span>
+  <a href="/downloads/rom-agent.exe" download style="font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--accent);border:1px solid var(--accent-dim);border-radius:5px;padding:0.3rem 0.7rem;text-decoration:none" title="Windows agent">Windows</a>
+  <a href="/downloads/rom-agent-linux" download style="font-family:'IBM Plex Mono',monospace;font-size:0.78rem;color:var(--accent);border:1px solid var(--accent-dim);border-radius:5px;padding:0.3rem 0.7rem;text-decoration:none" title="Linux agent">Linux</a>
   <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">theme</button>
 </header>
 
@@ -231,6 +253,19 @@ button.action.primary:hover, button.action.primary:focus { background: rgba(95,2
   </div>
 </div>
 
+<!-- Folder browser modal -->
+<div class="modal-bg" id="browse-modal" role="dialog" aria-modal="true">
+  <div class="modal">
+    <h2>Select Folder</h2>
+    <div class="browse-path" id="browse-current-path"></div>
+    <ul class="browse-list" id="browse-list"></ul>
+    <div class="browse-actions">
+      <button class="primary" onclick="browseSelect()">Select this folder</button>
+      <button onclick="closeModal('browse-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- Confirm delete dialog -->
 <div class="modal-bg" id="confirm-modal" role="dialog" aria-modal="true">
   <div class="modal">
@@ -267,11 +302,14 @@ button.action.primary:hover, button.action.primary:focus { background: rgba(95,2
     <input type="text" id="client-server-url" placeholder="http://192.168.0.120:5030">
     <label style="margin-top:1rem">Local folders for each console</label>
     <table style="margin-top:0.4rem">
-      <thead><tr><th>Console</th><th>Local folder</th></tr></thead>
+      <thead><tr><th>Console</th><th>Local folder</th><th></th></tr></thead>
       <tbody id="client-rows"></tbody>
     </table>
     <label style="margin-top:1rem">Saves folder (for Saves tab)</label>
-    <input type="text" id="client-saves-folder" placeholder="~/Downloads/saves">
+    <div style="display:flex;gap:0.4rem;align-items:center">
+      <input type="text" id="client-saves-folder" placeholder="~/Downloads/saves" style="margin:0">
+      <button onclick="openBrowse(document.getElementById('client-saves-folder'))" style="white-space:nowrap;flex-shrink:0">Browse</button>
+    </div>
     <br>
     <button class="primary" onclick="saveClientConfig()">Save</button>
     <button onclick="closeModal('client-modal')">Cancel</button>
@@ -649,7 +687,13 @@ async function openClientConfig() {
       inp.value = dest;
       inp.placeholder = 'path to local folder';
       inTd.appendChild(inp);
-      tr.append(nameTd, inTd);
+      const btnTd = document.createElement('td');
+      const btn = document.createElement('button');
+      btn.textContent = 'Browse';
+      btn.style.whiteSpace = 'nowrap';
+      btn.addEventListener('click', () => openBrowse(inp));
+      btnTd.appendChild(btn);
+      tr.append(nameTd, inTd, btnTd);
       tbody.appendChild(tr);
     }
     openModal('client-modal');
@@ -676,6 +720,54 @@ async function saveClientConfig() {
   } catch (e) {
     setStatus('Save failed: ' + e.message, true);
   }
+}
+
+// ── Folder browser ───────────────────────────────────────────────────────────
+
+let browseTargetInput = null;
+
+async function openBrowse(targetInput) {
+  browseTargetInput = targetInput;
+  await browseTo('');
+  openModal('browse-modal');
+}
+
+async function browseTo(path) {
+  try {
+    const url = AGENT + '/browse' + (path ? '?path=' + encodeURIComponent(path) : '');
+    const r = await apiFetch(url);
+    const data = await r.json();
+    document.getElementById('browse-current-path').textContent = data.path;
+    const list = document.getElementById('browse-list');
+    list.innerHTML = '';
+    if (data.parent && data.parent !== data.path) {
+      const li = document.createElement('li');
+      li.className = 'parent';
+      const btn = document.createElement('button');
+      btn.innerHTML = '↑ ..';
+      btn.addEventListener('click', () => browseTo(data.parent));
+      li.appendChild(btn);
+      list.appendChild(li);
+    }
+    for (const dir of (data.dirs || [])) {
+      const name = dir.replace(/\\/g, '/').split('/').pop() || dir.replace(/\\/g, '/').split('\\').pop() || dir;
+      const li = document.createElement('li');
+      const btn = document.createElement('button');
+      btn.innerHTML = '📁 ' + esc(name);
+      btn.addEventListener('click', () => browseTo(dir));
+      li.appendChild(btn);
+      list.appendChild(li);
+    }
+  } catch (e) {
+    setStatus('Browse failed: ' + e.message, true);
+  }
+}
+
+function browseSelect() {
+  if (browseTargetInput) {
+    browseTargetInput.value = document.getElementById('browse-current-path').textContent;
+  }
+  closeModal('browse-modal');
 }
 
 // ── Theme toggle ─────────────────────────────────────────────────────────────
