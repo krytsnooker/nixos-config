@@ -36,6 +36,8 @@
 
   # ── Nix ───────────────────────────────────────────────────────────────────
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
+  nix.settings.cores = 2;        # limit per-build parallelism; Rust source builds OOM at 4 cores on 8 GiB
+  nix.settings.max-jobs = 1;     # one build at a time to cap peak RAM usage
   nix.gc = {
     automatic = true;
     dates = "weekly";
