@@ -21,6 +21,7 @@
               vaultwarden = final.callPackage ./pkgs/vaultwarden.nix {
                 inherit (nixpkgs-unstable.legacyPackages.x86_64-linux) rustPlatform;
               };
+              vaultwarden-webvault = nixpkgs-unstable.legacyPackages.x86_64-linux.vaultwarden.webvault;
             })
             nix-minecraft.overlays.default
           ];

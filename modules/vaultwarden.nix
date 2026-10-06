@@ -6,6 +6,7 @@
     dbBackend = "sqlite";
     backupDir = "/var/backup/vaultwarden";
     environmentFile = "/var/lib/vaultwarden/secrets.env";
+    webVaultPackage = pkgs.vaultwarden-webvault;
     config = {
       DOMAIN = "https://vault.intrentaka.com";
       SIGNUPS_ALLOWED = false;
