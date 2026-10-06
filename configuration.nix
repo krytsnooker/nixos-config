@@ -1,7 +1,8 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, self, ... }:
 
 {
   # ── Identity ──────────────────────────────────────────────────────────────
+  system.configurationRevision = self.rev or "dirty";
   networking.hostName = "homeserver";
   networking.hosts."192.168.0.120" = [ "homeserver" ];
   time.timeZone = "Australia/Sydney";

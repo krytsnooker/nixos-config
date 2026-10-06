@@ -11,6 +11,7 @@
   outputs = { self, nixpkgs, nixpkgs-unstable, nix-minecraft }: {
     nixosConfigurations.homeserver = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
+      specialArgs = { inherit self; };
 
       modules = [
         {
