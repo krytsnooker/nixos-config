@@ -18,7 +18,9 @@
             (final: prev: {
               brave-origin-nightly = final.callPackage ./pkgs/brave-origin-nightly.nix {};
               nextcloud34 = nixpkgs-unstable.legacyPackages.x86_64-linux.nextcloud34;
-              vaultwarden = final.callPackage ./pkgs/vaultwarden.nix {};
+              vaultwarden = final.callPackage ./pkgs/vaultwarden.nix {
+                inherit (nixpkgs-unstable.legacyPackages.x86_64-linux) rustPlatform;
+              };
             })
             nix-minecraft.overlays.default
           ];
