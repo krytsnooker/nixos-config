@@ -51,7 +51,7 @@
           <thead><tr><th>Input</th><th>Channel</th><th>Purpose</th></tr></thead>
           <tbody>
             <tr><td class="mono">nixpkgs</td><td class="mono">nixos-25.11</td><td class="wrap">Main package set</td></tr>
-            <tr><td class="mono">nixpkgs-unstable</td><td class="mono">nixos-unstable</td><td class="wrap">Provides <code>nextcloud34</code> via overlay</td></tr>
+            <tr><td class="mono">nixpkgs-unstable</td><td class="mono">nixos-unstable</td><td class="wrap">Provides <code>nextcloud34</code>, <code>vaultwarden</code>, and <code>vaultwarden-webvault</code> via overlay</td></tr>
             <tr><td class="mono">nix-minecraft</td><td>—</td><td class="wrap">Minecraft server packages and NixOS module</td></tr>
           </tbody>
         </table>
@@ -64,6 +64,8 @@
           <tbody>
             <tr><td class="mono">brave-origin-nightly</td><td class="wrap"><code>pkgs/brave-origin-nightly.nix</code></td></tr>
             <tr><td class="mono">nextcloud34</td><td class="wrap"><code>nixpkgs-unstable</code></td></tr>
+            <tr><td class="mono">vaultwarden</td><td class="wrap"><code>nixpkgs-unstable</code> (pre-built binary — not compiled locally)</td></tr>
+            <tr><td class="mono">vaultwarden-webvault</td><td class="wrap"><code>nixpkgs-unstable</code> via <code>vaultwarden.webvault</code></td></tr>
             <tr><td class="mono">nix-minecraft packages</td><td class="wrap"><code>nix-minecraft.overlays.default</code></td></tr>
           </tbody>
         </table>
@@ -93,6 +95,8 @@
           </tbody>
         </table>
         </div>
+        <h3>Nix build limits</h3>
+        <p class="dim"><code>nix.settings.cores = 2</code> and <code>nix.settings.max-jobs = 1</code> are set to prevent source builds (particularly Rust crates) from exhausting the 8&nbsp;GB RAM. Without these, a full vaultwarden compile across 4 cores OOMs the machine.</p>
         <h3>Base packages</h3>
         <p class="dim">vim, git, wget, curl, htop, ripgrep, claude-code, go, cifs-utils.</p>
       </section>
@@ -162,6 +166,9 @@
 
         <h3>mjh-proxy.nix</h3>
         <p class="dim">Internal proxy service. Source at <code>apps/mjh-proxy/</code>.</p>
+
+        <h3>vaultwarden.nix</h3>
+        <p class="dim">Vaultwarden (Bitwarden-compatible) password manager. SQLite backend. Listens on <code>127.0.0.1:8222</code> and is proxied externally via nginx at <code>vault.intrentaka.com</code> with TLS via Let's Encrypt. Signups disabled. Backups to <code>/var/backup/vaultwarden</code>. The binary and web vault are both taken from <code>nixpkgs-unstable</code> as pre-built binaries — do not switch to a local source build on this machine; it will OOM.</p>
       </section>
 
       <section id="rebuilding">
@@ -210,6 +217,12 @@ EMBY_EXTERNAL_URL=https://intrentaka.com</code></pre>
         <div class="secret-card">
           <div class="path">/var/lib/nextcloud-admin-pass <span class="perm">chmod 600 · root:root</span></div>
           <p class="dim" style="margin:6px 0 0;">Single line: Nextcloud admin password.</p>
+        </div>
+
+        <div class="secret-card">
+          <div class="path">/var/lib/vaultwarden/secrets.env <span class="perm">chmod 600 · vaultwarden:vaultwarden</span></div>
+          <pre><code>ADMIN_TOKEN=</code></pre>
+          <p class="dim" style="margin:6px 0 0;"><code>ADMIN_TOKEN</code> must be a bcrypt hash. Generate with: <code>echo -n "password" | argon2 ... </code> or use the vaultwarden admin token generation docs. The plain password is never stored.</p>
         </div>
 
         <div class="secret-card">
