@@ -8,6 +8,9 @@
   stdenv,
   sqlite,
   callPackage,
+  dbBackend ? "sqlite_system",
+  libmysqlclient,
+  libpq,
 }:
 
 let
@@ -32,10 +35,13 @@ rustPlatform.buildRustPackage (finalAttrs: {
   nativeBuildInputs = [ pkg-config ];
   buildInputs = [
     openssl
-    sqlite
-  ] ++ lib.optionals stdenv.hostPlatform.isDarwin [ libiconv ];
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [ libiconv ]
+  ++ lib.optional (dbBackend == "mysql") libmysqlclient
+  ++ lib.optional (dbBackend == "postgresql") libpq
+  ++ lib.optional (dbBackend == "sqlite_system") sqlite;
 
-  buildFeatures = "sqlite_system";
+  buildFeatures = dbBackend;
 
   passthru = {
     inherit webvault;
