@@ -87,6 +87,7 @@
     claude-code
     go
     cifs-utils
+    neofetch
   ];
 
   # chrome-sandbox must be setuid root for Chromium-based browsers to use
