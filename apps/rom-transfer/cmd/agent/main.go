@@ -19,7 +19,7 @@ import (
 	"sync/atomic"
 )
 
-const version = "1.7"
+const version = "1.8"
 
 var reTimestamp = regexp.MustCompile(`_\d{8}-\d{6}$`)
 

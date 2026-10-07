@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"encoding/binary"
 	"fmt"
+	"hash/crc32"
 	"os"
 	"path/filepath"
 	"strings"
@@ -278,11 +279,15 @@ func AddSteamShortcut(steamPath, userID, name, exe, startDir string) error {
 		return err
 	}
 
+	quotedExe := "\"" + exe + "\""
+	appID := int32(crc32.ChecksumIEEE([]byte(quotedExe+name)) | 0x80000000)
+
 	newEntry := &vdfItem{
 		typ: vdfTypeDict,
 		children: []*vdfItem{
+			vdfInt("appid", appID),
 			vdfString("AppName", name),
-			vdfString("Exe", "\""+exe+"\""),
+			vdfString("Exe", quotedExe),
 			vdfString("StartDir", "\""+startDir+"\""),
 			vdfString("icon", ""),
 			vdfString("ShortcutPath", ""),
