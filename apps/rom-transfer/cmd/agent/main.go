@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -18,7 +19,7 @@ import (
 	"sync/atomic"
 )
 
-const version = "1.5"
+const version = "1.6"
 
 var reTimestamp = regexp.MustCompile(`_\d{8}-\d{6}$`)
 
@@ -29,9 +30,12 @@ func stripTimestamp(name string) string {
 }
 
 type Config struct {
-	ServerURL string            `json:"server_url"`
-	Roms      map[string]string `json:"roms"`
-	Saves     map[string]string `json:"saves"`
+	ServerURL     string            `json:"server_url"`
+	Roms          map[string]string `json:"roms"`
+	Saves         map[string]string `json:"saves"`
+	Games         map[string]string `json:"games"`
+	SteamPath     string            `json:"steam_path"`
+	SteamProfiles map[string]string `json:"steam_profiles"`
 }
 
 type ScanResult struct {
@@ -66,33 +70,48 @@ type DiskInfo struct {
 }
 
 type TransferJob struct {
-	Console string `json:"console"`
-	File    string `json:"file"`
+	Kind     string `json:"kind"`      // "" or "rom" = ROM; "pc" = PC game
+	Console  string `json:"console"`
+	File     string `json:"file"`      // ROM job
+	Item     string `json:"item"`      // PC job: item name on server
+	ItemType string `json:"item_type"` // PC job: "folder" or "archive"
 }
+
+const extractingTotal = int64(-1)
 
 // ActiveTransfer uses an atomic counter for bytes so the status handler
 // can read progress without holding the queue lock during IO.
 type ActiveTransfer struct {
+	Kind    string `json:"kind"`
 	Console string `json:"console"`
 	File    string `json:"file"`
+	Item    string `json:"item,omitempty"`
 	Total   int64  `json:"total"`
 	abytes  atomic.Int64
 }
 
 func (a *ActiveTransfer) MarshalJSON() ([]byte, error) {
 	type wire struct {
+		Kind    string  `json:"kind"`
 		Console string  `json:"console"`
 		File    string  `json:"file"`
+		Item    string  `json:"item,omitempty"`
+		Stage   string  `json:"stage,omitempty"`
 		Bytes   int64   `json:"bytes"`
 		Total   int64   `json:"total"`
 		Percent float64 `json:"percent"`
 	}
 	b := a.abytes.Load()
 	var pct float64
-	if a.Total > 0 {
-		pct = float64(b) / float64(a.Total) * 100
+	stage := ""
+	total := a.Total
+	if total == extractingTotal {
+		stage = "extracting"
+		total = 0
+	} else if total > 0 {
+		pct = float64(b) / float64(total) * 100
 	}
-	return json.Marshal(wire{Console: a.Console, File: a.File, Bytes: b, Total: a.Total, Percent: pct})
+	return json.Marshal(wire{Kind: a.Kind, Console: a.Console, File: a.File, Item: a.Item, Stage: stage, Bytes: b, Total: total, Percent: pct})
 }
 
 type Agent struct {
@@ -118,7 +137,12 @@ func newAgent(configPath string) *Agent {
 func (a *Agent) loadConfig() {
 	data, err := os.ReadFile(a.configPath)
 	if err != nil {
-		a.cfg = Config{Roms: map[string]string{}, Saves: map[string]string{}}
+		a.cfg = Config{
+			Roms:          map[string]string{},
+			Saves:         map[string]string{},
+			Games:         map[string]string{},
+			SteamProfiles: map[string]string{},
+		}
 		return
 	}
 	// migration: old config had a flat "destinations" field
@@ -141,6 +165,12 @@ func (a *Agent) loadConfig() {
 	if cfg.Saves == nil {
 		cfg.Saves = map[string]string{}
 	}
+	if cfg.Games == nil {
+		cfg.Games = map[string]string{}
+	}
+	if cfg.SteamProfiles == nil {
+		cfg.SteamProfiles = map[string]string{}
+	}
 	a.cfg = cfg
 }
 
@@ -156,9 +186,6 @@ func (a *Agent) writeConfig(cfg Config) error {
 }
 
 // cors wraps a handler with CORS and Private Network Access headers.
-// Loopback origins (localhost / 127.0.0.1) are always allowed so the app
-// works when accessed via either hostname while the server_url is set to
-// the LAN IP. Non-loopback origins must match the configured server_url.
 func (a *Agent) cors(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
@@ -168,12 +195,10 @@ func (a *Agent) cors(next http.HandlerFunc) http.HandlerFunc {
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 			w.Header().Set("Access-Control-Allow-Private-Network", "true")
 		}
-
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-
 		next(w, r)
 	}
 }
@@ -210,6 +235,12 @@ func (a *Agent) handleConfig(w http.ResponseWriter, r *http.Request) {
 		}
 		if cfg.Saves == nil {
 			cfg.Saves = map[string]string{}
+		}
+		if cfg.Games == nil {
+			cfg.Games = map[string]string{}
+		}
+		if cfg.SteamProfiles == nil {
+			cfg.SteamProfiles = map[string]string{}
 		}
 		if err := a.writeConfig(cfg); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -310,6 +341,207 @@ func (a *Agent) handleFiles(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ── PC Games ──────────────────────────────────────────────────────────────────
+
+type GameEntry struct {
+	Name string `json:"name"`
+	Size int64  `json:"size"` // -1 = unknown
+}
+
+func (a *Agent) handleGames(w http.ResponseWriter, r *http.Request) {
+	console := r.URL.Query().Get("console")
+	if console == "" {
+		http.Error(w, "console required", http.StatusBadRequest)
+		return
+	}
+	a.mu.RLock()
+	dir           := a.cfg.Games[console]
+	steamPath     := a.cfg.SteamPath
+	steamProfiles := a.cfg.SteamProfiles
+	a.mu.RUnlock()
+
+	switch r.Method {
+	case http.MethodGet:
+		if dir == "" {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"games":     []GameEntry{},
+				"disk_info": nil,
+			})
+			return
+		}
+		entries, err := os.ReadDir(dir)
+		if err != nil && !os.IsNotExist(err) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		var games []GameEntry
+		for _, e := range entries {
+			if e.IsDir() {
+				games = append(games, GameEntry{Name: e.Name(), Size: -1})
+			}
+		}
+		if games == nil {
+			games = []GameEntry{}
+		}
+		free, _ := freeSpace(dir)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"games":     games,
+			"disk_info": DiskInfo{FreeSpace: int64(free)},
+		})
+
+	case http.MethodDelete:
+		name := r.URL.Query().Get("name")
+		if name == "" || strings.ContainsAny(name, "/\\") || strings.Contains(name, "..") {
+			http.Error(w, "invalid name", http.StatusBadRequest)
+			return
+		}
+		if dir == "" {
+			http.Error(w, "no games directory configured", http.StatusBadRequest)
+			return
+		}
+		gamePath := filepath.Join(dir, name)
+		rel, err := filepath.Rel(dir, gamePath)
+		if err != nil || strings.HasPrefix(rel, "..") {
+			http.Error(w, "invalid path", http.StatusBadRequest)
+			return
+		}
+		// Remove Steam shortcut before deleting folder
+		if steamPath != "" {
+			if userID := steamProfiles[console]; userID != "" {
+				if err := RemoveSteamShortcut(steamPath, userID, name); err != nil {
+					log.Printf("remove steam shortcut %q: %v", name, err)
+				}
+			}
+		}
+		if err := os.RemoveAll(gamePath); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (a *Agent) handleGamesExes(w http.ResponseWriter, r *http.Request) {
+	console := r.URL.Query().Get("console")
+	item    := r.URL.Query().Get("item")
+	a.mu.RLock()
+	gamesDir := a.cfg.Games[console]
+	a.mu.RUnlock()
+	if gamesDir == "" {
+		http.Error(w, "no games directory configured for this console", http.StatusBadRequest)
+		return
+	}
+	gameName := strings.TrimSuffix(item, filepath.Ext(item))
+	gamePath := filepath.Join(gamesDir, gameName)
+
+	type ExeEntry struct {
+		Name string `json:"name"`
+		Path string `json:"path"`
+	}
+	var exes []ExeEntry
+	filepath.Walk(gamePath, func(p string, fi os.FileInfo, err error) error {
+		if err != nil || fi.IsDir() {
+			return nil
+		}
+		if strings.ToLower(filepath.Ext(p)) == ".exe" {
+			exes = append(exes, ExeEntry{Name: fi.Name(), Path: p})
+		}
+		return nil
+	})
+	if exes == nil {
+		exes = []ExeEntry{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(exes)
+}
+
+func (a *Agent) handleSteamAccounts(w http.ResponseWriter, r *http.Request) {
+	steamPath := r.URL.Query().Get("path")
+	if steamPath == "" {
+		a.mu.RLock()
+		steamPath = a.cfg.SteamPath
+		a.mu.RUnlock()
+	}
+	if steamPath == "" {
+		http.Error(w, "steam path not configured", http.StatusBadRequest)
+		return
+	}
+	accounts, err := FindSteamAccounts(steamPath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(accounts)
+}
+
+func (a *Agent) handleSteamShortcut(w http.ResponseWriter, r *http.Request) {
+	a.mu.RLock()
+	steamPath     := a.cfg.SteamPath
+	steamProfiles := a.cfg.SteamProfiles
+	a.mu.RUnlock()
+
+	switch r.Method {
+	case http.MethodPost:
+		var req struct {
+			Console  string `json:"console"`
+			Name     string `json:"name"`
+			Exe      string `json:"exe"`
+			StartDir string `json:"start_dir"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if steamPath == "" {
+			http.Error(w, "steam path not configured", http.StatusBadRequest)
+			return
+		}
+		userID := steamProfiles[req.Console]
+		if userID == "" {
+			http.Error(w, "no steam account mapped for console "+req.Console, http.StatusBadRequest)
+			return
+		}
+		startDir := req.StartDir
+		if startDir == "" {
+			startDir = filepath.Dir(req.Exe)
+		}
+		if err := AddSteamShortcut(steamPath, userID, req.Name, req.Exe, startDir); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	case http.MethodDelete:
+		console := r.URL.Query().Get("console")
+		name    := r.URL.Query().Get("name")
+		if steamPath == "" {
+			http.Error(w, "steam path not configured", http.StatusBadRequest)
+			return
+		}
+		userID := steamProfiles[console]
+		if userID == "" {
+			http.Error(w, "no steam account mapped for console "+console, http.StatusBadRequest)
+			return
+		}
+		if err := RemoveSteamShortcut(steamPath, userID, name); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// ── Transfer ──────────────────────────────────────────────────────────────────
+
 func (a *Agent) handleTransfer(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -320,9 +552,20 @@ func (a *Agent) handleTransfer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	if job.Console == "" || !safeFilename(job.File) {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+	if job.Console == "" {
+		http.Error(w, "console required", http.StatusBadRequest)
 		return
+	}
+	if job.Kind == "pc" {
+		if job.Item == "" {
+			http.Error(w, "item required for pc job", http.StatusBadRequest)
+			return
+		}
+	} else {
+		if !safeFilename(job.File) {
+			http.Error(w, "invalid request", http.StatusBadRequest)
+			return
+		}
 	}
 	a.qmu.Lock()
 	a.queue = append(a.queue, job)
@@ -374,6 +617,8 @@ func (a *Agent) handleBrowse(w http.ResponseWriter, r *http.Request) {
 		"dirs":   dirs,
 	})
 }
+
+// ── Saves ─────────────────────────────────────────────────────────────────────
 
 func (a *Agent) handleSaves(w http.ResponseWriter, r *http.Request) {
 	console := r.URL.Query().Get("console")
@@ -499,7 +744,7 @@ func (a *Agent) handleSavesPull(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// Transfer worker — runs one job at a time, re-signals itself if the queue has more.
+// ── Transfer worker ───────────────────────────────────────────────────────────
 
 func (a *Agent) runWorker() {
 	for range a.jobCh {
@@ -515,12 +760,18 @@ func (a *Agent) runNextJob() {
 	}
 	job := a.queue[0]
 	a.queue = a.queue[1:]
-	at := &ActiveTransfer{Console: job.Console, File: job.File}
+	at := &ActiveTransfer{Kind: job.Kind, Console: job.Console, File: job.File, Item: job.Item}
 	a.active = at
 	a.qmu.Unlock()
 
-	if err := a.doTransfer(at); err != nil {
-		log.Printf("transfer %s/%s failed: %v", job.Console, job.File, err)
+	var err error
+	if job.Kind == "pc" {
+		err = a.doPCTransfer(job, at)
+	} else {
+		err = a.doTransfer(at)
+	}
+	if err != nil {
+		log.Printf("transfer %s/%s failed: %v", job.Console, job.File+job.Item, err)
 	}
 
 	a.qmu.Lock()
@@ -560,7 +811,6 @@ func (a *Agent) doTransfer(at *ActiveTransfer) error {
 
 	dest := filepath.Join(destDir, at.File)
 
-	// Skip if we already have the complete file.
 	if at.Total > 0 {
 		if info, err := os.Stat(dest); err == nil && info.Size() == at.Total {
 			at.abytes.Store(at.Total)
@@ -568,7 +818,6 @@ func (a *Agent) doTransfer(at *ActiveTransfer) error {
 		}
 	}
 
-	// Check free space before starting.
 	if at.Total > 0 {
 		free, err := freeSpace(destDir)
 		if err != nil {
@@ -607,6 +856,105 @@ func (a *Agent) doTransfer(at *ActiveTransfer) error {
 	return os.Rename(tmp, dest)
 }
 
+func (a *Agent) doPCTransfer(job TransferJob, at *ActiveTransfer) error {
+	a.mu.RLock()
+	cfg := a.cfg
+	a.mu.RUnlock()
+
+	destDir := cfg.Games[job.Console]
+	if destDir == "" {
+		return fmt.Errorf("no games destination configured for %s", job.Console)
+	}
+
+	fileURL := cfg.ServerURL + "/api/download?console=" + url.QueryEscape(job.Console) + "&item=" + url.QueryEscape(job.Item)
+
+	// HEAD is best-effort — folder zips have no Content-Length
+	if headResp, err := http.Head(fileURL); err == nil {
+		headResp.Body.Close()
+		at.Total = headResp.ContentLength
+	}
+
+	resp, err := http.Get(fileURL)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("server returned %d", resp.StatusCode)
+	}
+	if at.Total == 0 {
+		at.Total = resp.ContentLength
+	}
+
+	tmp, err := os.CreateTemp("", "rom-pc-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath)
+
+	if _, err := io.Copy(tmp, &progressReader{r: resp.Body, at: at}); err != nil {
+		tmp.Close()
+		return err
+	}
+	tmp.Close()
+
+	// Signal extracting phase to the status poller
+	at.Total = extractingTotal
+	at.abytes.Store(0)
+
+	gameName := strings.TrimSuffix(job.Item, filepath.Ext(job.Item))
+	destPath := filepath.Join(destDir, gameName)
+
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return err
+	}
+
+	ext := strings.ToLower(filepath.Ext(job.Item))
+	if job.ItemType == "folder" || ext == ".zip" {
+		return extractZip(tmpPath, destPath)
+	}
+	return extract7z(tmpPath, destPath)
+}
+
+func extractZip(src, destDir string) error {
+	r, err := zip.OpenReader(src)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	for _, f := range r.File {
+		target := filepath.Join(destDir, filepath.FromSlash(f.Name))
+		rel, err := filepath.Rel(destDir, target)
+		if err != nil || strings.HasPrefix(rel, "..") {
+			return fmt.Errorf("unsafe path in archive: %s", f.Name)
+		}
+		if f.FileInfo().IsDir() {
+			os.MkdirAll(target, 0755)
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+			return err
+		}
+		rc, err := f.Open()
+		if err != nil {
+			return err
+		}
+		out, err := os.Create(target)
+		if err != nil {
+			rc.Close()
+			return err
+		}
+		_, copyErr := io.Copy(out, rc)
+		out.Close()
+		rc.Close()
+		if copyErr != nil {
+			return copyErr
+		}
+	}
+	return nil
+}
+
 type progressReader struct {
 	r  io.Reader
 	at *ActiveTransfer
@@ -619,6 +967,8 @@ func (pr *progressReader) Read(p []byte) (int, error) {
 	}
 	return n, err
 }
+
+// ── Scan / Update ─────────────────────────────────────────────────────────────
 
 func (a *Agent) handleScan(w http.ResponseWriter, r *http.Request) {
 	a.mu.RLock()
@@ -732,17 +1082,21 @@ func main() {
 	go a.runWorker()
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", a.cors(a.handleHealth))
-	mux.HandleFunc("/config", a.cors(a.handleConfig))
-	mux.HandleFunc("/files", a.cors(a.handleFiles))
-	mux.HandleFunc("/transfer", a.cors(a.handleTransfer))
+	mux.HandleFunc("/health",          a.cors(a.handleHealth))
+	mux.HandleFunc("/config",          a.cors(a.handleConfig))
+	mux.HandleFunc("/files",           a.cors(a.handleFiles))
+	mux.HandleFunc("/transfer",        a.cors(a.handleTransfer))
 	mux.HandleFunc("/transfer/status", a.cors(a.handleTransferStatus))
-	mux.HandleFunc("/browse", a.cors(a.handleBrowse))
-	mux.HandleFunc("/saves", a.cors(a.handleSaves))
-	mux.HandleFunc("/saves/push", a.cors(a.handleSavesPush))
-	mux.HandleFunc("/saves/pull", a.cors(a.handleSavesPull))
-	mux.HandleFunc("/scan", a.cors(a.handleScan))
-	mux.HandleFunc("/update", a.cors(a.handleUpdate))
+	mux.HandleFunc("/browse",          a.cors(a.handleBrowse))
+	mux.HandleFunc("/saves",           a.cors(a.handleSaves))
+	mux.HandleFunc("/saves/push",      a.cors(a.handleSavesPush))
+	mux.HandleFunc("/saves/pull",      a.cors(a.handleSavesPull))
+	mux.HandleFunc("/scan",            a.cors(a.handleScan))
+	mux.HandleFunc("/update",          a.cors(a.handleUpdate))
+	mux.HandleFunc("/games",           a.cors(a.handleGames))
+	mux.HandleFunc("/games/exes",      a.cors(a.handleGamesExes))
+	mux.HandleFunc("/steam/accounts",  a.cors(a.handleSteamAccounts))
+	mux.HandleFunc("/steam/shortcut",  a.cors(a.handleSteamShortcut))
 
 	srv := &http.Server{Addr: *addr, Handler: mux}
 	startServer(srv, *addr)

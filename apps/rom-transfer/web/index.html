@@ -15,7 +15,7 @@
   --accent: #5fd6c4; --accent-dim: #3a8f81;
   --danger: #e07a6b; --danger-bg: rgba(224,122,107,0.12);
   --shadow: 0 8px 24px rgba(0,0,0,0.35);
-  --header-h: 48px; --sidebar-w: 170px;
+  --header-h: 48px; --sidebar-w: 200px;
 }
 @media (prefers-color-scheme: light) {
   :root {
@@ -57,20 +57,7 @@ header {
 }
 .back-link { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--accent); text-decoration: none; white-space: nowrap; }
 .back-link:hover { text-decoration: underline; }
-.eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); white-space: nowrap; }
-header label { font-family: "IBM Plex Mono", monospace; font-size: 0.8rem; color: var(--text-dim); white-space: nowrap; }
-header select {
-  font-family: "IBM Plex Mono", monospace; font-size: 0.85rem;
-  padding: 0.25rem 0.5rem; background: var(--surface-2); color: var(--text);
-  border: 1px solid var(--border); border-radius: 5px;
-}
 .hdr-spacer { flex: 1; }
-header a.dl-btn {
-  font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--accent);
-  border: 1px solid var(--accent-dim); border-radius: 5px; padding: 0.25rem 0.6rem;
-  text-decoration: none; white-space: nowrap;
-}
-header a.dl-btn:hover { border-color: var(--accent); }
 header button {
   font-family: "IBM Plex Mono", monospace; font-size: 0.75rem;
   padding: 0.25rem 0.7rem; background: var(--surface-2); color: var(--text-dim);
@@ -89,23 +76,49 @@ header button:hover { color: var(--text); border-color: var(--text-faint); }
   flex-shrink: 0; overflow-y: auto; padding: 0.5rem 0;
   display: flex; flex-direction: column;
 }
-.sidebar-group {
-  font-family: "IBM Plex Mono", monospace; font-size: 0.63rem; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--text-faint);
-  padding: 1rem 1rem 0.25rem; margin-top: 0.25rem;
-}
-.sidebar-item {
+
+/* top-level collapsible section */
+.nav-section-header {
   font-family: "IBM Plex Mono", monospace; font-size: 0.82rem;
-  padding: 0.45rem 1rem; cursor: pointer; color: var(--text-dim);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.5rem 1rem; cursor: pointer; color: var(--text-dim);
   border-left: 2px solid transparent; user-select: none;
 }
-.sidebar-item:hover { color: var(--text); background: var(--surface-2); }
-.sidebar-item.active { color: var(--accent); border-left-color: var(--accent); background: var(--surface-2); }
+.nav-section-header:hover { color: var(--text); background: var(--surface-2); }
+.nav-section-header.active { color: var(--accent); border-left-color: var(--accent); background: var(--surface-2); }
+.nav-section-header .chevron { font-size: 0.55rem; color: var(--text-faint); transition: transform 0.15s; }
+.nav-section-header.open .chevron { transform: rotate(90deg); }
+
+/* child nav items */
+.nav-children { display: none; }
+.nav-children.open { display: block; }
+.nav-child {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.78rem;
+  padding: 0.4rem 1rem 0.4rem 1.8rem; cursor: pointer; color: var(--text-faint);
+  border-left: 2px solid transparent; user-select: none;
+}
+.nav-child:hover { color: var(--text-dim); background: var(--surface-2); }
+.nav-child.active { color: var(--accent); border-left-color: var(--accent); background: var(--surface-2); }
+
+/* ── App title bar ── */
+.app-title-bar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0.9rem 1.4rem 0.8rem; flex-shrink: 0;
+}
+.app-title-bar h1 {
+  font-family: "IBM Plex Mono", monospace; font-size: 1.5rem; font-weight: 600;
+  color: var(--text); margin: 0 0 0.1rem; letter-spacing: -0.01em;
+}
+.app-title-bar .app-subtitle {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-faint);
+}
 
 /* ── Content area ── */
 .content-area { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
 
 /* ── Transfer view ── */
+#view-transfer { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 .tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .tabs button {
   font-family: "IBM Plex Mono", monospace; font-size: 0.85rem;
@@ -130,7 +143,10 @@ header button:hover { color: var(--text); border-color: var(--text-faint); }
   font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; letter-spacing: 0.1em;
   text-transform: uppercase; color: var(--text-faint); margin: 0 0 0.5rem; font-weight: 500;
 }
-.disk-info { font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--text-faint); margin-bottom: 0.6rem; }
+.disk-info {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.75rem; color: var(--text-faint);
+  height: 1.4rem; margin-bottom: 0.4rem; white-space: nowrap; overflow: hidden;
+}
 .file-search { width: 100%; box-sizing: border-box; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 4px 8px; margin-bottom: 0.5rem; outline: none; }
 .file-search:focus { border-color: var(--accent); }
 .save-ind { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; margin-right: 0.4rem; flex-shrink: 0; vertical-align: middle; cursor: default; position: relative; }
@@ -161,6 +177,16 @@ tr.save-row.selected { background: var(--surface-3); outline: 1px solid var(--ac
 .panel-section h3 {
   font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--text-faint); margin: 0 0 0.6rem; font-weight: 500;
+}
+
+/* ── Import/Export toolbar ── */
+.json-toolbar {
+  display: flex; gap: 0.5rem; align-items: center;
+  margin-bottom: 0.8rem; padding-bottom: 0.8rem; border-bottom: 1px solid var(--border);
+}
+.json-toolbar-label {
+  font-family: "IBM Plex Mono", monospace; font-size: 0.68rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-faint); margin-right: 0.2rem;
 }
 
 /* ── Tables ── */
@@ -214,6 +240,7 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
 .panel-btn.primary:hover { background: rgba(95,214,196,0.08); border-color: var(--accent); }
 .panel-btn.danger { color: var(--danger); border-color: var(--danger); }
 .panel-btn.danger:hover { background: var(--danger-bg); }
+.panel-btn:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
 
 /* inline editable table */
 .edit-table input[type=text] {
@@ -232,6 +259,11 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
 .scan-result-path { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--text-dim); word-break: break-all; }
 .scan-count { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--text-faint); }
 .scan-console-sel { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 2px 4px; width: 100%; }
+
+/* ── Game Data Paths: one row per console ── */
+.dest-path-group { display: flex; gap: 0.4rem; align-items: center; }
+.dest-path-group input { flex: 1; }
+.dest-path-group button { white-space: nowrap; flex-shrink: 0; }
 
 /* ── Modals ── */
 .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; }
@@ -274,7 +306,26 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
 .browse-list li.parent button { color: var(--text-faint); }
 .browse-actions { display: flex; gap: 0.5rem; margin-top: 0.8rem; }
 
-#view-transfer { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+/* Agent status colours */
+.status-ok   { color: #4caf7d; font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; }
+.status-warn { color: var(--danger); font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; }
+.status-dim  { color: var(--text-dim); font-family: "IBM Plex Mono", monospace; font-size: 0.82rem; }
+
+/* PC game type badge */
+.type-badge { font-family: "IBM Plex Mono", monospace; font-size: 0.7rem; letter-spacing: 0.04em; padding: 0.1rem 0.45rem; border-radius: 3px; white-space: nowrap; }
+.type-badge.folder  { color: var(--accent); background: rgba(95,214,196,0.1); }
+.type-badge.archive { color: #c4a24e; background: rgba(196,162,78,0.1); }
+
+/* Exe picker list */
+.exe-list { border: 1px solid var(--border); border-radius: 6px; max-height: 220px; overflow-y: auto; margin: 0.2rem 0 0.6rem; }
+.exe-item { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--border); cursor: pointer; }
+.exe-item:last-child { border-bottom: none; }
+.exe-item:hover { background: var(--surface-2); }
+.exe-item input[type=radio] { margin-top: 0.18rem; accent-color: var(--accent); flex-shrink: 0; }
+.exe-item label { font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--text-dim); cursor: pointer; word-break: break-all; margin: 0; text-transform: none; letter-spacing: 0; }
+.exe-item.selected { background: var(--surface-2); }
+.exe-item.selected label { color: var(--accent); }
+
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
@@ -282,11 +333,6 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
 
 <header>
   <a class="back-link" href="http://homeserver:5000">← homeserver</a>
-  <span class="eyebrow">ROM Transfer</span>
-  <label id="console-label" for="console-sel">Console</label>
-  <select id="console-sel" onchange="onConsoleChange()">
-    <option value="">— select —</option>
-  </select>
   <div class="hdr-spacer"></div>
   <button id="update-btn" class="update-btn" style="display:none" onclick="doAgentUpdate()">Update agent</button>
   <button onclick="toggleTheme()">theme</button>
@@ -295,20 +341,51 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
 <div class="app-body">
 
   <nav class="sidebar">
-    <div class="sidebar-item active" data-view="transfer" onclick="setView('transfer')">Transfer</div>
-    <div class="sidebar-group">Server</div>
-    <div class="sidebar-item" data-view="consoles" onclick="setView('consoles')">Consoles</div>
-    <div class="sidebar-item" data-view="filetypes" onclick="setView('filetypes')">File Types</div>
-    <div class="sidebar-item" data-view="scanpaths" onclick="setView('scanpaths')">Scan Paths</div>
-    <div class="sidebar-group">Client</div>
-    <div class="sidebar-item" data-view="client" onclick="setView('client')">Destinations</div>
-    <div class="sidebar-item" data-view="agent-status" onclick="setView('agent-status')">Agent Status</div>
+
+    <!-- Game Data Transfer -->
+    <div id="section-transfer">
+      <div class="nav-section-header open" id="hdr-transfer" onclick="toggleSection('transfer')">
+        Game Data Transfer <span class="chevron">▶</span>
+      </div>
+      <div class="nav-children open" id="children-transfer">
+        <!-- populated by loadConsoles() -->
+      </div>
+    </div>
+
+    <!-- Server Settings -->
+    <div id="section-server">
+      <div class="nav-section-header" id="hdr-server" onclick="toggleSection('server')">
+        Server Settings <span class="chevron">▶</span>
+      </div>
+      <div class="nav-children" id="children-server">
+        <div class="nav-child" onclick="setView('consoles')">Consoles</div>
+        <div class="nav-child" onclick="setView('filetypes')">File Types</div>
+        <div class="nav-child" onclick="setView('emulator-paths')">Emulator Paths</div>
+      </div>
+    </div>
+
+    <!-- Client Settings -->
+    <div id="section-client">
+      <div class="nav-section-header" id="hdr-client" onclick="toggleSection('client')">
+        Client Settings <span class="chevron">▶</span>
+      </div>
+      <div class="nav-children" id="children-client">
+        <div class="nav-child" onclick="setView('game-data-paths')">Game Data Paths</div>
+        <div class="nav-child" onclick="setView('game-launcher')">Game Launcher</div>
+        <div class="nav-child" onclick="setView('agent-status')">Agent Status</div>
+      </div>
+    </div>
+
   </nav>
 
   <div class="content-area">
 
-    <!-- ── Transfer view ── -->
+    <!-- ── Game Data Transfer ── -->
     <div id="view-transfer">
+      <div class="app-title-bar">
+        <h1>ROM Transfer</h1>
+        <span class="app-subtitle" id="transfer-subtitle">Game Data Transfer</span>
+      </div>
       <div class="tabs">
         <button class="active" id="tab-roms" onclick="switchTab('roms')">ROMs</button>
         <button id="tab-saves" onclick="switchTab('saves')">Saves</button>
@@ -318,25 +395,44 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
       <div id="panes-roms" class="panes">
         <div class="pane">
           <h2>Local</h2>
-          <div class="disk-info" id="local-disk-info"></div>
+          <div class="disk-info" id="local-disk-info">&nbsp;</div>
           <input type="search" class="file-search" id="search-local" placeholder="Filter…">
           <table><thead><tr><th class="name-cell">Name</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
           <tbody id="local-body"></tbody></table>
         </div>
         <div class="pane">
           <h2>Server</h2>
+          <div class="disk-info">&nbsp;</div>
           <input type="search" class="file-search" id="search-server" placeholder="Filter…">
           <table><thead><tr><th class="name-cell">Name</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
           <tbody id="server-body"></tbody></table>
         </div>
       </div>
+      <!-- PC Games pane — shown instead of ROM/Saves tabs when console type is "pc" -->
+      <div id="panes-pcgames" class="panes" style="display:none">
+        <div class="pane">
+          <h2>Local Games</h2>
+          <div class="disk-info" id="pcgames-local-disk">&nbsp;</div>
+          <input type="search" class="file-search" id="search-pcgames-local" placeholder="Filter…">
+          <table><thead><tr><th class="name-cell">Name</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
+          <tbody id="pcgames-local-body"></tbody></table>
+        </div>
+        <div class="pane">
+          <h2>Server Games</h2>
+          <div class="disk-info">&nbsp;</div>
+          <input type="search" class="file-search" id="search-pcgames-server" placeholder="Filter…">
+          <table><thead><tr><th class="name-cell">Name</th><th style="width:5.5rem">Type</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
+          <tbody id="pcgames-server-body"></tbody></table>
+        </div>
+      </div>
+
       <div id="panes-saves" class="panes" style="display:none">
         <div class="pane">
           <div class="pane-heading">
             <h2>Local Saves</h2>
             <button class="legend-btn" onclick="toggleLegend('legend-local', this)">?</button>
           </div>
-          <div class="disk-info" id="saves-local-info"></div>
+          <div class="disk-info" id="saves-local-info">&nbsp;</div>
           <table><thead><tr><th class="name-cell">Name</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
           <tbody id="saves-local-body"></tbody></table>
         </div>
@@ -345,38 +441,43 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
             <h2>Server Saves</h2>
             <button class="legend-btn" onclick="toggleLegend('legend-server', this)">?</button>
           </div>
+          <div class="disk-info">&nbsp;</div>
           <table><thead><tr><th style="width:8rem">Game</th><th class="name-cell">File</th><th class="size-cell">Size</th><th class="btn-cell"></th></tr></thead>
           <tbody id="saves-server-body"></tbody></table>
         </div>
       </div>
     </div>
 
-    <!-- ── Consoles panel ── -->
+    <!-- ── Consoles ── -->
     <div id="view-consoles" class="config-panel" style="display:none">
       <h2>Consoles</h2>
-      <p class="panel-desc">ROM directories on the server. Each console name must match the entries in File Types.</p>
+      <p class="panel-desc">Server-side paths and console types. ROM console names must match entries in File Types. PC Games consoles use a folder-per-game layout instead of ROM files.</p>
+      <div class="json-toolbar">
+        <span class="json-toolbar-label">JSON</span>
+        <button class="panel-btn" onclick="exportJSON('consoles')">Export</button>
+        <button class="panel-btn" onclick="importJSON('consoles')">Import</button>
+      </div>
       <div class="panel-section">
         <table class="edit-table" id="consoles-table">
-          <thead><tr><th>Console</th><th>Server ROM path</th><th></th></tr></thead>
+          <thead><tr><th style="width:8rem">Console</th><th style="width:6.5rem">Type</th><th>Server path</th><th>Saves path</th><th></th></tr></thead>
           <tbody id="consoles-rows"></tbody>
         </table>
         <div class="panel-actions">
-          <button class="panel-btn" onclick="addConsoleRow('','')">+ Add console</button>
+          <button class="panel-btn" onclick="addConsoleRow('','','','')">+ Add console</button>
+          <button class="panel-btn primary" onclick="saveConsolesPanel()">Save</button>
         </div>
-      </div>
-      <div class="panel-section">
-        <label class="panel-label">Saves root path</label>
-        <input type="text" class="panel-input" id="saves-root-path" placeholder="/mnt/server-pc/Games/SAVEFILES">
-      </div>
-      <div class="panel-actions">
-        <button class="panel-btn primary" onclick="saveConsolesPanel()">Save</button>
       </div>
     </div>
 
-    <!-- ── File Types panel ── -->
+    <!-- ── File Types ── -->
     <div id="view-filetypes" class="config-panel" style="display:none">
       <h2>File Types</h2>
-      <p class="panel-desc">Stored at <code style="font-family:'IBM Plex Mono',monospace;background:var(--surface-3);padding:0.1em 0.4em;border-radius:3px;font-size:0.85em">/var/lib/rom-transfer/filetypes.json</code>. Changes save immediately.</p>
+      <p class="panel-desc">Controls which file extensions are shown for each ROM console in the transfer view. ROM extensions filter the server list; save extensions filter the saves tab. PC Games type consoles do not use file type filtering.</p>
+      <div class="json-toolbar">
+        <span class="json-toolbar-label">JSON</span>
+        <button class="panel-btn" onclick="exportJSON('filetypes')">Export</button>
+        <button class="panel-btn" onclick="importJSON('filetypes')">Import</button>
+      </div>
       <table class="edit-table" id="filetypes-table">
         <thead><tr><th style="width:9rem">Console</th><th>ROM extensions</th><th>Save extensions</th><th></th></tr></thead>
         <tbody id="filetypes-rows"></tbody>
@@ -387,10 +488,15 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
       </div>
     </div>
 
-    <!-- ── Scan Paths panel ── -->
-    <div id="view-scanpaths" class="config-panel" style="display:none">
-      <h2>Scan Paths</h2>
-      <p class="panel-desc">Stored at <code style="font-family:'IBM Plex Mono',monospace;background:var(--surface-3);padding:0.1em 0.4em;border-radius:3px;font-size:0.85em">/var/lib/rom-transfer/scanpaths.json</code>. The agent checks these paths when scanning for saves.</p>
+    <!-- ── Emulator Paths ── -->
+    <div id="view-emulator-paths" class="config-panel" style="display:none">
+      <h2>Emulator Paths</h2>
+      <p class="panel-desc">Default save file locations for common emulators. Stored on the server and served to agents on scan — update here once and all clients pick it up without a new agent deployment.</p>
+      <div class="json-toolbar">
+        <span class="json-toolbar-label">JSON</span>
+        <button class="panel-btn" onclick="exportJSON('emulator-paths')">Export</button>
+        <button class="panel-btn" onclick="importJSON('emulator-paths')">Import</button>
+      </div>
       <table class="edit-table" id="scanpaths-table">
         <thead><tr><th style="width:8rem">Emulator</th><th>Path</th><th style="width:7rem">Console</th><th style="width:6rem">OS</th><th></th></tr></thead>
         <tbody id="scanpaths-rows"></tbody>
@@ -401,18 +507,23 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
       </div>
     </div>
 
-    <!-- ── Client / Destinations panel ── -->
-    <div id="view-client" class="config-panel" style="display:none">
-      <h2>Destinations</h2>
-      <p class="panel-desc">Configure the agent on this client machine.</p>
+    <!-- ── Game Data Paths ── -->
+    <div id="view-game-data-paths" class="config-panel" style="display:none">
+      <h2>Game Data Paths</h2>
+      <p class="panel-desc">Local folders where the agent stores files on this machine.</p>
       <div class="panel-section">
         <label class="panel-label">Server URL</label>
-        <input type="text" class="panel-input" id="client-server-url" placeholder="http://192.168.0.120:5035">
+        <input type="text" class="panel-input" id="client-server-url" placeholder="http://192.168.0.120:5035" style="max-width:28rem">
       </div>
       <div class="panel-section">
-        <h3>Local folders per console</h3>
         <table class="edit-table">
-          <thead><tr><th>Console</th><th></th><th>Path</th><th></th></tr></thead>
+          <thead>
+            <tr>
+              <th style="width:7rem">Console</th>
+              <th>ROMs / Games folder</th>
+              <th>Saves folder</th>
+            </tr>
+          </thead>
           <tbody id="client-rows"></tbody>
         </table>
         <div class="panel-actions">
@@ -429,7 +540,32 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
       </div>
     </div>
 
-    <!-- ── Agent Status panel ── -->
+    <!-- ── Game Launcher ── -->
+    <div id="view-game-launcher" class="config-panel" style="display:none">
+      <h2>Game Launcher</h2>
+      <p class="panel-desc">Map each PC Games console to the Steam account that should receive its shortcuts. After adding a game to Steam, restart Steam for the shortcut to appear.</p>
+      <div class="panel-section">
+        <label class="panel-label">Steam Installation Path</label>
+        <div class="dest-path-group" style="max-width:40rem">
+          <input type="text" class="panel-input" id="steam-path-input" placeholder="C:\Program Files (x86)\Steam">
+          <button class="panel-btn" onclick="openBrowse(document.getElementById('steam-path-input'))">Browse</button>
+          <button class="panel-btn primary" onclick="detectSteamAccounts()">Detect Accounts</button>
+        </div>
+        <p style="font-size:0.8rem;color:var(--text-faint);margin:0.5rem 0 0">Accounts are discovered from <span style="font-family:'IBM Plex Mono',monospace">&lt;SteamPath&gt;\userdata\</span> and labelled using each account's local display name.</p>
+      </div>
+      <div class="panel-section" id="steam-profiles-section" style="display:none">
+        <h3>Account Mapping</h3>
+        <table>
+          <thead><tr><th style="width:12rem">PC Games Console</th><th>Steam Account</th></tr></thead>
+          <tbody id="steam-profiles-body"></tbody>
+        </table>
+      </div>
+      <div class="panel-actions">
+        <button class="panel-btn primary" onclick="saveGameLauncherPanel()">Save</button>
+      </div>
+    </div>
+
+    <!-- ── Agent Status ── -->
     <div id="view-agent-status" class="config-panel" style="display:none">
       <h2>Agent Status</h2>
       <p class="panel-desc">Live status of the agent running on this client machine.</p>
@@ -483,21 +619,220 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
 <!-- Confirm delete dialog -->
 <div class="modal-bg" id="confirm-modal" role="dialog" aria-modal="true">
   <div class="modal">
-    <h2>Delete file?</h2>
+    <h2 id="confirm-title">Delete file?</h2>
     <p id="confirm-msg" style="font-size:1.1rem"></p>
+    <p id="confirm-sub" style="font-size:0.85rem;color:var(--text-dim);margin:0"></p>
     <button class="confirm-delete" id="confirm-yes">Delete</button>
     <button onclick="closeModal('confirm-modal')">Cancel</button>
   </div>
 </div>
 
+<!-- Exe picker / Add to Steam modal -->
+<div class="modal-bg" id="exe-picker-modal" role="dialog" aria-modal="true">
+  <div class="modal" style="min-width:520px;max-width:92vw">
+    <h2>Add to Steam</h2>
+    <p>Transfer complete. Select the executable to create a Steam shortcut.</p>
+    <label>Game Name</label>
+    <input type="text" id="exe-picker-name" placeholder="Game name">
+    <label>Executable</label>
+    <div id="exe-list" class="exe-list"></div>
+    <p id="exe-picker-no-steam" style="display:none;font-size:0.82rem;color:var(--danger);margin:0.4rem 0 0">
+      Steam not configured for this console — go to Client Settings → Game Launcher to set the Steam path and account mapping.
+    </p>
+    <p id="exe-picker-warn" style="display:none;font-size:0.82rem;color:#4caf7d;margin:0.4rem 0 0">
+      Shortcut added. Restart Steam for it to appear.
+    </p>
+    <button class="primary" id="exe-picker-add-btn" onclick="doAddToSteam()">Add to Steam</button>
+    <button onclick="closeModal('exe-picker-modal')">Skip</button>
+  </div>
+</div>
+
+<!-- JSON import file input (hidden) -->
+<input type="file" id="json-import-input" accept=".json,application/json" style="display:none">
+
 <script>
 const AGENT = 'http://127.0.0.1:5031';
 let currentConsole = '';
 let currentTab = 'roms';
-let currentView = 'transfer';
 let statusPoll = null;
 let consoles = [];
 let fileTypes = {};
+let steamConfig = {path: '', profiles: {}};
+
+// ── Navigation ───────────────────────────────────────────────────────────────
+
+function toggleSection(id) {
+  const hdr      = document.getElementById('hdr-' + id);
+  const children = document.getElementById('children-' + id);
+  const isOpen   = children.classList.contains('open');
+  hdr.classList.toggle('open', !isOpen);
+  children.classList.toggle('open', !isOpen);
+}
+
+function setView(view) {
+  document.querySelectorAll('[id^="view-"]').forEach(el => el.style.display = 'none');
+  document.getElementById('view-' + view).style.display = '';
+
+  // update active state on all nav children
+  document.querySelectorAll('.nav-child, .nav-section-header').forEach(el => el.classList.remove('active'));
+
+  // find and activate the matching child
+  document.querySelectorAll('.nav-child').forEach(el => {
+    if (el.getAttribute('onclick') && el.getAttribute('onclick').includes("'" + view + "'")) {
+      el.classList.add('active');
+      // highlight parent header too
+      const parent = el.closest('[id^="section-"]');
+      if (parent) {
+        const hdr = parent.querySelector('.nav-section-header');
+        if (hdr) hdr.classList.add('active');
+      }
+    }
+  });
+
+  if (view === 'consoles')          loadConsolesPanel();
+  if (view === 'filetypes')         loadFileTypesPanel();
+  if (view === 'emulator-paths')    loadScanPathsPanel();
+  if (view === 'game-data-paths')   loadClientPanel();
+  if (view === 'game-launcher')     loadGameLauncherPanel();
+  if (view === 'agent-status')      loadAgentStatus();
+}
+
+function setConsoleView(consoleName) {
+  currentConsole = consoleName;
+  const consoleObj = consoles.find(c => c.name === consoleName);
+  const isPCGames  = consoleObj && consoleObj.type === 'pc';
+
+  document.getElementById('transfer-subtitle').textContent =
+    'Game Data Transfer' + (consoleName ? ' — ' + consoleName : '');
+
+  document.querySelectorAll('[id^="view-"]').forEach(el => el.style.display = 'none');
+  document.getElementById('view-transfer').style.display = '';
+
+  // show the right pane set
+  document.querySelector('.tabs').style.display          = isPCGames ? 'none' : '';
+  document.getElementById('panes-pcgames').style.display = isPCGames ? '' : 'none';
+  document.getElementById('panes-roms').style.display    = isPCGames ? 'none' : (currentTab === 'roms' ? '' : 'none');
+  document.getElementById('panes-saves').style.display   = isPCGames ? 'none' : (currentTab === 'saves' ? '' : 'none');
+  document.getElementById('search-saves').style.display  = 'none';
+
+  // activate sidebar
+  document.querySelectorAll('.nav-child, .nav-section-header').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('#children-transfer .nav-child').forEach(el => {
+    if (el.dataset.console === consoleName) el.classList.add('active');
+  });
+  document.getElementById('hdr-transfer').classList.add('active');
+
+  if (consoleName) {
+    if (isPCGames) loadPCGamesPanes();
+    else loadPanes();
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+
+function setupSearch(inputId, tbodyId) {
+  document.getElementById(inputId).addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    for (const tr of document.getElementById(tbodyId).rows) {
+      tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+    }
+  });
+}
+
+function setupSavesSearch() {
+  document.getElementById('search-saves').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    for (const tbody of ['saves-local-body', 'saves-server-body']) {
+      for (const tr of document.getElementById(tbody).rows) {
+        tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+      }
+    }
+  });
+}
+
+async function checkAgentVersion() {
+  try {
+    const [agentRes, serverRes] = await Promise.all([
+      fetch(AGENT + '/health'),
+      fetch('/api/agent-version')
+    ]);
+    if (!agentRes.ok || !serverRes.ok) return;
+    const agentData  = await agentRes.json();
+    const serverData = await serverRes.json();
+    if (agentData.version && serverData.version && agentData.version !== serverData.version) {
+      const btn = document.getElementById('update-btn');
+      btn.textContent = 'Update agent (' + agentData.version + ' → ' + serverData.version + ')';
+      btn.style.display = '';
+    }
+  } catch (e) { /* silent */ }
+}
+
+async function doAgentUpdate() {
+  const btn = document.getElementById('update-btn');
+  btn.textContent = 'Updating…';
+  btn.disabled = true;
+  try {
+    await apiFetch(AGENT + '/update', { method: 'POST' });
+  } catch (e) {
+    btn.textContent = 'Update failed: ' + e.message;
+    btn.disabled = false;
+    return;
+  }
+  btn.textContent = 'Restarting…';
+  for (let i = 0; i < 30; i++) {
+    await new Promise(r => setTimeout(r, 1000));
+    try {
+      const r = await fetch(AGENT + '/health');
+      if (r.ok) {
+        btn.style.display = 'none';
+        btn.disabled = false;
+        setStatus('Agent updated successfully.');
+        checkAgentVersion();
+        return;
+      }
+    } catch (e) { /* still restarting */ }
+  }
+  btn.textContent = 'Restart timed out — refresh page';
+  btn.disabled = false;
+}
+
+async function init() {
+  setupSearch('search-local',          'local-body');
+  setupSearch('search-server',         'server-body');
+  setupSearch('search-pcgames-local',  'pcgames-local-body');
+  setupSearch('search-pcgames-server', 'pcgames-server-body');
+  setupSavesSearch();
+  try { await fetch(AGENT + '/health'); } catch (e) {
+    setStatus('Agent not reachable at ' + AGENT + ' — is it running?', true);
+  }
+  await Promise.all([loadConsoles(), loadFileTypes()]);
+  checkAgentVersion();
+}
+
+async function loadConsoles() {
+  try {
+    const r = await apiFetch('/api/consoles');
+    consoles = await r.json() || [];
+
+    // rebuild sidebar console children
+    const container = document.getElementById('children-transfer');
+    container.innerHTML = '';
+    for (const c of consoles) {
+      const el = document.createElement('div');
+      el.className = 'nav-child';
+      el.dataset.console = c.name;
+      el.dataset.type = c.type || '';
+      el.textContent = c.name;
+      el.addEventListener('click', () => setConsoleView(c.name));
+      container.appendChild(el);
+    }
+
+    // auto-select first console if none selected
+    if (!currentConsole && consoles.length > 0) {
+      setConsoleView(consoles[0].name);
+    }
+  } catch (e) { setStatus('Cannot load consoles: ' + e.message, true); }
+}
 
 // ── File type filters ────────────────────────────────────────────────────────
 
@@ -554,127 +889,9 @@ async function apiFetch(url, opts) {
   return r;
 }
 
-// ── Navigation ───────────────────────────────────────────────────────────────
-
-function setView(view) {
-  currentView = view;
-  document.querySelectorAll('[id^="view-"]').forEach(el => el.style.display = 'none');
-  document.getElementById('view-' + view).style.display = '';
-  document.querySelectorAll('.sidebar-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.view === view);
-  });
-  const showConsole = view === 'transfer';
-  document.getElementById('console-label').style.display = showConsole ? '' : 'none';
-  document.getElementById('console-sel').style.display = showConsole ? '' : 'none';
-  if (view === 'consoles')     loadConsolesPanel();
-  if (view === 'filetypes')    loadFileTypesPanel();
-  if (view === 'scanpaths')    loadScanPathsPanel();
-  if (view === 'client')       loadClientPanel();
-  if (view === 'agent-status') loadAgentStatus();
-}
-
-// ── Init ─────────────────────────────────────────────────────────────────────
-
-function setupSearch(inputId, tbodyId) {
-  document.getElementById(inputId).addEventListener('input', function() {
-    const q = this.value.toLowerCase();
-    for (const tr of document.getElementById(tbodyId).rows) {
-      tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
-    }
-  });
-}
-
-function setupSavesSearch() {
-  document.getElementById('search-saves').addEventListener('input', function() {
-    const q = this.value.toLowerCase();
-    for (const tbody of ['saves-local-body', 'saves-server-body']) {
-      for (const tr of document.getElementById(tbody).rows) {
-        tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
-      }
-    }
-  });
-}
-
-async function checkAgentVersion() {
-  try {
-    const [agentRes, serverRes] = await Promise.all([
-      fetch(AGENT + '/health'),
-      fetch('/api/agent-version')
-    ]);
-    if (!agentRes.ok || !serverRes.ok) return;
-    const agentData  = await agentRes.json();
-    const serverData = await serverRes.json();
-    if (agentData.version && serverData.version && agentData.version !== serverData.version) {
-      const btn = document.getElementById('update-btn');
-      btn.textContent = 'Update agent (' + agentData.version + ' → ' + serverData.version + ')';
-      btn.style.display = '';
-    }
-  } catch (e) { /* silent */ }
-}
-
-async function doAgentUpdate() {
-  const btn = document.getElementById('update-btn');
-  btn.textContent = 'Updating…';
-  btn.disabled = true;
-  try {
-    await apiFetch(AGENT + '/update', { method: 'POST' });
-  } catch (e) {
-    btn.textContent = 'Update failed: ' + e.message;
-    btn.disabled = false;
-    return;
-  }
-  btn.textContent = 'Restarting…';
-  // Poll until agent comes back
-  for (let i = 0; i < 30; i++) {
-    await new Promise(r => setTimeout(r, 1000));
-    try {
-      const r = await fetch(AGENT + '/health');
-      if (r.ok) {
-        btn.style.display = 'none';
-        btn.disabled = false;
-        setStatus('Agent updated successfully.');
-        checkAgentVersion();
-        return;
-      }
-    } catch (e) { /* still restarting */ }
-  }
-  btn.textContent = 'Restart timed out — refresh page';
-  btn.disabled = false;
-}
-
-async function init() {
-  setupSearch('search-local',  'local-body');
-  setupSearch('search-server', 'server-body');
-  setupSavesSearch();
-  try { await fetch(AGENT + '/health'); } catch (e) {
-    setStatus('Agent not reachable at ' + AGENT + ' — is it running?', true);
-  }
-  await Promise.all([loadConsoles(), loadFileTypes()]);
-  checkAgentVersion();
-}
-
-async function loadConsoles() {
-  try {
-    const r = await apiFetch('/api/consoles');
-    consoles = await r.json() || [];
-    const sel = document.getElementById('console-sel');
-    const prev = sel.value;
-    sel.innerHTML = '<option value="">— select —</option>';
-    for (const c of consoles) {
-      const opt = document.createElement('option');
-      opt.value = c.name; opt.textContent = c.name;
-      if (c.name === prev) opt.selected = true;
-      sel.appendChild(opt);
-    }
-  } catch (e) { setStatus('Cannot load consoles: ' + e.message, true); }
-}
-
-function onConsoleChange() {
-  currentConsole = document.getElementById('console-sel').value;
-  if (currentConsole) loadPanes();
-}
-
 function switchTab(tab) {
+  const consoleObj = consoles.find(c => c.name === currentConsole);
+  if (consoleObj && consoleObj.type === 'pc') return;
   currentTab = tab;
   document.getElementById('tab-roms').classList.toggle('active', tab === 'roms');
   document.getElementById('tab-saves').classList.toggle('active', tab === 'saves');
@@ -738,11 +955,17 @@ async function loadServerFiles() {
   } catch (e) { setStatus('Cannot load server files: ' + e.message, true); }
 }
 
-function confirmDelete(filename) {
-  document.getElementById('confirm-msg').textContent = '"' + filename + '"';
-  document.getElementById('confirm-yes').onclick = () => doDelete(filename);
+function openConfirm(title, msg, sub, onYes) {
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-msg').textContent   = msg;
+  document.getElementById('confirm-sub').textContent   = sub || '';
+  document.getElementById('confirm-yes').onclick = () => { closeModal('confirm-modal'); onYes(); };
   openModal('confirm-modal');
   document.getElementById('confirm-yes').focus();
+}
+
+function confirmDelete(filename) {
+  openConfirm('Delete file?', '"' + filename + '"', '', () => doDelete(filename));
 }
 
 async function doDelete(filename) {
@@ -767,19 +990,37 @@ function startStatusPoll() {
   statusPoll = setInterval(pollStatus, 800);
 }
 
+let _lastPCTransfer = null; // {console, item} set when a PC transfer is queued
+
 async function pollStatus() {
   try {
     const r = await apiFetch(AGENT + '/transfer/status');
     const data = await r.json();
     if (data.active) {
       const a = data.active;
-      setStatus('Transferring ' + a.file + ': ' + Math.round(a.percent || 0) + '%  (' + fmt(a.bytes) + ' / ' + fmt(a.total) + ')');
+      if (a.kind === 'pc') {
+        if (a.stage === 'extracting') {
+          setStatus('Extracting ' + a.item + '…');
+        } else {
+          const pct = a.total > 0 ? Math.round(a.percent || 0) + '%  (' + fmt(a.bytes) + ' / ' + fmt(a.total) + ')' : fmt(a.bytes) + ' received…';
+          setStatus('Transferring ' + a.item + ': ' + pct);
+        }
+      } else {
+        setStatus('Transferring ' + a.file + ': ' + Math.round(a.percent || 0) + '%  (' + fmt(a.bytes) + ' / ' + fmt(a.total) + ')');
+      }
     } else if (data.queue && data.queue.length > 0) {
       setStatus('Queued: ' + data.queue.length + ' file(s) waiting');
     } else {
-      setStatus('Ready.');
       clearInterval(statusPoll); statusPoll = null;
-      loadLocalFiles();
+      setStatus('Ready.');
+      if (_lastPCTransfer) {
+        const pt = _lastPCTransfer;
+        _lastPCTransfer = null;
+        loadPCGamesPanes();
+        openExePicker(pt.item);
+      } else {
+        loadLocalFiles();
+      }
     }
   } catch (e) { clearInterval(statusPoll); statusPoll = null; }
 }
@@ -802,23 +1043,15 @@ let activeLegend = null;
 
 function toggleLegend(id, btn) {
   if (activeLegend && activeLegend.id === id) {
-    activeLegend.el.remove();
-    activeLegend = null;
-    return;
+    activeLegend.el.remove(); activeLegend = null; return;
   }
-  if (activeLegend) {
-    activeLegend.el.remove();
-    activeLegend = null;
-  }
+  if (activeLegend) { activeLegend.el.remove(); activeLegend = null; }
   const popup = document.createElement('div');
   popup.className = 'legend-popup';
   for (const [cls, label] of legends[id]) {
-    const row = document.createElement('div');
-    row.className = 'legend-row';
-    const dot = document.createElement('span');
-    dot.className = 'save-ind ' + cls;
-    row.appendChild(dot);
-    row.appendChild(document.createTextNode(label));
+    const row = document.createElement('div'); row.className = 'legend-row';
+    const dot = document.createElement('span'); dot.className = 'save-ind ' + cls;
+    row.appendChild(dot); row.appendChild(document.createTextNode(label));
     popup.appendChild(row);
   }
   document.body.appendChild(popup);
@@ -832,19 +1065,12 @@ function toggleLegend(id, btn) {
 
 // ── Saves ────────────────────────────────────────────────────────────────────
 
-const tooltip = document.createElement('div');
-
 function showTooltip(e, text) {
   const t = document.getElementById('save-tooltip');
-  t.textContent = text;
-  t.style.display = 'block';
-  t.style.left = (e.clientX + 12) + 'px';
-  t.style.top  = (e.clientY + 12) + 'px';
+  t.textContent = text; t.style.display = 'block';
+  t.style.left = (e.clientX + 12) + 'px'; t.style.top = (e.clientY + 12) + 'px';
 }
-
-function hideTooltip() {
-  document.getElementById('save-tooltip').style.display = 'none';
-}
+function hideTooltip() { document.getElementById('save-tooltip').style.display = 'none'; }
 
 function makeInd(cls, tipText) {
   const span = document.createElement('span');
@@ -856,6 +1082,7 @@ function makeInd(cls, tipText) {
 }
 
 let selectedSaveBase = null;
+let selectedSaveHash = '';
 
 function saveBaseName(filename) {
   const dot = filename.lastIndexOf('.');
@@ -886,7 +1113,6 @@ async function loadSavesPanes() {
   if (!currentConsole) return;
 
   const [localFiles, serverFiles] = await Promise.all([loadLocalSaves(), loadServerSaves()]);
-
   const serverHashes = new Set((serverFiles || []).filter(f => f.hash).map(f => f.hash));
   const serverBases  = new Set((serverFiles || []).map(f => saveBaseName(f.name)));
 
@@ -903,15 +1129,13 @@ async function loadSavesPanes() {
     }
     const tr = document.createElement('tr');
     tr.className = 'save-row';
-    tr.dataset.base = base;
-    tr.dataset.hash = f.hash || '';
+    tr.dataset.base = base; tr.dataset.hash = f.hash || '';
     const btn = document.createElement('button');
     btn.className = 'action primary'; btn.textContent = 'Push';
     btn.addEventListener('click', e => { e.stopPropagation(); openPushModal(f.name); });
     const ind = makeInd(indCls, tipText);
     tr.innerHTML = '<td class="name-cell"></td><td class="size-cell">' + fmt(f.size) + '</td><td class="btn-cell"></td>';
-    tr.cells[0].appendChild(ind);
-    tr.cells[0].appendChild(document.createTextNode(f.name));
+    tr.cells[0].appendChild(ind); tr.cells[0].appendChild(document.createTextNode(f.name));
     tr.lastChild.appendChild(btn);
     tr.addEventListener('click', () => selectSaveRow(base, f.hash || ''));
     localTbody.appendChild(tr);
@@ -921,8 +1145,7 @@ async function loadSavesPanes() {
   for (const f of (serverFiles || [])) {
     const base = saveBaseName(f.name);
     const tr = document.createElement('tr');
-    tr.dataset.base = base;
-    tr.dataset.hash = f.hash || '';
+    tr.dataset.base = base; tr.dataset.hash = f.hash || '';
     const btn = document.createElement('button');
     btn.className = 'action primary'; btn.textContent = 'Pull';
     btn.addEventListener('click', () => pullSave(f.name));
@@ -934,16 +1157,9 @@ async function loadSavesPanes() {
   }
 }
 
-let selectedSaveHash = '';
-
 function selectSaveRow(base, hash) {
-  if (selectedSaveBase === base) {
-    selectedSaveBase = null;
-    selectedSaveHash = '';
-  } else {
-    selectedSaveBase = base;
-    selectedSaveHash = hash;
-  }
+  if (selectedSaveBase === base) { selectedSaveBase = null; selectedSaveHash = ''; }
+  else { selectedSaveBase = base; selectedSaveHash = hash; }
   for (const tr of document.getElementById('saves-local-body').rows) {
     tr.classList.toggle('selected', tr.dataset.base === selectedSaveBase);
   }
@@ -956,16 +1172,11 @@ function selectSaveRow(base, hash) {
       let ind = tr.querySelector('.save-ind.server-match');
       if (nameMatch) {
         const exactMatch = selectedSaveHash && tr.dataset.hash === selectedSaveHash;
-        if (!ind) {
-          ind = makeInd('server-match', '');
-          tr.cells[1].prepend(ind);
-        }
+        if (!ind) { ind = makeInd('server-match', ''); tr.cells[1].prepend(ind); }
         ind.className = 'save-ind server-match ' + (exactMatch ? 'exact' : 'srv-diff');
         ind._tipText = exactMatch ? 'Exact match with local file' : 'Different version of this file';
         ind.onmouseenter = e => showTooltip(e, ind._tipText);
-      } else if (ind) {
-        ind.remove();
-      }
+      } else if (ind) { ind.remove(); }
     }
   } else {
     searchBox.style.display = '';
@@ -1021,16 +1232,33 @@ async function loadConsolesPanel() {
     const r = await apiFetch('/api/hostconfig');
     const cfg = await r.json();
     document.getElementById('consoles-rows').innerHTML = '';
-    for (const c of (cfg.consoles || [])) addConsoleRow(c.name, c.server_path);
-    document.getElementById('saves-root-path').value = cfg.saves_path || '';
+    for (const c of (cfg.consoles || [])) addConsoleRow(c.name, c.type || '', c.server_path, c.saves_path || '');
+    if (!document.getElementById('consoles-rows').children.length) {
+      document.getElementById('saves-root-legacy') && (document.getElementById('saves-root-legacy').value = cfg.saves_path || '');
+    }
   } catch (e) { setStatus('Cannot load consoles: ' + e.message, true); }
 }
 
-function addConsoleRow(name, path) {
+function addConsoleRow(name, type, path, savesPath) {
   const tr = document.createElement('tr');
+  const isPc = (type || '') === 'pc';
+  const typeOpts = [['', 'ROM'], ['pc', 'PC Games']].map(([v, label]) =>
+    '<option value="' + v + '"' + (v === (type || '') ? ' selected' : '') + '>' + label + '</option>'
+  ).join('');
   tr.innerHTML = '<td><input type="text" value="' + esc(name) + '" placeholder="PS2"></td>' +
-                 '<td><input type="text" value="' + esc(path) + '" placeholder="/mnt/server-pc/Games/ROMS/PS2"></td>' +
+                 '<td><select>' + typeOpts + '</select></td>' +
+                 '<td><input type="text" value="' + esc(path) + '" placeholder="/mnt/server-pc/Games/PS2"></td>' +
+                 '<td><input type="text" value="' + esc(isPc ? '' : (savesPath || '')) + '" placeholder="' + (isPc ? 'N/A for PC Games' : '/mnt/server-pc/Saves/PS2') + '" ' + (isPc ? 'disabled style="opacity:0.35"' : '') + '></td>' +
                  '<td><button class="panel-btn danger" onclick="this.closest(\'tr\').remove()">Remove</button></td>';
+  const sel = tr.querySelector('select');
+  const savesInp = tr.querySelectorAll('input')[2];
+  sel.addEventListener('change', () => {
+    const pc = sel.value === 'pc';
+    savesInp.disabled    = pc;
+    savesInp.style.opacity = pc ? '0.35' : '';
+    savesInp.placeholder = pc ? 'N/A for PC Games' : '/mnt/server-pc/Saves/PS2';
+    if (pc) savesInp.value = '';
+  });
   document.getElementById('consoles-rows').appendChild(tr);
 }
 
@@ -1039,12 +1267,12 @@ async function saveConsolesPanel() {
   const consolList = [];
   for (const tr of rows) {
     const inputs = tr.querySelectorAll('input');
-    const name = inputs[0].value.trim(), path = inputs[1].value.trim();
-    if (name && path) consolList.push({name, server_path: path});
+    const sel    = tr.querySelector('select');
+    const name   = inputs[0].value.trim(), path = inputs[1].value.trim();
+    if (name && path) consolList.push({name, type: sel ? sel.value : '', server_path: path, saves_path: inputs[2].value.trim()});
   }
-  const saves_path = document.getElementById('saves-root-path').value.trim();
   try {
-    await apiFetch('/api/hostconfig', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({consoles: consolList, saves_path}) });
+    await apiFetch('/api/hostconfig', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({consoles: consolList, saves_path: ''}) });
     setStatus('Consoles saved.');
     await loadConsoles();
   } catch (e) { setStatus('Save failed: ' + e.message, true); }
@@ -1079,7 +1307,7 @@ async function saveFileTypesPanel() {
     const inputs = tr.querySelectorAll('input');
     const name = inputs[0].value.trim();
     if (!name) continue;
-    const rom = inputs[1].value.split(',').map(s => s.trim()).filter(Boolean);
+    const rom  = inputs[1].value.split(',').map(s => s.trim()).filter(Boolean);
     const save = inputs[2].value.split(',').map(s => s.trim()).filter(Boolean);
     ft[name] = {rom, save};
   }
@@ -1090,7 +1318,7 @@ async function saveFileTypesPanel() {
   } catch (e) { setStatus('Save failed: ' + e.message, true); }
 }
 
-// ── Scan Paths panel ──────────────────────────────────────────────────────────
+// ── Scan Paths / Emulator Paths panel ─────────────────────────────────────────
 
 async function loadScanPathsPanel() {
   try {
@@ -1099,7 +1327,7 @@ async function loadScanPathsPanel() {
     const tbody = document.getElementById('scanpaths-rows');
     tbody.innerHTML = '';
     for (const p of paths) addScanPathRow(p.emulator, p.path, p.console, p.os);
-  } catch (e) { setStatus('Cannot load scan paths: ' + e.message, true); }
+  } catch (e) { setStatus('Cannot load emulator paths: ' + e.message, true); }
 }
 
 function addScanPathRow(emulator, path, console_, os) {
@@ -1126,11 +1354,11 @@ async function saveScanPathsPanel() {
   }
   try {
     await apiFetch('/api/scanpaths', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(paths) });
-    setStatus('Scan paths saved.');
+    setStatus('Emulator paths saved.');
   } catch (e) { setStatus('Save failed: ' + e.message, true); }
 }
 
-// ── Client / Destinations panel ───────────────────────────────────────────────
+// ── Game Data Paths panel ─────────────────────────────────────────────────────
 
 async function loadClientPanel() {
   try {
@@ -1140,33 +1368,43 @@ async function loadClientPanel() {
     const tbody = document.getElementById('client-rows');
     tbody.innerHTML = '';
     for (const c of consoles) {
-      const romPath  = (cfg.roms  || {})[c.name] || '';
-      const savePath = (cfg.saves || {})[c.name] || '';
+      const isPCGames = c.type === 'pc';
       const tr = document.createElement('tr');
-      const romInp = document.createElement('input');
-      romInp.type = 'text'; romInp.dataset.console = c.name; romInp.dataset.kind = 'rom';
-      romInp.value = romPath; romInp.placeholder = 'ROMs folder'; romInp.className = 'panel-input';
-      const romBrowse = document.createElement('button');
-      romBrowse.className = 'panel-btn'; romBrowse.textContent = 'Browse';
-      romBrowse.style.whiteSpace = 'nowrap';
-      romBrowse.addEventListener('click', () => openBrowse(romInp));
-      const saveInp = document.createElement('input');
-      saveInp.type = 'text'; saveInp.dataset.console = c.name; saveInp.dataset.kind = 'save';
-      saveInp.value = savePath; saveInp.placeholder = 'Saves folder'; saveInp.className = 'panel-input';
-      const saveBrowse = document.createElement('button');
-      saveBrowse.className = 'panel-btn'; saveBrowse.textContent = 'Browse';
-      saveBrowse.style.whiteSpace = 'nowrap';
-      saveBrowse.addEventListener('click', () => openBrowse(saveInp));
-      tr.innerHTML = '<td style="width:7rem;font-family:\'IBM Plex Mono\',monospace;font-size:0.85rem" rowspan="2">' + esc(c.name) + '</td>' +
-                     '<td style="width:3.5rem;color:var(--text-faint);font-size:0.78rem">ROMs</td><td></td><td style="width:5.5rem;text-align:right"></td>';
-      tr.cells[2].appendChild(romInp);
-      tr.cells[3].appendChild(romBrowse);
-      const tr2 = document.createElement('tr');
-      tr2.innerHTML = '<td style="width:3.5rem;color:var(--text-faint);font-size:0.78rem">Saves</td><td></td><td style="width:5.5rem;text-align:right"></td>';
-      tr2.cells[1].appendChild(saveInp);
-      tr2.cells[2].appendChild(saveBrowse);
+      const nameCell = '<td style="width:7rem;font-family:\'IBM Plex Mono\',monospace;font-size:0.85rem;white-space:nowrap">' + esc(c.name) + '</td>';
+
+      if (isPCGames) {
+        const gamePath  = (cfg.games || {})[c.name] || '';
+        const gameInp   = document.createElement('input');
+        gameInp.type = 'text'; gameInp.dataset.console = c.name; gameInp.dataset.kind = 'game';
+        gameInp.value = gamePath; gameInp.placeholder = 'C:\\Games'; gameInp.className = 'panel-input';
+        const gameBrowse = document.createElement('button');
+        gameBrowse.className = 'panel-btn'; gameBrowse.textContent = 'Browse';
+        gameBrowse.addEventListener('click', () => openBrowse(gameInp));
+        tr.innerHTML = nameCell + '<td colspan="2"><div class="dest-path-group"></div></td>';
+        tr.cells[1].firstChild.appendChild(gameInp);
+        tr.cells[1].firstChild.appendChild(gameBrowse);
+      } else {
+        const romPath  = (cfg.roms  || {})[c.name] || '';
+        const savePath = (cfg.saves || {})[c.name] || '';
+        const romInp = document.createElement('input');
+        romInp.type = 'text'; romInp.dataset.console = c.name; romInp.dataset.kind = 'rom';
+        romInp.value = romPath; romInp.placeholder = 'ROMs folder'; romInp.className = 'panel-input';
+        const romBrowse = document.createElement('button');
+        romBrowse.className = 'panel-btn'; romBrowse.textContent = 'Browse';
+        romBrowse.addEventListener('click', () => openBrowse(romInp));
+        const saveInp = document.createElement('input');
+        saveInp.type = 'text'; saveInp.dataset.console = c.name; saveInp.dataset.kind = 'save';
+        saveInp.value = savePath; saveInp.placeholder = 'Saves folder'; saveInp.className = 'panel-input';
+        const saveBrowse = document.createElement('button');
+        saveBrowse.className = 'panel-btn'; saveBrowse.textContent = 'Browse';
+        saveBrowse.addEventListener('click', () => openBrowse(saveInp));
+        tr.innerHTML = nameCell + '<td><div class="dest-path-group"></div></td><td><div class="dest-path-group"></div></td>';
+        tr.cells[1].firstChild.appendChild(romInp);
+        tr.cells[1].firstChild.appendChild(romBrowse);
+        tr.cells[2].firstChild.appendChild(saveInp);
+        tr.cells[2].firstChild.appendChild(saveBrowse);
+      }
       tbody.appendChild(tr);
-      tbody.appendChild(tr2);
     }
     document.getElementById('scan-results-section').style.display = 'none';
   } catch (e) { setStatus('Cannot load client config: ' + e.message, true); }
@@ -1174,16 +1412,17 @@ async function loadClientPanel() {
 
 async function saveClientPanel() {
   const serverUrl = document.getElementById('client-server-url').value.trim();
-  const roms = {}, saves = {};
+  const roms = {}, saves = {}, games = {};
   for (const inp of document.querySelectorAll('#client-rows input[data-console]')) {
     const v = inp.value.trim();
     if (!v) continue;
-    if (inp.dataset.kind === 'save') saves[inp.dataset.console] = v;
+    if (inp.dataset.kind === 'save')  saves[inp.dataset.console] = v;
+    else if (inp.dataset.kind === 'game') games[inp.dataset.console] = v;
     else roms[inp.dataset.console] = v;
   }
   try {
-    await apiFetch(AGENT + '/config', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({server_url: serverUrl, roms, saves}) });
-    setStatus('Client config saved.');
+    await apiFetch(AGENT + '/config', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({server_url: serverUrl, roms, saves, games}) });
+    setStatus('Game data paths saved.');
   } catch (e) { setStatus('Save failed: ' + e.message, true); }
 }
 
@@ -1220,10 +1459,19 @@ async function loadAgentStatus() {
     if (cfgRes.ok) {
       const cfg = await cfgRes.json();
       tbody.appendChild(row('Server URL', cfg.server_url || '(not set)', !!cfg.server_url));
-      const roms = cfg.roms || {}, saves = cfg.saves || {};
+      const roms = cfg.roms || {}, saves = cfg.saves || {}, games = cfg.games || {};
       for (const c of consoles) {
-        tbody.appendChild(row(c.name + ' ROMs',  roms[c.name]  || '(not set)', !!roms[c.name]));
-        tbody.appendChild(row(c.name + ' Saves', saves[c.name] || '(not set)', !!saves[c.name]));
+        if (c.type === 'pc') {
+          tbody.appendChild(row(c.name + ' Games', games[c.name] || '(not set)', !!games[c.name]));
+        } else {
+          tbody.appendChild(row(c.name + ' ROMs',  roms[c.name]  || '(not set)', !!roms[c.name]));
+          tbody.appendChild(row(c.name + ' Saves', saves[c.name] || '(not set)', !!saves[c.name]));
+        }
+      }
+      tbody.appendChild(row('Steam path', cfg.steam_path || '(not set)', !!cfg.steam_path));
+      const profiles = cfg.steam_profiles || {};
+      for (const c of consoles.filter(c => c.type === 'pc')) {
+        tbody.appendChild(row(c.name + ' Steam account', profiles[c.name] || '(not set)', !!profiles[c.name]));
       }
     }
   } catch (e) {
@@ -1231,6 +1479,8 @@ async function loadAgentStatus() {
     tbody.appendChild(row('Status', 'Unreachable — ' + e.message, false));
   }
 }
+
+// ── Scan for saves ────────────────────────────────────────────────────────────
 
 async function runScan() {
   setStatus('Scanning…');
@@ -1277,6 +1527,286 @@ function applyScanResult(path, console_) {
   const inp = document.querySelector('#client-rows input[data-console="' + CSS.escape(console_) + '"][data-kind="save"]');
   if (inp) { inp.value = path; setStatus('Applied: ' + console_ + ' → ' + path); }
   else { setStatus('Console "' + console_ + '" not in configured list — add it in Consoles first.', true); }
+}
+
+// ── PC Games ──────────────────────────────────────────────────────────────────
+
+async function loadPCGamesPanes() {
+  // local games
+  try {
+    const r = await apiFetch(AGENT + '/games?console=' + encodeURIComponent(currentConsole));
+    const data = await r.json();
+    const localBody = document.getElementById('pcgames-local-body');
+    localBody.innerHTML = '';
+    const di = data.disk_info;
+    const installed = (data.games || []).reduce((a, g) => a + (g.size || 0), 0);
+    document.getElementById('pcgames-local-disk').textContent =
+      di ? 'Installed: ' + fmt(installed) + '  ·  Free: ' + fmt(di.free_space)
+         : 'No local folder configured for this console.';
+    for (const g of (data.games || [])) {
+      const tr = document.createElement('tr');
+      const btn = document.createElement('button');
+      btn.className = 'action danger'; btn.textContent = 'Delete';
+      btn.addEventListener('click', () => confirmDeletePCGame(g.name));
+      tr.innerHTML = '<td class="name-cell">📁 ' + esc(g.name) + '</td>' +
+                     '<td class="size-cell">' + fmt(g.size) + '</td><td class="btn-cell"></td>';
+      tr.lastChild.appendChild(btn);
+      localBody.appendChild(tr);
+    }
+  } catch (e) { setStatus('Cannot load local games: ' + e.message, true); }
+
+  // server games
+  try {
+    const r = await apiFetch('/api/pcgames?console=' + encodeURIComponent(currentConsole));
+    const items = await r.json() || [];
+    const serverBody = document.getElementById('pcgames-server-body');
+    serverBody.innerHTML = '';
+    for (const g of items) {
+      const tr = document.createElement('tr');
+      const btn = document.createElement('button');
+      btn.className = 'action primary'; btn.textContent = 'Transfer';
+      btn.addEventListener('click', () => startPCTransfer(g.name, g.item_type));
+      tr.innerHTML = '<td class="name-cell">' + esc(g.name) + '</td>' +
+                     '<td><span class="type-badge ' + esc(g.item_type) + '">' + esc(g.item_type) + '</span></td>' +
+                     '<td class="size-cell">' + fmt(g.size) + '</td>' +
+                     '<td class="btn-cell"></td>';
+      tr.lastChild.appendChild(btn);
+      serverBody.appendChild(tr);
+    }
+  } catch (e) { setStatus('Cannot load server games: ' + e.message, true); }
+}
+
+async function startPCTransfer(itemName, itemType) {
+  try {
+    await apiFetch(AGENT + '/transfer', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({kind: 'pc', console: currentConsole, item: itemName, item_type: itemType})
+    });
+    _lastPCTransfer = {console: currentConsole, item: itemName};
+    setStatus('Queued: ' + itemName);
+    startStatusPoll();
+  } catch (e) { setStatus('Transfer failed: ' + e.message, true); }
+}
+
+function confirmDeletePCGame(gameName) {
+  openConfirm(
+    'Delete game?',
+    '"' + gameName + '"',
+    'The local game folder and its Steam shortcut will both be removed.',
+    () => doDeletePCGame(gameName)
+  );
+}
+
+async function doDeletePCGame(gameName) {
+  try {
+    await apiFetch(AGENT + '/games?console=' + encodeURIComponent(currentConsole) + '&name=' + encodeURIComponent(gameName), {method: 'DELETE'});
+    setStatus('Deleted "' + gameName + '" and removed Steam shortcut. Restart Steam.');
+    loadPCGamesPanes();
+  } catch (e) { setStatus('Delete failed: ' + e.message, true); }
+}
+
+async function openExePicker(itemName) {
+  const base = itemName.replace(/\.[^.]+$/, '');
+  document.getElementById('exe-picker-name').value = base;
+  document.getElementById('exe-picker-warn').style.display = 'none';
+
+  const steamReady = !!(steamConfig.path && steamConfig.profiles[currentConsole]);
+  document.getElementById('exe-picker-no-steam').style.display = steamReady ? 'none' : '';
+  document.getElementById('exe-picker-add-btn').disabled = !steamReady;
+
+  const list = document.getElementById('exe-list');
+  list.innerHTML = '<div style="color:var(--text-faint);font-size:0.82rem">Loading executables…</div>';
+  openModal('exe-picker-modal');
+
+  try {
+    const r = await apiFetch(AGENT + '/games/exes?console=' + encodeURIComponent(currentConsole) + '&item=' + encodeURIComponent(base));
+    const exes = await r.json() || [];
+    list.innerHTML = '';
+    if (!exes.length) {
+      list.innerHTML = '<div style="color:var(--text-faint);font-size:0.82rem">No .exe files found in game folder.</div>';
+      return;
+    }
+    exes.forEach((exe, i) => {
+      const item = document.createElement('div');
+      item.className = 'exe-item' + (i === 0 ? ' selected' : '');
+      const radio = document.createElement('input');
+      radio.type = 'radio'; radio.name = 'exe-pick'; radio.value = exe.path;
+      radio.id = 'exe-opt-' + i; radio.checked = i === 0;
+      const label = document.createElement('label');
+      label.htmlFor = 'exe-opt-' + i; label.textContent = exe.path;
+      item.appendChild(radio); item.appendChild(label);
+      item.addEventListener('click', () => {
+        radio.checked = true;
+        list.querySelectorAll('.exe-item').forEach(el => el.classList.remove('selected'));
+        item.classList.add('selected');
+      });
+      list.appendChild(item);
+    });
+  } catch (e) {
+    list.innerHTML = '<div style="color:var(--danger);font-size:0.82rem">Failed to load executables: ' + esc(e.message) + '</div>';
+  }
+}
+
+async function doAddToSteam() {
+  const name = document.getElementById('exe-picker-name').value.trim();
+  const sel  = document.querySelector('#exe-list input[type=radio]:checked');
+  if (!name) { setStatus('Enter a game name.', true); return; }
+  if (!sel)  { setStatus('Select an executable.', true); return; }
+  const exe = sel.value;
+  try {
+    await apiFetch(AGENT + '/steam/shortcut', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({console: currentConsole, name, exe})
+    });
+    document.getElementById('exe-picker-warn').style.display = '';
+    setStatus('Steam shortcut created for "' + name + '". Restart Steam to see it.');
+    setTimeout(() => closeModal('exe-picker-modal'), 2800);
+  } catch (e) { setStatus('Failed to add shortcut: ' + e.message, true); }
+}
+
+// ── Game Launcher panel ───────────────────────────────────────────────────────
+
+let _detectedAccounts = []; // [{id, name}] populated by detectSteamAccounts()
+
+async function loadGameLauncherPanel() {
+  let cfg = {steam_path: '', steam_profiles: {}};
+  try {
+    const r = await fetch(AGENT + '/config');
+    if (r.ok) cfg = await r.json();
+  } catch (e) { /* agent unreachable — use defaults */ }
+
+  steamConfig.path     = cfg.steam_path     || '';
+  steamConfig.profiles = cfg.steam_profiles || {};
+  document.getElementById('steam-path-input').value = steamConfig.path;
+
+  const pcConsoles = consoles.filter(c => c.type === 'pc');
+  if (pcConsoles.length === 0) {
+    document.getElementById('steam-profiles-section').style.display = 'none';
+    return;
+  }
+
+  // show mapping table with whatever accounts we already know about
+  buildProfilesTable(pcConsoles, cfg.steam_profiles || {}, _detectedAccounts);
+}
+
+function buildProfilesTable(pcConsoles, savedProfiles, accounts) {
+  const tbody = document.getElementById('steam-profiles-body');
+  tbody.innerHTML = '';
+  const section = document.getElementById('steam-profiles-section');
+  section.style.display = '';
+
+  for (const c of pcConsoles) {
+    const tr = document.createElement('tr');
+    const sel = document.createElement('select');
+    sel.className = 'edit-table-select';
+    sel.style.cssText = 'font-family:"IBM Plex Mono",monospace;font-size:0.82rem;padding:0.25rem 0.4rem;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:4px;width:100%';
+    sel.dataset.console = c.name;
+
+    // always offer a blank option + any detected accounts
+    const blankOpt = document.createElement('option');
+    blankOpt.value = ''; blankOpt.textContent = '— select account —';
+    sel.appendChild(blankOpt);
+
+    const saved = savedProfiles[c.name] || '';
+    let savedInList = false;
+    for (const acc of accounts) {
+      const opt = document.createElement('option');
+      opt.value = acc.id;
+      opt.textContent = acc.name ? acc.name + '  (' + acc.id + ')' : acc.id;
+      if (acc.id === saved) { opt.selected = true; savedInList = true; }
+      sel.appendChild(opt);
+    }
+    // if saved value isn't in detected list yet, show it anyway
+    if (saved && !savedInList) {
+      const opt = document.createElement('option');
+      opt.value = saved; opt.textContent = saved + '  (saved)'; opt.selected = true;
+      sel.appendChild(opt);
+    }
+
+    tr.innerHTML = '<td style="font-family:\'IBM Plex Mono\',monospace;font-size:0.85rem">' + esc(c.name) + '</td><td></td>';
+    tr.cells[1].appendChild(sel);
+    tbody.appendChild(tr);
+  }
+}
+
+async function detectSteamAccounts() {
+  steamConfig.path = document.getElementById('steam-path-input').value.trim();
+  try {
+    const r = await apiFetch(AGENT + '/steam/accounts' + (steamConfig.path ? '?path=' + encodeURIComponent(steamConfig.path) : ''));
+    _detectedAccounts = await r.json() || [];
+    const pcConsoles = consoles.filter(c => c.type === 'pc');
+    const savedProfiles = {};
+    for (const sel of document.querySelectorAll('#steam-profiles-body select[data-console]')) {
+      if (sel.value) savedProfiles[sel.dataset.console] = sel.value;
+    }
+    buildProfilesTable(pcConsoles, savedProfiles, _detectedAccounts);
+    setStatus('Found ' + _detectedAccounts.length + ' Steam account(s).');
+  } catch (e) { setStatus('Failed to detect accounts: ' + e.message, true); }
+}
+
+async function saveGameLauncherPanel() {
+  const steamPath = document.getElementById('steam-path-input').value.trim();
+  const steamProfiles = {};
+  for (const sel of document.querySelectorAll('#steam-profiles-body select[data-console]')) {
+    if (sel.value) steamProfiles[sel.dataset.console] = sel.value;
+  }
+  try {
+    const r = await fetch(AGENT + '/config');
+    if (!r.ok) throw new Error('Cannot read current config');
+    const cfg = await r.json();
+    cfg.steam_path     = steamPath;
+    cfg.steam_profiles = steamProfiles;
+    await apiFetch(AGENT + '/config', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(cfg) });
+    steamConfig.path     = steamPath;
+    steamConfig.profiles = steamProfiles;
+    setStatus('Game launcher settings saved.');
+  } catch (e) { setStatus('Save failed: ' + e.message, true); }
+}
+
+// ── JSON Import / Export ──────────────────────────────────────────────────────
+
+const jsonEndpoints = {
+  'consoles':       { get: '/api/hostconfig',  put: '/api/hostconfig' },
+  'filetypes':      { get: '/api/filetypes',   put: '/api/filetypes' },
+  'emulator-paths': { get: '/api/scanpaths',   put: '/api/scanpaths' },
+};
+
+async function exportJSON(panel) {
+  try {
+    const r = await apiFetch(jsonEndpoints[panel].get);
+    const data = await r.json();
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'rom-transfer-' + panel + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  } catch (e) { setStatus('Export failed: ' + e.message, true); }
+}
+
+function importJSON(panel) {
+  const input = document.getElementById('json-import-input');
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    input.value = '';
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      await apiFetch(jsonEndpoints[panel].put, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+      });
+      setStatus('Imported ' + panel + ' successfully.');
+      if (panel === 'consoles')       { loadConsolesPanel(); loadConsoles(); }
+      if (panel === 'filetypes')      { loadFileTypesPanel(); loadFileTypes(); }
+      if (panel === 'emulator-paths') loadScanPathsPanel();
+    } catch (e) { setStatus('Import failed: ' + e.message, true); }
+  };
+  input.click();
 }
 
 // ── Folder browser ────────────────────────────────────────────────────────────

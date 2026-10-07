@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -20,6 +21,13 @@ import (
 type Console struct {
 	Name       string `json:"name"`
 	ServerPath string `json:"server_path"`
+	Type       string `json:"type,omitempty"` // "pc" or "" (rom)
+}
+
+type PCGameItem struct {
+	Name     string `json:"name"`
+	Size     int64  `json:"size"`     // -1 for folders (unknown until zipped)
+	ItemType string `json:"item_type"` // "folder" or "archive"
 }
 
 type HostConfig struct {
@@ -121,6 +129,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/consoles", s.lanOnly(s.handleConsoles))
 	mux.HandleFunc("/api/files", s.lanOnly(s.handleFiles))
+	mux.HandleFunc("/api/pcgames", s.lanOnly(s.handlePCGames))
 	mux.HandleFunc("/api/download", s.lanOnly(s.handleDownload))
 	mux.HandleFunc("/api/hostconfig", s.lanOnly(s.handleHostConfig))
 	mux.HandleFunc("/api/saves", s.lanOnly(s.handleSaves))
@@ -204,6 +213,47 @@ func (s *Server) consolePath(name string) (string, bool) {
 	return "", false
 }
 
+func (s *Server) consoleType(name string) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, c := range s.cfg.Consoles {
+		if c.Name == name {
+			return c.Type
+		}
+	}
+	return ""
+}
+
+var pcArchiveExts = map[string]bool{".zip": true, ".7z": true, ".rar": true}
+
+func (s *Server) handlePCGames(w http.ResponseWriter, r *http.Request) {
+	console := r.URL.Query().Get("console")
+	dir, ok := s.consolePath(console)
+	if !ok {
+		http.Error(w, "unknown console", http.StatusBadRequest)
+		return
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	items := []PCGameItem{}
+	for _, e := range entries {
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		if e.IsDir() {
+			items = append(items, PCGameItem{Name: e.Name(), Size: -1, ItemType: "folder"})
+		} else if pcArchiveExts[strings.ToLower(filepath.Ext(e.Name()))] {
+			items = append(items, PCGameItem{Name: e.Name(), Size: info.Size(), ItemType: "archive"})
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(items)
+}
+
 func listDir(dir string) ([]FileInfo, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -284,12 +334,59 @@ func (s *Server) handleFiles(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 	console := r.URL.Query().Get("console")
-	file := r.URL.Query().Get("file")
 	dir, ok := s.consolePath(console)
 	if !ok {
 		http.Error(w, "unknown console", http.StatusBadRequest)
 		return
 	}
+
+	if s.consoleType(console) == "pc" {
+		item := r.URL.Query().Get("item")
+		p, ok := safePath(dir, item)
+		if !ok {
+			http.Error(w, "invalid path", http.StatusBadRequest)
+			return
+		}
+		info, err := os.Stat(p)
+		if err != nil {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		if info.IsDir() {
+			w.Header().Set("Content-Disposition", `attachment; filename="`+item+`.zip"`)
+			w.Header().Set("Content-Type", "application/zip")
+			zw := zip.NewWriter(w)
+			walkErr := filepath.Walk(p, func(path string, fi os.FileInfo, err error) error {
+				if err != nil || fi.IsDir() {
+					return err
+				}
+				rel, err := filepath.Rel(p, path)
+				if err != nil {
+					return err
+				}
+				fw, err := zw.Create(filepath.ToSlash(rel))
+				if err != nil {
+					return err
+				}
+				f, err := os.Open(path)
+				if err != nil {
+					return err
+				}
+				defer f.Close()
+				_, err = io.Copy(fw, f)
+				return err
+			})
+			zw.Close()
+			if walkErr != nil {
+				log.Printf("zip stream error for %s/%s: %v", console, item, walkErr)
+			}
+			return
+		}
+		http.ServeFile(w, r, p)
+		return
+	}
+
+	file := r.URL.Query().Get("file")
 	p, ok := safePath(dir, file)
 	if !ok {
 		http.Error(w, "invalid path", http.StatusBadRequest)

@@ -218,6 +218,36 @@ del "%%~f0"
 	return cmd.Start()
 }
 
+func find7z() (string, error) {
+	if p, err := exec.LookPath("7z"); err == nil {
+		return p, nil
+	}
+	candidates := []string{
+		`C:\Program Files\7-Zip\7z.exe`,
+		`C:\Program Files (x86)\7-Zip\7z.exe`,
+	}
+	for _, c := range candidates {
+		if _, err := os.Stat(c); err == nil {
+			return c, nil
+		}
+	}
+	return "", fmt.Errorf("7z not found; install 7-Zip from https://www.7-zip.org/")
+}
+
+func extract7z(src, destDir string) error {
+	sevenZip, err := find7z()
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command(sevenZip, "x", src, "-o"+destDir, "-y")
+	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: 0x08000000} // CREATE_NO_WINDOW
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("7z extraction failed: %w\n%s", err, out)
+	}
+	return nil
+}
+
 func uninstallService() error {
 	m, err := mgr.Connect()
 	if err != nil {

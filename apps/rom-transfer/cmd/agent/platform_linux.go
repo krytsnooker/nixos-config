@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -65,4 +66,19 @@ func uninstallService() error {
 
 func doUpdate(serverURL string) error {
 	return fmt.Errorf("one-click update is not supported on Linux")
+}
+
+func find7z() (string, error) {
+	return exec.LookPath("7z")
+}
+
+func extract7z(src, destDir string) error {
+	sevenZip, err := find7z()
+	if err != nil {
+		return fmt.Errorf("7z not found in PATH: %w", err)
+	}
+	cmd := exec.Command(sevenZip, "x", src, "-o"+destDir, "-y")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
