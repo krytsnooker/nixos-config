@@ -643,7 +643,7 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
       Shortcut added. Restart Steam for it to appear.
     </p>
     <button class="primary" id="exe-picker-add-btn" onclick="doAddToSteam()">Add to Steam</button>
-    <button onclick="closeModal('exe-picker-modal')">Skip</button>
+    <button onclick="closeExePicker()">Skip</button>
   </div>
 </div>
 
@@ -1002,7 +1002,7 @@ async function pollStatus() {
         if (a.stage === 'extracting') {
           setStatus('Extracting ' + a.item + '…');
         } else {
-          const pct = a.total > 0 ? Math.round(a.percent || 0) + '%  (' + fmt(a.bytes) + ' / ' + fmt(a.total) + ')' : fmt(a.bytes) + ' received…';
+          const pct = a.total > 0 ? Math.round(a.percent || 0) + '%  (' + fmt(a.bytes) + ' / ' + fmt(a.total) + ')' : (a.bytes > 0 ? fmt(a.bytes) + ' received…' : 'Starting…');
           setStatus('Transferring ' + a.item + ': ' + pct);
         }
       } else {
@@ -1648,6 +1648,11 @@ async function openExePicker(itemName) {
   }
 }
 
+function closeExePicker() {
+  closeModal('exe-picker-modal');
+  loadPCGamesPanes();
+}
+
 async function doAddToSteam() {
   const name = document.getElementById('exe-picker-name').value.trim();
   const sel  = document.querySelector('#exe-list input[type=radio]:checked');
@@ -1662,7 +1667,7 @@ async function doAddToSteam() {
     });
     document.getElementById('exe-picker-warn').style.display = '';
     setStatus('Steam shortcut created for "' + name + '". Restart Steam to see it.');
-    setTimeout(() => closeModal('exe-picker-modal'), 2800);
+    setTimeout(() => closeExePicker(), 2800);
   } catch (e) { setStatus('Failed to add shortcut: ' + e.message, true); }
 }
 
@@ -1860,10 +1865,16 @@ function toggleTheme() {
 
 // Close on backdrop / Escape
 document.querySelectorAll('.modal-bg').forEach(bg => {
-  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
+  bg.addEventListener('click', e => {
+    if (e.target !== bg) return;
+    if (bg.id === 'exe-picker-modal') { closeExePicker(); } else { bg.classList.remove('open'); }
+  });
 });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') document.querySelectorAll('.modal-bg.open').forEach(m => m.classList.remove('open'));
+  if (e.key !== 'Escape') return;
+  const open = document.querySelector('.modal-bg.open');
+  if (!open) return;
+  if (open.id === 'exe-picker-modal') { closeExePicker(); } else { open.classList.remove('open'); }
 });
 
 init();
