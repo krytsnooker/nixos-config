@@ -19,7 +19,7 @@ import (
 	"sync/atomic"
 )
 
-const version = "1.6"
+const version = "1.7"
 
 var reTimestamp = regexp.MustCompile(`_\d{8}-\d{6}$`)
 
@@ -871,7 +871,9 @@ func (a *Agent) doPCTransfer(job TransferJob, at *ActiveTransfer) error {
 	// HEAD is best-effort — folder zips have no Content-Length
 	if headResp, err := http.Head(fileURL); err == nil {
 		headResp.Body.Close()
-		at.Total = headResp.ContentLength
+		if headResp.ContentLength > 0 {
+			at.Total = headResp.ContentLength
+		}
 	}
 
 	resp, err := http.Get(fileURL)
@@ -882,7 +884,7 @@ func (a *Agent) doPCTransfer(job TransferJob, at *ActiveTransfer) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("server returned %d", resp.StatusCode)
 	}
-	if at.Total == 0 {
+	if at.Total == 0 && resp.ContentLength > 0 {
 		at.Total = resp.ContentLength
 	}
 
