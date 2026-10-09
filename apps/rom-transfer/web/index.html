@@ -676,25 +676,6 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
 </div>
 
 <!-- PC Game Saves modal -->
-<div class="modal-bg" id="pc-saves-modal" role="dialog" aria-modal="true">
-  <div class="modal" style="min-width:520px;max-width:92vw">
-    <h2 id="pc-saves-title">Saves</h2>
-    <label>Save folder</label>
-    <div style="display:flex;gap:0.5rem;align-items:center">
-      <input type="text" id="pc-saves-path" placeholder="e.g. C:\Users\you\AppData\Roaming\GameName" style="flex:1">
-      <button class="panel-btn" onclick="openBrowse(document.getElementById('pc-saves-path'))">Browse</button>
-    </div>
-    <div style="display:flex;gap:0.5rem;margin-top:0.8rem">
-      <button class="primary" onclick="pcGameSavesBackup()">Backup now</button>
-      <button onclick="closeModal('pc-saves-modal')">Close</button>
-    </div>
-    <div id="pc-saves-list-section" style="margin-top:1.2rem">
-      <label>Backups on server</label>
-      <div id="pc-saves-list" style="margin-top:0.4rem;font-size:0.82rem;color:var(--text-faint)">Loading…</div>
-    </div>
-    <p id="pc-saves-status" style="font-size:0.82rem;margin:0.5rem 0 0;min-height:1.2em"></p>
-  </div>
-</div>
 
 <!-- JSON import file input (hidden) -->
 <input type="file" id="json-import-input" accept=".json,application/json" style="display:none">
@@ -1825,92 +1806,6 @@ async function doAddToSteam() {
     setStatus('Steam shortcut created for "' + name + '". Restart Steam to see it.');
     setTimeout(() => closeExePicker(), 2800);
   } catch (e) { setStatus('Failed to add shortcut: ' + e.message, true); }
-}
-
-// ── PC Game Saves ─────────────────────────────────────────────────────────────
-
-let _pcSavesGame = null;
-
-async function openPCGameSaves(gameName) {
-  _pcSavesGame = gameName;
-  document.getElementById('pc-saves-title').textContent = gameName + ' — Saves';
-  document.getElementById('pc-saves-status').textContent = '';
-  document.getElementById('pc-saves-path').value = '';
-  document.getElementById('pc-saves-list').textContent = 'Loading…';
-  openModal('pc-saves-modal');
-
-  // Load configured save path
-  try {
-    const r = await fetch(AGENT + '/games/saves/config?name=' + encodeURIComponent(gameName));
-    if (r.ok) {
-      const d = await r.json();
-      document.getElementById('pc-saves-path').value = d.path || '';
-    }
-  } catch (e) {}
-
-  // Load server backup list
-  await loadPCGameSavesList(gameName);
-}
-
-async function loadPCGameSavesList(gameName) {
-  const el = document.getElementById('pc-saves-list');
-  try {
-    const r = await fetch('/api/saves?console=PCGames');
-    if (!r.ok) { el.textContent = 'Cannot load backups.'; return; }
-    const all = await r.json() || [];
-    const mine = all.filter(s => s.game === gameName);
-    if (mine.length === 0) { el.textContent = 'No backups yet.'; return; }
-    el.innerHTML = '';
-    for (const s of mine.sort((a,b) => b.name.localeCompare(a.name))) {
-      const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:0.5rem;padding:0.3rem 0;border-bottom:1px solid var(--border)';
-      const label = document.createElement('span');
-      label.style.flex = '1';
-      label.textContent = s.name + '  (' + fmt(s.size) + ')';
-      const btn = document.createElement('button');
-      btn.className = 'panel-btn'; btn.textContent = 'Restore';
-      btn.addEventListener('click', () => pcGameSavesRestore(s.name));
-      row.appendChild(label); row.appendChild(btn);
-      el.appendChild(row);
-    }
-  } catch (e) { el.textContent = 'Error: ' + e.message; }
-}
-
-async function pcGameSavesBackup() {
-  const path = document.getElementById('pc-saves-path').value.trim();
-  const statusEl = document.getElementById('pc-saves-status');
-  if (!path) { statusEl.textContent = 'Enter a save folder path first.'; return; }
-
-  // Save the path config first
-  await fetch(AGENT + '/games/saves/config?name=' + encodeURIComponent(_pcSavesGame), {
-    method: 'PUT',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({path})
-  });
-
-  statusEl.textContent = 'Backing up…';
-  try {
-    await apiFetch(AGENT + '/games/saves/backup', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({name: _pcSavesGame})
-    });
-    statusEl.textContent = 'Backup complete.';
-    await loadPCGameSavesList(_pcSavesGame);
-  } catch (e) { statusEl.textContent = 'Backup failed: ' + e.message; }
-}
-
-async function pcGameSavesRestore(filename) {
-  const statusEl = document.getElementById('pc-saves-status');
-  statusEl.textContent = 'Restoring…';
-  try {
-    await apiFetch(AGENT + '/games/saves/restore', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({name: _pcSavesGame, file: filename})
-    });
-    statusEl.textContent = 'Restored successfully.';
-  } catch (e) { statusEl.textContent = 'Restore failed: ' + e.message; }
 }
 
 // ── Game Launcher panel ───────────────────────────────────────────────────────

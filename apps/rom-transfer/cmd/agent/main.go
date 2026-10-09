@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/zip"
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -22,7 +21,7 @@ import (
 	"time"
 )
 
-const version = "1.15"
+const version = "1.16"
 
 const maxLogEntries = 500
 
@@ -74,7 +73,6 @@ type Config struct {
 	Roms          map[string]string `json:"roms"`
 	Saves         map[string]string `json:"saves"`
 	Games         map[string]string `json:"games"`
-	GameSaves     map[string]string `json:"game_saves,omitempty"`
 	SteamPath     string            `json:"steam_path"`
 	SteamProfiles map[string]string `json:"steam_profiles"`
 }
@@ -325,9 +323,7 @@ func (a *Agent) handleConfig(w http.ResponseWriter, r *http.Request) {
 		if len(cfg.SteamProfiles) == 0 {
 			cfg.SteamProfiles = a.cfg.SteamProfiles
 		}
-		if len(cfg.GameSaves) == 0 {
-			cfg.GameSaves = a.cfg.GameSaves
-		}
+
 		a.mu.RUnlock()
 		if cfg.SteamProfiles == nil {
 			cfg.SteamProfiles = map[string]string{}
@@ -965,180 +961,6 @@ func (a *Agent) handleSavesCopyOut(w http.ResponseWriter, r *http.Request) {
 
 // ── PC game saves ────────────────────────────────────────────────────────────
 
-func (a *Agent) handlePCGameSavesBackup(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	var req struct {
-		Name string `json:"name"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	a.mu.RLock()
-	cfg := a.cfg
-	a.mu.RUnlock()
-
-	savePath := cfg.GameSaves[req.Name]
-	if savePath == "" {
-		http.Error(w, "no save path configured for "+req.Name, http.StatusBadRequest)
-		return
-	}
-
-	var buf bytes.Buffer
-	zw := zip.NewWriter(&buf)
-	err := filepath.Walk(savePath, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info.IsDir() {
-			return err
-		}
-		rel, _ := filepath.Rel(savePath, path)
-		fw, err := zw.Create(rel)
-		if err != nil {
-			return err
-		}
-		f, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
-		_, err = io.Copy(fw, f)
-		return err
-	})
-	zw.Close()
-	if err != nil {
-		http.Error(w, "zip failed: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	filename := req.Name + "_" + time.Now().Format("20060102-150405") + ".zip"
-	uploadURL := cfg.ServerURL + "/api/saves/upload?console=PCGames&file=" + url.QueryEscape(filename) + "&game=" + url.QueryEscape(req.Name)
-	resp, err := http.Post(uploadURL, "application/zip", &buf)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent {
-		body, _ := io.ReadAll(resp.Body)
-		http.Error(w, fmt.Sprintf("server %d: %s", resp.StatusCode, body), http.StatusInternalServerError)
-		return
-	}
-	log.Printf("save backed up: %s → %s", req.Name, filename)
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func (a *Agent) handlePCGameSavesRestore(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	var req struct {
-		Name string `json:"name"`
-		File string `json:"file"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	if !safeFilename(req.File) {
-		http.Error(w, "invalid filename", http.StatusBadRequest)
-		return
-	}
-	a.mu.RLock()
-	cfg := a.cfg
-	a.mu.RUnlock()
-
-	savePath := cfg.GameSaves[req.Name]
-	if savePath == "" {
-		http.Error(w, "no save path configured for "+req.Name, http.StatusBadRequest)
-		return
-	}
-
-	dlURL := cfg.ServerURL + "/api/saves/download?console=PCGames&file=" + url.QueryEscape(req.File)
-	resp, err := http.Get(dlURL)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		http.Error(w, fmt.Sprintf("server returned %d", resp.StatusCode), http.StatusInternalServerError)
-		return
-	}
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
-	if err != nil {
-		http.Error(w, "bad zip: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	os.MkdirAll(savePath, 0755)
-	for _, f := range zr.File {
-		dest := filepath.Join(savePath, f.Name)
-		if f.FileInfo().IsDir() {
-			os.MkdirAll(dest, 0755)
-			continue
-		}
-		os.MkdirAll(filepath.Dir(dest), 0755)
-		out, err := os.Create(dest)
-		if err != nil {
-			continue
-		}
-		rc, _ := f.Open()
-		io.Copy(out, rc)
-		rc.Close()
-		out.Close()
-	}
-	log.Printf("save restored: %s ← %s", req.Name, req.File)
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// handlePCGameSavesConfig handles GET (read save path) and PUT (set save path) for a game.
-func (a *Agent) handlePCGameSavesConfig(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Query().Get("name")
-	if name == "" {
-		http.Error(w, "name required", http.StatusBadRequest)
-		return
-	}
-	switch r.Method {
-	case http.MethodGet:
-		a.mu.RLock()
-		path := a.cfg.GameSaves[name]
-		a.mu.RUnlock()
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"path": path})
-	case http.MethodPut:
-		var body struct {
-			Path string `json:"path"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		a.mu.Lock()
-		if a.cfg.GameSaves == nil {
-			a.cfg.GameSaves = map[string]string{}
-		}
-		a.cfg.GameSaves[name] = body.Path
-		cfg := a.cfg
-		a.mu.Unlock()
-		if err := a.writeConfig(cfg); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusNoContent)
-	default:
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
 // ── Transfer worker ───────────────────────────────────────────────────────────
 
 func (a *Agent) runWorker() {
@@ -1486,9 +1308,6 @@ func main() {
 	mux.HandleFunc("/update",          a.cors(a.handleUpdate))
 	mux.HandleFunc("/games",              a.cors(a.handleGames))
 	mux.HandleFunc("/games/exes",         a.cors(a.handleGamesExes))
-	mux.HandleFunc("/games/saves/config", a.cors(a.handlePCGameSavesConfig))
-	mux.HandleFunc("/games/saves/backup", a.cors(a.handlePCGameSavesBackup))
-	mux.HandleFunc("/games/saves/restore",a.cors(a.handlePCGameSavesRestore))
 	mux.HandleFunc("/steam/accounts",  a.cors(a.handleSteamAccounts))
 	mux.HandleFunc("/steam/shortcut",  a.cors(a.handleSteamShortcut))
 	mux.HandleFunc("/logs",            a.cors(a.handleLogs))
