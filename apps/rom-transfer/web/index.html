@@ -1534,6 +1534,7 @@ async function loadAgentStatus() {
       tbody.appendChild(row('Up to date', upToDate ? 'Yes' : 'No — click "Update agent" in header', upToDate));
     }
     tbody.appendChild(row('Address', AGENT));
+    if (health.exe_path) tbody.appendChild(row('Exe path', health.exe_path));
     const cfgRes = await fetch(AGENT + '/config');
     if (cfgRes.ok) {
       const cfg = await cfgRes.json();

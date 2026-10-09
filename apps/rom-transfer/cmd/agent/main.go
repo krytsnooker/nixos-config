@@ -277,8 +277,13 @@ func loopbackOrigin(origin string) bool {
 }
 
 func (a *Agent) handleHealth(w http.ResponseWriter, r *http.Request) {
+	exe, _ := os.Executable()
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"status":"ok","version":%q}`, version)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":   "ok",
+		"version":  version,
+		"exe_path": exe,
+	})
 }
 
 func (a *Agent) handleLogs(w http.ResponseWriter, r *http.Request) {
