@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "1.13"
+const version = "1.14"
 
 const maxLogEntries = 500
 
@@ -852,6 +852,68 @@ func (a *Agent) handleSavesPull(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (a *Agent) handleSavesPullTo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Console string `json:"console"`
+		File    string `json:"file"`
+		Dest    string `json:"dest"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if !safeFilename(req.File) {
+		http.Error(w, "invalid filename", http.StatusBadRequest)
+		return
+	}
+	if req.Dest == "" {
+		http.Error(w, "dest required", http.StatusBadRequest)
+		return
+	}
+	a.mu.RLock()
+	serverURL := a.cfg.ServerURL
+	a.mu.RUnlock()
+	dlURL := serverURL + "/api/saves/download?console=" + url.QueryEscape(req.Console) + "&file=" + url.QueryEscape(req.File)
+	resp, err := http.Get(dlURL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Sprintf("server returned %d", resp.StatusCode), http.StatusInternalServerError)
+		return
+	}
+	if err := os.MkdirAll(req.Dest, 0755); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	dest := filepath.Join(req.Dest, stripTimestamp(req.File))
+	tmp := dest + ".tmp"
+	f, err := os.Create(tmp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if _, err := io.Copy(f, resp.Body); err != nil {
+		f.Close(); os.Remove(tmp)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	f.Close()
+	if err := os.Rename(tmp, dest); err != nil {
+		os.Remove(tmp)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Printf("save pull-to: %s → %s", req.File, dest)
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (a *Agent) handleSavesCopyIn(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -1484,6 +1546,7 @@ func main() {
 	mux.HandleFunc("/saves",           a.cors(a.handleSaves))
 	mux.HandleFunc("/saves/push",      a.cors(a.handleSavesPush))
 	mux.HandleFunc("/saves/pull",      a.cors(a.handleSavesPull))
+	mux.HandleFunc("/saves/pull-to",   a.cors(a.handleSavesPullTo))
 	mux.HandleFunc("/saves/copy-in",   a.cors(a.handleSavesCopyIn))
 	mux.HandleFunc("/saves/copy-out",  a.cors(a.handleSavesCopyOut))
 	mux.HandleFunc("/scan",            a.cors(a.handleScan))
