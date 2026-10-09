@@ -229,7 +229,13 @@ func (a *Agent) writeConfig(cfg Config) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(a.configPath, data, 0600)
+	err = os.WriteFile(a.configPath, data, 0600)
+	if err != nil {
+		log.Printf("config save FAILED: %s — %v", a.configPath, err)
+	} else {
+		log.Printf("config saved: %s", a.configPath)
+	}
+	return err
 }
 
 // cors wraps a handler with CORS and Private Network Access headers.
