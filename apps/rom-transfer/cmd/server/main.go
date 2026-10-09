@@ -21,6 +21,7 @@ import (
 type Console struct {
 	Name       string `json:"name"`
 	ServerPath string `json:"server_path"`
+	SavesPath  string `json:"saves_path,omitempty"`
 	Type       string `json:"type,omitempty"` // "pc" or "" (rom)
 }
 
@@ -471,10 +472,18 @@ func (s *Server) handleDownload(w http.ResponseWriter, r *http.Request) {
 func (s *Server) savesDir(console string) (string, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if s.cfg.SavesPath == "" || console == "" {
+	if console == "" {
 		return "", false
 	}
-	return filepath.Join(s.cfg.SavesPath, console), true
+	for _, c := range s.cfg.Consoles {
+		if c.Name == console && c.SavesPath != "" {
+			return c.SavesPath, true
+		}
+	}
+	if s.cfg.SavesPath != "" {
+		return filepath.Join(s.cfg.SavesPath, console), true
+	}
+	return "", false
 }
 
 func (s *Server) handleSaves(w http.ResponseWriter, r *http.Request) {

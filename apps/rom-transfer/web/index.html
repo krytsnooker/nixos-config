@@ -1322,7 +1322,7 @@ async function saveConsolesPanel() {
     if (name && path) consolList.push({name, type: sel ? sel.value : '', server_path: path, saves_path: inputs[2].value.trim()});
   }
   try {
-    await apiFetch('/api/hostconfig', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({consoles: consolList, saves_path: ''}) });
+    await apiFetch('/api/hostconfig', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({consoles: consolList}) });
     setStatus('Consoles saved.');
     await loadConsoles();
   } catch (e) { setStatus('Save failed: ' + e.message, true); }
