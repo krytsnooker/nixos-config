@@ -179,8 +179,10 @@ func newAgent(configPath string) *Agent {
 }
 
 func (a *Agent) loadConfig() {
+	log.Printf("config path: %s", a.configPath)
 	data, err := os.ReadFile(a.configPath)
 	if err != nil {
+		log.Printf("config not found (%v), using defaults", err)
 		a.cfg = Config{
 			Roms:          map[string]string{},
 			Saves:         map[string]string{},
@@ -189,6 +191,7 @@ func (a *Agent) loadConfig() {
 		}
 		return
 	}
+	log.Printf("config loaded (%d bytes)", len(data))
 	// migration: old config had a flat "destinations" field
 	var raw map[string]json.RawMessage
 	var cfg Config
