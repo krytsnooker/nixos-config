@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "1.12"
+const version = "1.13"
 
 const maxLogEntries = 500
 
@@ -683,15 +683,18 @@ func (a *Agent) handleBrowse(w http.ResponseWriter, r *http.Request) {
 	if path == "" {
 		path = defaultBrowseRoot()
 	}
+	showFiles := r.URL.Query().Get("files") == "true"
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	var dirs []string
+	var dirs, files []string
 	for _, e := range entries {
 		if e.IsDir() {
 			dirs = append(dirs, filepath.Join(path, e.Name()))
+		} else if showFiles {
+			files = append(files, e.Name())
 		}
 	}
 	if dirs == nil {
@@ -700,12 +703,22 @@ func (a *Agent) handleBrowse(w http.ResponseWriter, r *http.Request) {
 	sort.Slice(dirs, func(i, j int) bool {
 		return strings.ToLower(dirs[i]) < strings.ToLower(dirs[j])
 	})
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if files == nil {
+		files = []string{}
+	}
+	sort.Slice(files, func(i, j int) bool {
+		return strings.ToLower(files[i]) < strings.ToLower(files[j])
+	})
+	resp := map[string]interface{}{
 		"path":   path,
 		"parent": filepath.Dir(path),
 		"dirs":   dirs,
-	})
+	}
+	if showFiles {
+		resp["files"] = files
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }
 
 // ── Saves ─────────────────────────────────────────────────────────────────────
@@ -831,6 +844,121 @@ func (a *Agent) handleSavesPull(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a *Agent) handleSavesCopyIn(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Console string `json:"console"`
+		Src     string `json:"src"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if req.Src == "" {
+		http.Error(w, "src required", http.StatusBadRequest)
+		return
+	}
+	a.mu.RLock()
+	folder := a.cfg.Saves[req.Console]
+	a.mu.RUnlock()
+	if folder == "" {
+		folder = defaultDownloadsDir()
+	}
+	if err := os.MkdirAll(folder, 0755); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	src, err := os.Open(req.Src)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer src.Close()
+	dest := filepath.Join(folder, filepath.Base(req.Src))
+	tmp := dest + ".tmp"
+	f, err := os.Create(tmp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if _, err := io.Copy(f, src); err != nil {
+		f.Close(); os.Remove(tmp)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	f.Close()
+	if err := os.Rename(tmp, dest); err != nil {
+		os.Remove(tmp)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Printf("save copy-in: %s → %s", req.Src, dest)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a *Agent) handleSavesCopyOut(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Console string `json:"console"`
+		File    string `json:"file"`
+		Dest    string `json:"dest"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if !safeFilename(req.File) {
+		http.Error(w, "invalid filename", http.StatusBadRequest)
+		return
+	}
+	if req.Dest == "" {
+		http.Error(w, "dest required", http.StatusBadRequest)
+		return
+	}
+	a.mu.RLock()
+	folder := a.cfg.Saves[req.Console]
+	a.mu.RUnlock()
+	if folder == "" {
+		folder = defaultDownloadsDir()
+	}
+	src, err := os.Open(filepath.Join(folder, req.File))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer src.Close()
+	if err := os.MkdirAll(req.Dest, 0755); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	dest := filepath.Join(req.Dest, req.File)
+	tmp := dest + ".tmp"
+	f, err := os.Create(tmp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if _, err := io.Copy(f, src); err != nil {
+		f.Close(); os.Remove(tmp)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	f.Close()
+	if err := os.Rename(tmp, dest); err != nil {
+		os.Remove(tmp)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Printf("save copy-out: %s → %s", req.File, dest)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1351,6 +1479,8 @@ func main() {
 	mux.HandleFunc("/saves",           a.cors(a.handleSaves))
 	mux.HandleFunc("/saves/push",      a.cors(a.handleSavesPush))
 	mux.HandleFunc("/saves/pull",      a.cors(a.handleSavesPull))
+	mux.HandleFunc("/saves/copy-in",   a.cors(a.handleSavesCopyIn))
+	mux.HandleFunc("/saves/copy-out",  a.cors(a.handleSavesCopyOut))
 	mux.HandleFunc("/scan",            a.cors(a.handleScan))
 	mux.HandleFunc("/update",          a.cors(a.handleUpdate))
 	mux.HandleFunc("/games",              a.cors(a.handleGames))

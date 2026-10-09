@@ -433,6 +433,7 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
         <div class="pane">
           <div class="pane-heading">
             <h2>Local Saves</h2>
+            <button class="panel-btn" onclick="addNewSave()" style="margin-left:auto;margin-right:0.4rem">Add new save</button>
             <button class="legend-btn" onclick="toggleLegend('legend-local', this)">?</button>
           </div>
           <div class="disk-info" id="saves-local-info">&nbsp;</div>
@@ -454,7 +455,7 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
     <!-- ── Consoles ── -->
     <div id="view-consoles" class="config-panel" style="display:none">
       <h2>Consoles</h2>
-      <p class="panel-desc">Server-side paths and console types. ROM console names must match entries in File Types. PC Games consoles use a folder-per-game layout instead of ROM files.</p>
+      <p class="panel-desc">Server-side paths and console types. ROM console names must match entries in File Types. PC Games consoles use a folder-per-game layout instead of ROM files. Set the saves path to enable save backups for PC games.</p>
       <div class="json-toolbar">
         <span class="json-toolbar-label">JSON</span>
         <button class="panel-btn" onclick="exportJSON('consoles')">Export</button>
@@ -633,11 +634,11 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
 <!-- Browse modal -->
 <div class="modal-bg" id="browse-modal" role="dialog" aria-modal="true">
   <div class="modal">
-    <h2>Select Folder</h2>
+    <h2 id="browse-modal-title">Select Folder</h2>
     <div class="browse-path" id="browse-current-path"></div>
     <ul class="browse-list" id="browse-list"></ul>
     <div class="browse-actions">
-      <button class="primary" onclick="browseSelect()">Select this folder</button>
+      <button class="primary" id="browse-select-btn" onclick="browseSelect()">Select this folder</button>
       <button onclick="closeModal('browse-modal')">Cancel</button>
     </div>
   </div>
@@ -749,6 +750,7 @@ function setView(view) {
 
 function setConsoleView(consoleName) {
   currentConsole = consoleName;
+  setStatus('Ready.');
   const consoleObj = consoles.find(c => c.name === consoleName);
   const isPCGames  = consoleObj && consoleObj.type === 'pc';
 
@@ -921,10 +923,15 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+let _statusTimer = null;
 function setStatus(msg, isError) {
   const el = document.getElementById('status-bar');
   el.textContent = msg;
   el.className = isError ? 'error' : '';
+  clearTimeout(_statusTimer);
+  if (!isError && msg !== 'Ready.') {
+    _statusTimer = setTimeout(() => { el.textContent = 'Ready.'; el.className = ''; }, 4000);
+  }
 }
 
 function openModal(id) { document.getElementById(id).classList.add('open'); }
@@ -1183,10 +1190,14 @@ async function loadSavesPanes() {
     const btn = document.createElement('button');
     btn.className = 'action primary'; btn.textContent = 'Push';
     btn.addEventListener('click', e => { e.stopPropagation(); openPushModal(f.name); });
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'action'; copyBtn.textContent = 'Copy to';
+    copyBtn.addEventListener('click', e => { e.stopPropagation(); saveCopyOut(f.name); });
     const ind = makeInd(indCls, tipText);
     tr.innerHTML = '<td class="name-cell"></td><td class="size-cell">' + fmt(f.size) + '</td><td class="btn-cell"></td>';
     tr.cells[0].appendChild(ind); tr.cells[0].appendChild(document.createTextNode(f.name));
     tr.lastChild.appendChild(btn);
+    tr.lastChild.appendChild(copyBtn);
     tr.addEventListener('click', () => selectSaveRow(base, f.hash || ''));
     localTbody.appendChild(tr);
   }
@@ -1275,6 +1286,27 @@ async function pullSave(filename) {
   } catch (e) { setStatus('Pull failed: ' + e.message, true); }
 }
 
+function addNewSave() {
+  openBrowseForFile(async (src) => {
+    try {
+      setStatus('Copying…');
+      await apiFetch(AGENT + '/saves/copy-in', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({console: currentConsole, src}) });
+      setStatus('Added: ' + src.replace(/\\/g, '/').split('/').pop());
+      loadSavesPanes();
+    } catch (e) { setStatus('Copy failed: ' + e.message, true); }
+  });
+}
+
+function saveCopyOut(filename) {
+  openBrowseForFolder(async (dest) => {
+    try {
+      setStatus('Copying…');
+      await apiFetch(AGENT + '/saves/copy-out', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({console: currentConsole, file: filename, dest}) });
+      setStatus('Copied to: ' + dest);
+    } catch (e) { setStatus('Copy failed: ' + e.message, true); }
+  });
+}
+
 // ── Consoles panel ────────────────────────────────────────────────────────────
 
 async function loadConsolesPanel() {
@@ -1298,16 +1330,13 @@ function addConsoleRow(name, type, path, savesPath) {
   tr.innerHTML = '<td><input type="text" value="' + esc(name) + '" placeholder="PS2"></td>' +
                  '<td><select>' + typeOpts + '</select></td>' +
                  '<td><input type="text" value="' + esc(path) + '" placeholder="/mnt/server-pc/Games/PS2"></td>' +
-                 '<td><input type="text" value="' + esc(isPc ? '' : (savesPath || '')) + '" placeholder="' + (isPc ? 'N/A for PC Games' : '/mnt/server-pc/Saves/PS2') + '" ' + (isPc ? 'disabled style="opacity:0.35"' : '') + '></td>' +
+                 '<td><input type="text" value="' + esc(savesPath || '') + '" placeholder="' + (isPc ? '/mnt/server-pc/Saves/PCGames' : '/mnt/server-pc/Saves/PS2') + '"></td>' +
                  '<td><button class="panel-btn danger" onclick="this.closest(\'tr\').remove()">Remove</button></td>';
   const sel = tr.querySelector('select');
   const savesInp = tr.querySelectorAll('input')[2];
   sel.addEventListener('change', () => {
     const pc = sel.value === 'pc';
-    savesInp.disabled    = pc;
-    savesInp.style.opacity = pc ? '0.35' : '';
-    savesInp.placeholder = pc ? 'N/A for PC Games' : '/mnt/server-pc/Saves/PS2';
-    if (pc) savesInp.value = '';
+    savesInp.placeholder = pc ? '/mnt/server-pc/Saves/PCGames' : '/mnt/server-pc/Saves/PS2';
   });
   document.getElementById('consoles-rows').appendChild(tr);
 }
@@ -1712,6 +1741,17 @@ async function openExePicker(itemName) {
   document.getElementById('exe-picker-add-btn').style.display = '';
   document.querySelector('#exe-picker-modal button[onclick="closeExePicker()"]').style.display = '';
 
+  if (!steamConfig.path) {
+    try {
+      const r = await fetch(AGENT + '/config');
+      if (r.ok) {
+        const cfg = await r.json();
+        steamConfig.path     = cfg.steam_path     || 'C:\\Program Files (x86)\\Steam';
+        steamConfig.profiles = cfg.steam_profiles || {};
+      }
+    } catch (e) { /* agent unreachable */ }
+  }
+
   const steamReady = !!(steamConfig.path && steamConfig.profiles[currentConsole]);
   document.getElementById('exe-picker-no-steam').style.display = steamReady ? 'none' : '';
   document.getElementById('exe-picker-add-btn').disabled = !steamReady;
@@ -2006,16 +2046,45 @@ function importJSON(panel) {
 // ── Folder browser ────────────────────────────────────────────────────────────
 
 let browseTargetInput = null;
+let browseFileMode = false;
+let browseCallback = null;
 
 function openBrowse(targetInput) {
   browseTargetInput = targetInput;
+  browseFileMode = false;
+  browseCallback = null;
+  document.getElementById('browse-modal-title').textContent = 'Select Folder';
+  document.getElementById('browse-select-btn').textContent = 'Select this folder';
+  browseTo('');
+  openModal('browse-modal');
+}
+
+function openBrowseForFile(callback) {
+  browseTargetInput = null;
+  browseFileMode = true;
+  browseCallback = callback;
+  document.getElementById('browse-modal-title').textContent = 'Select File';
+  document.getElementById('browse-select-btn').style.display = 'none';
+  browseTo('');
+  openModal('browse-modal');
+}
+
+function openBrowseForFolder(callback) {
+  browseTargetInput = null;
+  browseFileMode = false;
+  browseCallback = callback;
+  document.getElementById('browse-modal-title').textContent = 'Select Folder';
+  document.getElementById('browse-select-btn').textContent = 'Select this folder';
+  document.getElementById('browse-select-btn').style.display = '';
   browseTo('');
   openModal('browse-modal');
 }
 
 async function browseTo(path) {
   try {
-    const r = await apiFetch(AGENT + '/browse' + (path ? '?path=' + encodeURIComponent(path) : ''));
+    let url = AGENT + '/browse' + (path ? '?path=' + encodeURIComponent(path) : '');
+    if (browseFileMode) url += (path ? '&' : '?') + 'files=true';
+    const r = await apiFetch(url);
     const data = await r.json();
     document.getElementById('browse-current-path').textContent = data.path;
     const list = document.getElementById('browse-list');
@@ -2033,11 +2102,28 @@ async function browseTo(path) {
       btn.addEventListener('click', () => browseTo(dir));
       li.appendChild(btn); list.appendChild(li);
     }
+    if (browseFileMode) {
+      for (const file of (data.files || [])) {
+        const li = document.createElement('li');
+        const btn = document.createElement('button');
+        btn.innerHTML = '📄 ' + esc(file);
+        btn.style.fontWeight = 'normal';
+        const fullPath = (data.path.endsWith('\\') || data.path.endsWith('/') ? data.path : data.path + (data.path.includes('\\') ? '\\' : '/')) + file;
+        btn.addEventListener('click', () => {
+          closeModal('browse-modal');
+          if (browseCallback) browseCallback(fullPath);
+        });
+        li.appendChild(btn); list.appendChild(li);
+      }
+    }
   } catch (e) { setStatus('Browse failed: ' + e.message, true); }
 }
 
 function browseSelect() {
-  if (browseTargetInput) browseTargetInput.value = document.getElementById('browse-current-path').textContent;
+  const path = document.getElementById('browse-current-path').textContent;
+  if (browseTargetInput) browseTargetInput.value = path;
+  if (browseCallback) browseCallback(path);
+  document.getElementById('browse-select-btn').style.display = '';
   closeModal('browse-modal');
 }
 
