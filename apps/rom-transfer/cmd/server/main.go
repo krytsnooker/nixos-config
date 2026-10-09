@@ -90,6 +90,42 @@ var defaultFileTypes = map[string]ConsoleFileTypes{
 	"Switch":    {Rom: []string{".nsp", ".xci", ".nsz"}, Save: []string{".sav", ".bin"}},
 }
 
+const maxLogEntries = 500
+
+type logEntry struct {
+	T   string `json:"t"`
+	Lvl string `json:"lvl"` // "ok", "fail", "info"
+	Msg string `json:"msg"`
+}
+
+type logBuffer struct {
+	mu      sync.Mutex
+	entries []logEntry
+}
+
+func (lb *logBuffer) Write(p []byte) (int, error) {
+	line := strings.TrimRight(string(p), "\n\r")
+	if line == "" {
+		return len(p), nil
+	}
+	lvl := "info"
+	upper := strings.ToUpper(line)
+	if strings.Contains(upper, "[OK]") {
+		lvl = "ok"
+	} else if strings.Contains(upper, "[FAIL]") || strings.Contains(upper, "FAILED") ||
+		strings.Contains(upper, "ERROR") || strings.Contains(upper, "FATAL") {
+		lvl = "fail"
+	}
+	e := logEntry{T: time.Now().Format("2006-01-02 15:04:05"), Lvl: lvl, Msg: line}
+	lb.mu.Lock()
+	lb.entries = append(lb.entries, e)
+	if len(lb.entries) > maxLogEntries {
+		lb.entries = lb.entries[len(lb.entries)-maxLogEntries:]
+	}
+	lb.mu.Unlock()
+	return len(p), nil
+}
+
 type Server struct {
 	mu            sync.RWMutex
 	cfg           HostConfig
@@ -97,6 +133,7 @@ type Server struct {
 	webDir        string
 	fileTypesPath string
 	scanPathsPath string
+	logs          *logBuffer
 }
 
 func main() {
@@ -106,11 +143,15 @@ func main() {
 	flag.Parse()
 
 	stateDir := filepath.Dir(*configPath)
+	lb := &logBuffer{}
+	log.SetOutput(io.MultiWriter(os.Stderr, lb))
+	log.SetFlags(0) // timestamps handled by logBuffer
 	s := &Server{
 		configPath:    *configPath,
 		webDir:        *webDir,
 		fileTypesPath: filepath.Join(stateDir, "filetypes.json"),
 		scanPathsPath: filepath.Join(stateDir, "scanpaths.json"),
+		logs:          lb,
 	}
 	if data, err := os.ReadFile(*configPath); err == nil {
 		json.Unmarshal(data, &s.cfg)
@@ -138,10 +179,21 @@ func main() {
 	mux.HandleFunc("/api/filetypes", s.lanOnly(s.handleFileTypes))
 	mux.HandleFunc("/api/scanpaths", s.lanOnly(s.handleScanPaths))
 	mux.HandleFunc("/api/agent-version", s.lanOnly(s.handleAgentVersion))
+	mux.HandleFunc("/api/logs", s.lanOnly(s.handleLogs))
 	mux.Handle("/", http.FileServer(http.Dir(*webDir)))
 
 	log.Printf("rom-transfer server on %s", *addr)
 	log.Fatal(http.ListenAndServe(*addr, mux))
+}
+
+type statusWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (sw *statusWriter) WriteHeader(code int) {
+	sw.status = code
+	sw.ResponseWriter.WriteHeader(code)
 }
 
 func (s *Server) lanOnly(next http.HandlerFunc) http.HandlerFunc {
@@ -156,7 +208,28 @@ func (s *Server) lanOnly(next http.HandlerFunc) http.HandlerFunc {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
-		next(w, r)
+
+		sw := &statusWriter{ResponseWriter: w, status: 200}
+		start := time.Now()
+		next(sw, r)
+		dur := time.Since(start).Round(time.Millisecond)
+
+		// Only log mutating or download requests — skip noisy polling endpoints.
+		path := r.URL.Path
+		skip := path == "/api/consoles" || path == "/api/files" || path == "/api/pcgames" ||
+			path == "/api/hostconfig" || path == "/api/filetypes" || path == "/api/scanpaths" ||
+			path == "/api/agent-version" || path == "/api/saves"
+		if !skip {
+			q := r.URL.RawQuery
+			if q != "" {
+				q = "?" + q
+			}
+			result := "OK"
+			if sw.status >= 400 {
+				result = "FAIL"
+			}
+			log.Printf("[%s] %s %s%s %d %s (%s)", result, r.Method, path, q, sw.status, host, dur)
+		}
 	}
 }
 
@@ -560,6 +633,15 @@ func (s *Server) handleFileTypes(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(ft)
+}
+
+func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
+	s.logs.mu.Lock()
+	entries := make([]logEntry, len(s.logs.entries))
+	copy(entries, s.logs.entries)
+	s.logs.mu.Unlock()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(entries)
 }
 
 func (s *Server) handleAgentVersion(w http.ResponseWriter, r *http.Request) {

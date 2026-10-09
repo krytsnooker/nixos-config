@@ -201,7 +201,6 @@ func writeVDF(items []*vdfItem) []byte {
 		switch item.typ {
 		case vdfTypeDict:
 			buf = append(buf, writeVDF(item.children)...)
-			buf = append(buf, vdfTypeEnd)
 		case vdfTypeString:
 			buf = append(buf, []byte(item.strVal)...)
 			buf = append(buf, 0)
@@ -256,6 +255,7 @@ func writeShortcuts(path string, entries []*vdfItem) error {
 	buf = append(buf, []byte("shortcuts")...)
 	buf = append(buf, 0)
 	buf = append(buf, inner...)
+	buf = append(buf, vdfTypeEnd) // root closing \x08
 
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
@@ -288,7 +288,7 @@ func AddSteamShortcut(steamPath, userID, name, exe, startDir string) error {
 			vdfInt("appid", appID),
 			vdfString("AppName", name),
 			vdfString("Exe", quotedExe),
-			vdfString("StartDir", "\""+startDir+"\""),
+			vdfString("StartDir", startDir),
 			vdfString("icon", ""),
 			vdfString("ShortcutPath", ""),
 			vdfString("LaunchOptions", ""),

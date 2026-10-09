@@ -132,32 +132,53 @@ func startServer(srv *http.Server, addr string) {
 		}
 		return
 	}
-	log.Printf("rom-agent v%s listening on %s", version, addr)
-	log.Fatal(srv.ListenAndServe())
+	selfInstall(addr)
 }
 
-func installService(exePath, addr string) error {
+func selfInstall(addr string) {
+	exe, err := os.Executable()
+	if err != nil {
+		log.Fatalf("cannot determine exe path: %v", err)
+	}
+
 	m, err := mgr.Connect()
 	if err != nil {
-		return fmt.Errorf("cannot connect to service manager: %w", err)
+		log.Fatalf("cannot connect to service manager — run as Administrator: %v", err)
 	}
 	defer m.Disconnect()
-	s, err := m.OpenService(svcName)
-	if err == nil {
+
+	// Stop and remove any existing installation.
+	if s, err := m.OpenService(svcName); err == nil {
+		log.Println("Stopping existing service...")
+		s.Control(svc.Stop)
+		for i := 0; i < 20; i++ {
+			if st, err := s.Query(); err != nil || st.State == svc.Stopped {
+				break
+			}
+			time.Sleep(500 * time.Millisecond)
+		}
+		s.Delete()
 		s.Close()
-		return fmt.Errorf("service %q already exists", svcName)
+		eventlog.Remove(svcName)
+		log.Println("Removed existing service.")
 	}
-	s, err = m.CreateService(svcName, exePath, mgr.Config{
+
+	s, err := m.CreateService(svcName, exe, mgr.Config{
 		DisplayName: svcDisplayName,
 		Description: svcDesc,
 		StartType:   mgr.StartAutomatic,
 	}, "-addr", addr)
 	if err != nil {
-		return fmt.Errorf("cannot create service: %w", err)
+		log.Fatalf("install failed: %v", err)
 	}
 	defer s.Close()
 	eventlog.InstallAsEventCreate(svcName, eventlog.Error|eventlog.Warning|eventlog.Info)
-	return nil
+
+	if err := s.Start(); err != nil {
+		log.Fatalf("service registered but failed to start: %v", err)
+	}
+	log.Printf("ROM Transfer Agent v%s installed and running on %s", version, addr)
+	log.Println("The service will start automatically on boot. You can close this window.")
 }
 
 func doUpdate(serverURL string) error {

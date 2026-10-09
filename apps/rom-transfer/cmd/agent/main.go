@@ -17,9 +17,47 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
-const version = "1.8"
+const version = "1.10"
+
+const maxLogEntries = 500
+
+type logEntry struct {
+	T   string `json:"t"`
+	Lvl string `json:"lvl"`
+	Msg string `json:"msg"`
+}
+
+type logBuffer struct {
+	mu      sync.Mutex
+	entries []logEntry
+}
+
+func (lb *logBuffer) Write(p []byte) (int, error) {
+	line := strings.TrimRight(string(p), "\n\r")
+	if line == "" {
+		return len(p), nil
+	}
+	lvl := "info"
+	upper := strings.ToUpper(line)
+	if strings.Contains(upper, "FAILED") || strings.Contains(upper, "ERROR") ||
+		strings.Contains(upper, "FATAL") {
+		lvl = "fail"
+	} else if strings.Contains(upper, "COMPLETE") || strings.Contains(upper, "INSTALLED") ||
+		strings.Contains(upper, "SHORTCUT ADDED") {
+		lvl = "ok"
+	}
+	e := logEntry{T: time.Now().Format("2006-01-02 15:04:05"), Lvl: lvl, Msg: line}
+	lb.mu.Lock()
+	lb.entries = append(lb.entries, e)
+	if len(lb.entries) > maxLogEntries {
+		lb.entries = lb.entries[len(lb.entries)-maxLogEntries:]
+	}
+	lb.mu.Unlock()
+	return len(p), nil
+}
 
 var reTimestamp = regexp.MustCompile(`_\d{8}-\d{6}$`)
 
@@ -123,12 +161,18 @@ type Agent struct {
 	queue  []TransferJob
 	active *ActiveTransfer
 	jobCh  chan struct{}
+
+	logs *logBuffer
 }
 
 func newAgent(configPath string) *Agent {
+	lb := &logBuffer{}
+	log.SetOutput(io.MultiWriter(os.Stderr, lb))
+	log.SetFlags(0)
 	a := &Agent{
 		configPath: configPath,
 		jobCh:      make(chan struct{}, 1),
+		logs:       lb,
 	}
 	a.loadConfig()
 	return a
@@ -215,6 +259,15 @@ func loopbackOrigin(origin string) bool {
 func (a *Agent) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintf(w, `{"status":"ok","version":%q}`, version)
+}
+
+func (a *Agent) handleLogs(w http.ResponseWriter, r *http.Request) {
+	a.logs.mu.Lock()
+	entries := make([]logEntry, len(a.logs.entries))
+	copy(entries, a.logs.entries)
+	a.logs.mu.Unlock()
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(entries)
 }
 
 func (a *Agent) handleConfig(w http.ResponseWriter, r *http.Request) {
@@ -764,6 +817,8 @@ func (a *Agent) runNextJob() {
 	a.active = at
 	a.qmu.Unlock()
 
+	label := job.Console + "/" + job.File + job.Item
+	log.Printf("transfer started: %s", label)
 	var err error
 	if job.Kind == "pc" {
 		err = a.doPCTransfer(job, at)
@@ -771,7 +826,9 @@ func (a *Agent) runNextJob() {
 		err = a.doTransfer(at)
 	}
 	if err != nil {
-		log.Printf("transfer %s/%s failed: %v", job.Console, job.File+job.Item, err)
+		log.Printf("transfer FAILED: %s — %v", label, err)
+	} else {
+		log.Printf("transfer complete: %s", label)
 	}
 
 	a.qmu.Lock()
@@ -1056,22 +1113,10 @@ func fmtBytes(b int64) string {
 }
 
 func main() {
-	addr    := flag.String("addr", "127.0.0.1:5031", "listen address")
-	install := flag.Bool("install", false, "install as a system service (Windows, run as administrator)")
-	uninst  := flag.Bool("uninstall", false, "uninstall the system service (Windows, run as administrator)")
+	addr   := flag.String("addr", "127.0.0.1:5031", "listen address")
+	uninst := flag.Bool("uninstall", false, "uninstall the system service (Windows, run as administrator)")
 	flag.Parse()
 
-	if *install {
-		exe, err := os.Executable()
-		if err != nil {
-			log.Fatalf("cannot determine executable path: %v", err)
-		}
-		if err := installService(exe, *addr); err != nil {
-			log.Fatalf("install failed: %v", err)
-		}
-		log.Println("Service installed. Start it with: sc start rom-agent")
-		return
-	}
 	if *uninst {
 		if err := uninstallService(); err != nil {
 			log.Fatalf("uninstall failed: %v", err)
@@ -1099,6 +1144,7 @@ func main() {
 	mux.HandleFunc("/games/exes",      a.cors(a.handleGamesExes))
 	mux.HandleFunc("/steam/accounts",  a.cors(a.handleSteamAccounts))
 	mux.HandleFunc("/steam/shortcut",  a.cors(a.handleSteamShortcut))
+	mux.HandleFunc("/logs",            a.cors(a.handleLogs))
 
 	srv := &http.Server{Addr: *addr, Handler: mux}
 	startServer(srv, *addr)

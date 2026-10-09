@@ -333,6 +333,8 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
 
 <header>
   <a class="back-link" href="http://homeserver:5000">← homeserver</a>
+  <span style="font-family:'IBM Plex Mono',monospace;font-size:0.85rem;font-weight:600;color:var(--text)">ROM Transfer</span>
+  <span style="font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--text-faint)">v2.0</span>
   <div class="hdr-spacer"></div>
   <button id="update-btn" class="update-btn" style="display:none" onclick="doAgentUpdate()">Update agent</button>
   <button onclick="toggleTheme()">theme</button>
@@ -373,6 +375,7 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
         <div class="nav-child" onclick="setView('game-data-paths')">Game Data Paths</div>
         <div class="nav-child" onclick="setView('game-launcher')">Game Launcher</div>
         <div class="nav-child" onclick="setView('agent-status')">Agent Status</div>
+        <div class="nav-child" onclick="setView('logs')">Logs</div>
       </div>
     </div>
 
@@ -580,9 +583,33 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
           <a class="panel-btn" href="/downloads/rom-agent.exe" download>Windows</a>
           <a class="panel-btn" href="/downloads/rom-agent-linux" download>Linux</a>
         </div>
+        <p class="panel-desc" style="margin-top:0.6rem">
+          <strong>Windows:</strong> move <code>rom-agent.exe</code> to a permanent folder
+          (e.g. <code>C:\rom-agent\</code>), then right-click it and choose
+          <em>Run as administrator</em>. It will install itself as a Windows service
+          that starts automatically at boot.
+        </p>
       </div>
       <div class="panel-actions">
         <button class="panel-btn primary" onclick="loadAgentStatus()">Refresh</button>
+      </div>
+    </div>
+
+    <!-- ── Logs ── -->
+    <div id="view-logs" class="config-panel" style="display:none">
+      <h2>Logs</h2>
+      <p class="panel-desc">Recent activity from the server and agent. Refreshes automatically every 3 seconds.</p>
+      <div class="panel-section">
+        <label class="panel-label">Server</label>
+        <div id="log-server" style="font-family:monospace;font-size:0.78rem;background:var(--bg2,#1a1a1a);border:1px solid var(--border,#333);border-radius:4px;padding:0.6rem;max-height:300px;overflow-y:auto"></div>
+      </div>
+      <div class="panel-section">
+        <label class="panel-label">Agent</label>
+        <div id="log-agent" style="font-family:monospace;font-size:0.78rem;background:var(--bg2,#1a1a1a);border:1px solid var(--border,#333);border-radius:4px;padding:0.6rem;max-height:300px;overflow-y:auto"></div>
+      </div>
+      <div class="panel-actions">
+        <button class="panel-btn primary" onclick="loadLogs()">Refresh</button>
+        <button class="panel-btn" onclick="clearLogView()">Clear view</button>
       </div>
     </div>
 
@@ -694,7 +721,9 @@ function setView(view) {
   if (view === 'emulator-paths')    loadScanPathsPanel();
   if (view === 'game-data-paths')   loadClientPanel();
   if (view === 'game-launcher')     loadGameLauncherPanel();
+  if (view !== 'logs')              stopLogPolling();
   if (view === 'agent-status')      loadAgentStatus();
+  if (view === 'logs')              startLogPolling();
 }
 
 function setConsoleView(consoleName) {
@@ -1478,6 +1507,51 @@ async function loadAgentStatus() {
     tbody.innerHTML = '';
     tbody.appendChild(row('Status', 'Unreachable — ' + e.message, false));
   }
+}
+
+// ── Logs panel ───────────────────────────────────────────────────────────────
+
+let _logPollTimer = null;
+
+function startLogPolling() {
+  loadLogs();
+  if (_logPollTimer) clearInterval(_logPollTimer);
+  _logPollTimer = setInterval(loadLogs, 3000);
+}
+
+function stopLogPolling() {
+  if (_logPollTimer) { clearInterval(_logPollTimer); _logPollTimer = null; }
+}
+
+async function loadLogs() {
+  await Promise.all([
+    fetchAndRenderLogs('/api/logs', 'log-server'),
+    fetchAndRenderLogs(AGENT + '/logs', 'log-agent'),
+  ]);
+}
+
+async function fetchAndRenderLogs(url, elId) {
+  const el = document.getElementById(elId);
+  try {
+    const res = await fetch(url);
+    if (!res.ok) { el.innerHTML = '<span style="color:var(--danger)">Error ' + res.status + '</span>'; return; }
+    const entries = await res.json();
+    if (!entries || entries.length === 0) { el.innerHTML = '<span style="color:var(--text-faint)">No entries yet.</span>'; return; }
+    const wasAtBottom = el.scrollHeight - el.scrollTop <= el.clientHeight + 4;
+    el.innerHTML = entries.map(e => {
+      const col = e.lvl === 'ok' ? '#4caf7d' : e.lvl === 'fail' ? 'var(--danger,#e05252)' : 'var(--text-dim)';
+      return '<div style="color:' + col + ';white-space:pre-wrap;line-height:1.4">' +
+        '<span style="color:var(--text-faint);user-select:none">' + esc(e.t) + '  </span>' + esc(e.msg) + '</div>';
+    }).join('');
+    if (wasAtBottom) el.scrollTop = el.scrollHeight;
+  } catch (e) {
+    el.innerHTML = '<span style="color:var(--danger)">Unreachable</span>';
+  }
+}
+
+function clearLogView() {
+  document.getElementById('log-server').innerHTML = '<span style="color:var(--text-faint)">Cleared.</span>';
+  document.getElementById('log-agent').innerHTML  = '<span style="color:var(--text-faint)">Cleared.</span>';
 }
 
 // ── Scan for saves ────────────────────────────────────────────────────────────
