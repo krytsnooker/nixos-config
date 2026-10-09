@@ -1214,16 +1214,12 @@ async function loadSavesPanes() {
     const base = saveBaseName(f.name);
     const tr = document.createElement('tr');
     tr.dataset.base = base; tr.dataset.hash = f.hash || '';
-    const copyToBtn = document.createElement('button');
-    copyToBtn.className = 'action'; copyToBtn.textContent = 'Copy to';
-    copyToBtn.addEventListener('click', () => serverSaveCopyTo(f.name));
     const btn = document.createElement('button');
     btn.className = 'action primary'; btn.textContent = 'Pull';
     btn.addEventListener('click', () => pullSave(f.name));
     tr.innerHTML = '<td style="font-size:0.82rem;color:var(--text-dim)">' + esc(f.game || '—') + '</td>' +
                    '<td class="name-cell">' + esc(f.name) + '</td>' +
                    '<td class="size-cell">' + fmt(f.size) + '</td><td class="btn-cell"></td>';
-    tr.lastChild.appendChild(copyToBtn);
     tr.lastChild.appendChild(btn);
     serverTbody.appendChild(tr);
   }
@@ -1295,16 +1291,6 @@ async function pullSave(filename) {
     setStatus('Pulled: ' + filename);
     loadSavesPanes();
   } catch (e) { setStatus('Pull failed: ' + e.message, true); }
-}
-
-function serverSaveCopyTo(filename) {
-  openBrowseForFolder(async (dest) => {
-    try {
-      setStatus('Copying…');
-      await apiFetch(AGENT + '/saves/pull-to', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({console: currentConsole, file: filename, dest}) });
-      setStatus('Copied to: ' + dest);
-    } catch (e) { setStatus('Copy failed: ' + e.message, true); }
-  });
 }
 
 function addNewSave() {
