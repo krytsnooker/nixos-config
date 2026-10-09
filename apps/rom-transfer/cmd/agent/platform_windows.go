@@ -76,8 +76,11 @@ func freeSpace(path string) (uint64, error) {
 }
 
 func configFilePath() string {
-	appdata := os.Getenv("APPDATA")
-	return filepath.Join(appdata, "rom-agent", "config.json")
+	exe, err := os.Executable()
+	if err != nil {
+		return "config.json"
+	}
+	return filepath.Join(filepath.Dir(exe), "config.json")
 }
 
 func defaultDownloadsDir() string {
