@@ -214,12 +214,12 @@ func (s *Server) lanOnly(next http.HandlerFunc) http.HandlerFunc {
 		next(sw, r)
 		dur := time.Since(start).Round(time.Millisecond)
 
-		// Only log mutating or download requests — skip noisy polling endpoints.
+		// Log mutations, downloads, and errors — skip read-only polling GETs.
 		path := r.URL.Path
-		skip := path == "/api/consoles" || path == "/api/files" || path == "/api/pcgames" ||
-			path == "/api/hostconfig" || path == "/api/filetypes" || path == "/api/scanpaths" ||
-			path == "/api/agent-version" || path == "/api/saves"
-		if !skip {
+		isGet := r.Method == http.MethodGet
+		isDownload := isGet && path == "/api/download"
+		isError := sw.status >= 400
+		if !isGet || isDownload || isError {
 			q := r.URL.RawQuery
 			if q != "" {
 				q = "?" + q

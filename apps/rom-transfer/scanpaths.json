@@ -1,0 +1,98 @@
+[
+  {
+    "emulator": "RetroArch",
+    "path": "%APPDATA%\\RetroArch\\saves",
+    "console": "",
+    "os": "windows"
+  },
+  {
+    "emulator": "PCSX2",
+    "path": "%USERPROFILE%\\Documents\\PCSX2\\memcards",
+    "console": "PS2",
+    "os": "windows"
+  },
+  {
+    "emulator": "DuckStation",
+    "path": "%APPDATA%\\DuckStation\\memcards",
+    "console": "PS1",
+    "os": "windows"
+  },
+  {
+    "emulator": "Flycast",
+    "path": "%APPDATA%\\flycast\\data",
+    "console": "Dreamcast",
+    "os": "windows"
+  },
+  {
+    "emulator": "Project64",
+    "path": "%APPDATA%\\Project64\\Save",
+    "console": "N64",
+    "os": "windows"
+  },
+  {
+    "emulator": "Dolphin",
+    "path": "%APPDATA%\\Dolphin Emulator\\GC",
+    "console": "",
+    "os": "windows"
+  },
+  {
+    "emulator": "Mednafen",
+    "path": "%APPDATA%\\Mednafen\\sav",
+    "console": "",
+    "os": "windows"
+  },
+  {
+    "emulator": "ePSXe",
+    "path": "%APPDATA%\\ePSXe\\memcards",
+    "console": "PS1",
+    "os": "windows"
+  },
+  {
+    "emulator": "Snes9x",
+    "path": "%APPDATA%\\Snes9x",
+    "console": "SNES",
+    "os": "windows"
+  },
+  {
+    "emulator": "RetroArch",
+    "path": "~/.config/retroarch/saves",
+    "console": "",
+    "os": "linux"
+  },
+  {
+    "emulator": "PCSX2",
+    "path": "~/.config/PCSX2/memcards",
+    "console": "PS2",
+    "os": "linux"
+  },
+  {
+    "emulator": "DuckStation",
+    "path": "~/.local/share/duckstation/memcards",
+    "console": "PS1",
+    "os": "linux"
+  },
+  {
+    "emulator": "Flycast",
+    "path": "~/.local/share/flycast/data",
+    "console": "Dreamcast",
+    "os": "linux"
+  },
+  {
+    "emulator": "Mupen64Plus",
+    "path": "~/.local/share/mupen64plus/save",
+    "console": "N64",
+    "os": "linux"
+  },
+  {
+    "emulator": "Dolphin",
+    "path": "~/.local/share/dolphin-emu/GC",
+    "console": "",
+    "os": "linux"
+  },
+  {
+    "emulator": "Mednafen",
+    "path": "~/.mednafen/sav",
+    "console": "",
+    "os": "linux"
+  }
+]

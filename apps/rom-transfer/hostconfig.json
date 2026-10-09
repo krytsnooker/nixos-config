@@ -1,0 +1,21 @@
+{
+  "consoles": [
+    {
+      "name": "PS2",
+      "server_path": "/mnt/server-pc/Games/ROMS/PS2"
+    },
+    {
+      "name": "Switch",
+      "server_path": "/mnt/server-pc/Games/emu/Switch Roms/NSP"
+    },
+    {
+      "name": "SNES",
+      "server_path": "/mnt/server-pc/Games/ROMS/Nintendo - Super Nintendo Entertainment System (Combined) (20200802-011312)"
+    },
+    {
+      "name": "Gamecube",
+      "server_path": "/mnt/server-pc/Games/ROMS/Nintendo Gamecube"
+    }
+  ],
+  "saves_path": "/mnt/server-pc/Games/SAVEFILES"
+}

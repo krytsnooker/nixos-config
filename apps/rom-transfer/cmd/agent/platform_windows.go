@@ -88,11 +88,7 @@ func defaultDownloadsDir() string {
 }
 
 func defaultBrowseRoot() string {
-	profile := os.Getenv("USERPROFILE")
-	if profile == "" {
-		return `C:\`
-	}
-	return profile
+	return `C:\`
 }
 
 // ── Windows service ───────────────────────────────────────────────────────────
@@ -146,13 +142,15 @@ func selfInstall(addr string) {
 
 	m, err := mgr.Connect()
 	if err != nil {
-		log.Fatalf("cannot connect to service manager — run as Administrator: %v", err)
+		fmt.Printf("ERROR: cannot connect to service manager — run as Administrator: %v\n", err)
+		fmt.Scanln()
+		os.Exit(1)
 	}
 	defer m.Disconnect()
 
 	// Stop and remove any existing installation.
 	if s, err := m.OpenService(svcName); err == nil {
-		log.Println("Stopping existing service...")
+		fmt.Println("Stopping existing service...")
 		s.Control(svc.Stop)
 		for i := 0; i < 20; i++ {
 			if st, err := s.Query(); err != nil || st.State == svc.Stopped {
@@ -163,7 +161,7 @@ func selfInstall(addr string) {
 		s.Delete()
 		s.Close()
 		eventlog.Remove(svcName)
-		log.Println("Removed existing service.")
+		fmt.Println("Removed existing service.")
 	}
 
 	s, err := m.CreateService(svcName, exe, mgr.Config{
@@ -172,16 +170,22 @@ func selfInstall(addr string) {
 		StartType:   mgr.StartAutomatic,
 	}, "-addr", addr)
 	if err != nil {
-		log.Fatalf("install failed: %v", err)
+		fmt.Printf("ERROR: install failed: %v\n", err)
+		fmt.Scanln()
+		os.Exit(1)
 	}
 	defer s.Close()
 	eventlog.InstallAsEventCreate(svcName, eventlog.Error|eventlog.Warning|eventlog.Info)
 
 	if err := s.Start(); err != nil {
-		log.Fatalf("service registered but failed to start: %v", err)
+		fmt.Printf("ERROR: service registered but failed to start: %v\n", err)
+		fmt.Scanln()
+		os.Exit(1)
 	}
-	log.Printf("ROM Transfer Agent v%s installed and running on %s", version, addr)
-	log.Println("The service will start automatically on boot. You can close this window.")
+	fmt.Printf("\nROM Transfer Agent v%s installed and running on %s\n", version, addr)
+	fmt.Println("The service will start automatically on boot.")
+	fmt.Println("\nPress Enter to close this window...")
+	fmt.Scanln()
 }
 
 func doUpdate(serverURL string) error {

@@ -1,0 +1,112 @@
+{
+  "Dreamcast": {
+    "rom": [
+      ".gdi",
+      ".cdi",
+      ".iso",
+      ".chd"
+    ],
+    "save": [
+      ".vmu",
+      ".bin"
+    ]
+  },
+  "Mega Drive": {
+    "rom": [
+      ".md",
+      ".bin",
+      ".gen",
+      ".smd"
+    ],
+    "save": [
+      ".srm",
+      ".sav"
+    ]
+  },
+  "N64": {
+    "rom": [
+      ".z64",
+      ".n64",
+      ".v64"
+    ],
+    "save": [
+      ".sra",
+      ".fla",
+      ".eep",
+      ".mpk",
+      ".srm"
+    ]
+  },
+  "NES": {
+    "rom": [
+      ".nes"
+    ],
+    "save": [
+      ".sav"
+    ]
+  },
+  "PS1": {
+    "rom": [
+      ".iso",
+      ".bin",
+      ".cue",
+      ".img",
+      ".chd"
+    ],
+    "save": [
+      ".mcr",
+      ".mcd",
+      ".srm",
+      ".mem"
+    ]
+  },
+  "PS2": {
+    "rom": [
+      ".iso",
+      ".bin",
+      ".chd"
+    ],
+    "save": [
+      ".ps2",
+      ".mcr",
+      ".xps",
+      ".max",
+      ".psu"
+    ]
+  },
+  "SNES": {
+    "rom": [
+      ".smc",
+      ".sfc"
+    ],
+    "save": [
+      ".srm",
+      ".sav"
+    ]
+  },
+  "Saturn": {
+    "rom": [
+      ".iso",
+      ".bin",
+      ".cue",
+      ".mdf",
+      ".chd"
+    ],
+    "save": [
+      ".bkr",
+      ".srm",
+      ".sav"
+    ]
+  },
+  "Switch": {
+    "rom": [
+      ".nsp",
+      ".xci",
+      ".nsz"
+    ],
+    "save": [
+      ".sav",
+      ".bin"
+    ]
+  }
+}
