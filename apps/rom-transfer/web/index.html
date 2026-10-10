@@ -2080,7 +2080,8 @@ async function loadDownloadMode() {
   }
 
   btn.disabled = false;
-  if (!status.blocking) {
+  const isBlocking = status.blocking === 'enabled' || status.blocking === true;
+  if (!isBlocking) {
     const mins = status.timer ? Math.ceil(status.timer / 60) : null;
     const timerText = mins ? ` — ${mins} min remaining` : '';
     statusEl.innerHTML = `<span style="color:var(--danger)">Download Mode active: ad blocking disabled${timerText}</span>`;
@@ -2101,7 +2102,8 @@ async function toggleDownloadMode() {
   const status = await fetch(serverURL + '/api/pihole').then(r => r.json()).catch(() => null);
   if (!status || !status.configured) return;
 
-  const body = status.blocking
+  const isBlocking = status.blocking === 'enabled' || status.blocking === true;
+  const body = isBlocking
     ? { blocking: false, timer: parseInt(document.getElementById('dlmode-duration').value) }
     : { blocking: true };
 

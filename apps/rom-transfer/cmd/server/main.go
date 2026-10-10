@@ -795,7 +795,7 @@ func piholeGetBlocking(baseURL, sid string) (map[string]interface{}, error) {
 
 func piholeSetBlocking(baseURL, sid string, payload map[string]interface{}) error {
 	body, _ := json.Marshal(payload)
-	req, err := http.NewRequest(http.MethodPut, baseURL+"/api/dns/blocking?sid="+sid, bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, baseURL+"/api/dns/blocking?sid="+sid, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
