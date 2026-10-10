@@ -375,6 +375,7 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
         <div class="nav-child" onclick="setView('game-data-paths')">Game Data Paths</div>
         <div class="nav-child" onclick="setView('game-launcher')">Game Launcher</div>
         <div class="nav-child" onclick="setView('agent-status')">Agent Status</div>
+        <div class="nav-child" onclick="setView('dlmode')">Download Mode</div>
         <div class="nav-child" onclick="setView('logs')">Logs</div>
       </div>
     </div>
@@ -614,6 +615,26 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
       </div>
     </div>
 
+    <!-- ── Download Mode ── -->
+    <div id="view-dlmode" class="config-panel" style="display:none">
+      <h2>Download Mode</h2>
+      <p class="panel-desc">Temporarily disables Pi-hole ad blocking so Steam downloads run without DNS interference. Blocking re-enables automatically when the timer expires.</p>
+      <div class="panel-section">
+        <div id="dlmode-status" style="font-family:'IBM Plex Mono',monospace;font-size:0.9rem;padding:0.6rem 0">Checking Pi-hole status…</div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.8rem;align-items:center;flex-wrap:wrap">
+          <button class="panel-btn primary" id="dlmode-btn" onclick="toggleDownloadMode()">Enable Download Mode</button>
+          <select id="dlmode-duration" style="font-family:'IBM Plex Mono',monospace;font-size:0.8rem;padding:0.3rem 0.5rem;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:4px">
+            <option value="3600">1 hour</option>
+            <option value="7200" selected>2 hours</option>
+            <option value="14400">4 hours</option>
+          </select>
+        </div>
+      </div>
+      <div class="panel-actions">
+        <button class="panel-btn" onclick="loadDownloadMode()">Refresh</button>
+      </div>
+    </div>
+
   </div><!-- .content-area -->
 </div><!-- .app-body -->
 
@@ -726,6 +747,7 @@ function setView(view) {
   if (view === 'game-launcher')     loadGameLauncherPanel();
   if (view !== 'logs')              stopLogPolling();
   if (view === 'agent-status')      loadAgentStatus();
+  if (view === 'dlmode')            loadDownloadMode();
   if (view === 'logs')              startLogPolling();
 }
 
@@ -2033,6 +2055,63 @@ function browseSelect() {
   if (browseCallback) browseCallback(path);
   document.getElementById('browse-select-btn').style.display = '';
   closeModal('browse-modal');
+}
+
+// ── Download Mode ─────────────────────────────────────────────────────────────
+
+async function dlmodeServerURL() {
+  const cfg = await fetch('/api/config').then(r => r.json()).catch(() => ({}));
+  return cfg.server_url || window.location.origin;
+}
+
+async function loadDownloadMode() {
+  const btn = document.getElementById('dlmode-btn');
+  const statusEl = document.getElementById('dlmode-status');
+  btn.disabled = true;
+  statusEl.textContent = 'Checking Pi-hole status…';
+
+  const serverURL = await dlmodeServerURL();
+  const status = await fetch(serverURL + '/api/pihole').then(r => r.json()).catch(() => null);
+
+  if (!status || !status.configured) {
+    statusEl.textContent = 'Pi-hole not configured. Add pihole_url and pihole_password to hostconfig.json on the server.';
+    btn.disabled = true;
+    return;
+  }
+
+  btn.disabled = false;
+  if (!status.blocking) {
+    const mins = status.timer ? Math.ceil(status.timer / 60) : null;
+    const timerText = mins ? ` — ${mins} min remaining` : '';
+    statusEl.innerHTML = `<span style="color:var(--danger)">Download Mode active: ad blocking disabled${timerText}</span>`;
+    btn.textContent = 'Restore Ad Blocking';
+    document.getElementById('dlmode-duration').style.display = 'none';
+  } else {
+    statusEl.innerHTML = `<span style="color:var(--accent)">Normal: ad blocking active</span>`;
+    btn.textContent = 'Enable Download Mode';
+    document.getElementById('dlmode-duration').style.display = '';
+  }
+}
+
+async function toggleDownloadMode() {
+  const btn = document.getElementById('dlmode-btn');
+  btn.disabled = true;
+
+  const serverURL = await dlmodeServerURL();
+  const status = await fetch(serverURL + '/api/pihole').then(r => r.json()).catch(() => null);
+  if (!status || !status.configured) return;
+
+  const body = status.blocking
+    ? { blocking: false, timer: parseInt(document.getElementById('dlmode-duration').value) }
+    : { blocking: true };
+
+  await fetch(serverURL + '/api/pihole', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  }).catch(() => {});
+
+  await loadDownloadMode();
 }
 
 // ── Theme ─────────────────────────────────────────────────────────────────────

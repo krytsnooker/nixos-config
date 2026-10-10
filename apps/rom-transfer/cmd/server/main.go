@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -32,8 +33,10 @@ type PCGameItem struct {
 }
 
 type HostConfig struct {
-	Consoles  []Console `json:"consoles"`
-	SavesPath string    `json:"saves_path"`
+	Consoles        []Console `json:"consoles"`
+	SavesPath       string    `json:"saves_path"`
+	PiholeURL       string    `json:"pihole_url"`
+	PiholePassword  string    `json:"pihole_password"`
 }
 
 type FileInfo struct {
@@ -181,6 +184,7 @@ func main() {
 	mux.HandleFunc("/api/scanpaths", s.lanOnly(s.handleScanPaths))
 	mux.HandleFunc("/api/agent-version", s.lanOnly(s.handleAgentVersion))
 	mux.HandleFunc("/api/logs", s.lanOnly(s.handleLogs))
+	mux.HandleFunc("/api/pihole", s.lanOnly(s.handlePihole))
 	mux.Handle("/", http.FileServer(http.Dir(*webDir)))
 
 	log.Printf("rom-transfer server on %s", *addr)
@@ -692,4 +696,114 @@ func (s *Server) handleScanPaths(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(paths)
+}
+
+func (s *Server) handlePihole(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	piholeURL := s.cfg.PiholeURL
+	piholePassword := s.cfg.PiholePassword
+	s.mu.RUnlock()
+
+	w.Header().Set("Content-Type", "application/json")
+
+	if piholeURL == "" {
+		json.NewEncoder(w).Encode(map[string]interface{}{"configured": false})
+		return
+	}
+
+	sid, err := piholeAuth(piholeURL, piholePassword)
+	if err != nil {
+		http.Error(w, `{"error":"pihole auth failed"}`, http.StatusBadGateway)
+		return
+	}
+	defer piholeLogout(piholeURL, sid)
+
+	switch r.Method {
+	case http.MethodGet:
+		status, err := piholeGetBlocking(piholeURL, sid)
+		if err != nil {
+			http.Error(w, `{"error":"pihole request failed"}`, http.StatusBadGateway)
+			return
+		}
+		status["configured"] = true
+		json.NewEncoder(w).Encode(status)
+	case http.MethodPut:
+		var req map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err := piholeSetBlocking(piholeURL, sid, req); err != nil {
+			http.Error(w, `{"error":"pihole request failed"}`, http.StatusBadGateway)
+			return
+		}
+		status, _ := piholeGetBlocking(piholeURL, sid)
+		if status == nil {
+			status = make(map[string]interface{})
+		}
+		status["configured"] = true
+		json.NewEncoder(w).Encode(status)
+	default:
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func piholeAuth(baseURL, password string) (string, error) {
+	body, _ := json.Marshal(map[string]string{"password": password})
+	resp, err := http.Post(baseURL+"/api/auth", "application/json", bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	var result struct {
+		Session struct {
+			SID string `json:"sid"`
+		} `json:"session"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", err
+	}
+	if result.Session.SID == "" {
+		return "", fmt.Errorf("no SID in auth response")
+	}
+	return result.Session.SID, nil
+}
+
+func piholeLogout(baseURL, sid string) {
+	req, err := http.NewRequest(http.MethodDelete, baseURL+"/api/auth?sid="+sid, nil)
+	if err == nil {
+		http.DefaultClient.Do(req)
+	}
+}
+
+func piholeGetBlocking(baseURL, sid string) (map[string]interface{}, error) {
+	req, err := http.NewRequest(http.MethodGet, baseURL+"/api/dns/blocking?sid="+sid, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var result map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func piholeSetBlocking(baseURL, sid string, payload map[string]interface{}) error {
+	body, _ := json.Marshal(payload)
+	req, err := http.NewRequest(http.MethodPut, baseURL+"/api/dns/blocking?sid="+sid, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	return nil
 }
