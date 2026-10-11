@@ -128,6 +128,7 @@ in
       User = "rom-transfer";
       Group = "rom-transfer";
       StateDirectory = "rom-transfer";
+      EnvironmentFile = "-/var/lib/rom-transfer/secrets.env";
       ExecStartPre = "${pkgs.bash}/bin/bash -c 'rm -rf /var/lib/rom-transfer/web && cp -r ${../apps/rom-transfer/web} /var/lib/rom-transfer/web && chmod -R u+w /var/lib/rom-transfer/web'";
       ExecStart = "${pkg}/bin/server -addr 0.0.0.0:5035 -config /var/lib/rom-transfer/hostconfig.json -web /var/lib/rom-transfer/web";
       Restart = "on-failure";

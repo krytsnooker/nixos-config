@@ -703,6 +703,9 @@ func (s *Server) handlePihole(w http.ResponseWriter, r *http.Request) {
 	piholeURL := s.cfg.PiholeURL
 	piholePassword := s.cfg.PiholePassword
 	s.mu.RUnlock()
+	if env := os.Getenv("PIHOLE_PASSWORD"); env != "" {
+		piholePassword = env
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 
