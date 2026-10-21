@@ -24,15 +24,23 @@ in
     after = [ "network.target" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
-      DynamicUser = true;
-      StateDirectory = "lan-pastebin";
+      DynamicUser      = true;
+      StateDirectory   = "lan-pastebin";
       WorkingDirectory = "${../../apps/lan_pastebin}";
       Environment = [
         "PASTEBIN_DB_PATH=/var/lib/lan-pastebin/pastes.db"
         "PASTEBIN_PORT=5001"
       ];
       ExecStart = "${pythonEnv}/bin/python3 ${../../apps/lan_pastebin}/app.py";
-      Restart = "on-failure";
+      Restart   = "on-failure";
+
+      NoNewPrivileges       = true;
+      PrivateTmp            = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules  = true;
+      ProtectControlGroups  = true;
+      RestrictSUIDSGID      = true;
+      LockPersonality       = true;
     };
   };
 
@@ -45,7 +53,7 @@ in
     after = [ "network.target" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
-      DynamicUser = true;
+      DynamicUser    = true;
       StateDirectory = "math-tutor";
       Environment = [
         "MATH_TUTOR_PORT=3001"
@@ -54,8 +62,16 @@ in
         "HOME=/var/lib/math-tutor"
       ];
       ExecStartPre = npmInstallOnce "express" "/var/lib/math-tutor";
-      ExecStart = "${nodeEnv}/bin/node ${../../apps/math-tutor}/server.js";
-      Restart = "on-failure";
+      ExecStart    = "${nodeEnv}/bin/node ${../../apps/math-tutor}/server.js";
+      Restart      = "on-failure";
+
+      NoNewPrivileges       = true;
+      PrivateTmp            = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules  = true;
+      ProtectControlGroups  = true;
+      RestrictSUIDSGID      = true;
+      LockPersonality       = true;
     };
   };
 
@@ -68,7 +84,7 @@ in
     after = [ "network.target" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
-      DynamicUser = true;
+      DynamicUser    = true;
       StateDirectory = "typing-tutor";
       Environment = [
         "TYPING_TUTOR_PORT=3000"
@@ -77,8 +93,16 @@ in
         "HOME=/var/lib/typing-tutor"
       ];
       ExecStartPre = npmInstallOnce "express" "/var/lib/typing-tutor";
-      ExecStart = "${nodeEnv}/bin/node ${../../apps/typing-tutor}/server.js";
-      Restart = "on-failure";
+      ExecStart    = "${nodeEnv}/bin/node ${../../apps/typing-tutor}/server.js";
+      Restart      = "on-failure";
+
+      NoNewPrivileges       = true;
+      PrivateTmp            = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules  = true;
+      ProtectControlGroups  = true;
+      RestrictSUIDSGID      = true;
+      LockPersonality       = true;
     };
   };
 
