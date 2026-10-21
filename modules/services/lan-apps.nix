@@ -122,16 +122,24 @@ in
     after = [ "network.target" "mnt-server\\x2dpc.mount" ];
     wantedBy = [ "multi-user.target" ];
     serviceConfig = {
-      User = "music-info";
-      Group = "music-info";
+      User           = "music-info";
+      Group          = "music-info";
       StateDirectory = "music-info";
       Environment = [
         "MUSIC_DB_PATH=/var/lib/music-info/music.db"
         "MUSIC_INFO_PORT=5010"
       ];
       EnvironmentFile = "/var/lib/music-info/secrets.env";
-      ExecStart = "${pythonEnv}/bin/python3 ${../../apps/music-info-project}/app.py";
-      Restart = "on-failure";
+      ExecStart       = "${pythonEnv}/bin/python3 ${../../apps/music-info-project}/app.py";
+      Restart         = "on-failure";
+
+      NoNewPrivileges       = true;
+      PrivateTmp            = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules  = true;
+      ProtectControlGroups  = true;
+      RestrictSUIDSGID      = true;
+      LockPersonality       = true;
     };
   };
 
@@ -173,13 +181,21 @@ in
         vendorHash = null;
       };
     in {
-      User = "rom-transfer";
-      Group = "rom-transfer";
+      User           = "rom-transfer";
+      Group          = "rom-transfer";
       StateDirectory = "rom-transfer";
       EnvironmentFile = "-/var/lib/rom-transfer/secrets.env";
-      ExecStartPre = "${pkgs.bash}/bin/bash -c 'rm -rf /var/lib/rom-transfer/web && cp -r ${../../apps/rom-transfer/web} /var/lib/rom-transfer/web && chmod -R u+w /var/lib/rom-transfer/web'";
-      ExecStart = "${pkg}/bin/server -addr 0.0.0.0:5035 -config /var/lib/rom-transfer/hostconfig.json -web /var/lib/rom-transfer/web";
-      Restart = "on-failure";
+      ExecStartPre   = "${pkgs.bash}/bin/bash -c 'rm -rf /var/lib/rom-transfer/web && cp -r ${../../apps/rom-transfer/web} /var/lib/rom-transfer/web && chmod -R u+w /var/lib/rom-transfer/web'";
+      ExecStart      = "${pkg}/bin/server -addr 0.0.0.0:5035 -config /var/lib/rom-transfer/hostconfig.json -web /var/lib/rom-transfer/web";
+      Restart        = "on-failure";
+
+      NoNewPrivileges       = true;
+      PrivateTmp            = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules  = true;
+      ProtectControlGroups  = true;
+      RestrictSUIDSGID      = true;
+      LockPersonality       = true;
     };
   };
 
