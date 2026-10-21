@@ -54,6 +54,8 @@
     services.nginx.virtualHosts."cloud.intrentaka.com" = {
       forceSSL = true;
       enableACME = true;
+      # TEMPORARY BLOCK — CVE-2026-109618/109619 PHP RCE; remove once PHP is patched
+      extraConfig = "return 503;";
       locations."= /status.php" = {
         extraConfig = "return 404;";
       };
