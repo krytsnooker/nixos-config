@@ -216,6 +216,14 @@ in
     serviceConfig = {
       Type      = "oneshot";
       ExecStart = "${backupScript}";
+
+      NoNewPrivileges       = true;
+      PrivateTmp            = true;
+      ProtectKernelTunables = true;
+      ProtectKernelModules  = true;
+      ProtectControlGroups  = true;
+      RestrictSUIDSGID      = true;
+      LockPersonality       = true;
     };
   };
 
