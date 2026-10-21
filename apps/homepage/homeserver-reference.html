@@ -71,7 +71,7 @@
         </div>
         <div class="callout warn">
           <span class="tag">CIFS ownership note</span>
-          CIFS mounts don't support real UNIX ownership — ownership is set at mount time via <code>uid=</code>/<code>gid=</code> options. The Nextcloud data mount <code>uid=</code> is derived from <code>homeserver.nextcloudUid</code> (declared in <code>modules/nextcloud.nix</code>, default 991) — change it there and both the service user UID and the mount option update together.
+          CIFS mounts don't support real UNIX ownership — ownership is set at mount time via <code>uid=</code>/<code>gid=</code> options. The Nextcloud data mount <code>uid=</code> is derived from <code>homeserver.nextcloudUid</code> (declared in <code>modules/native/nextcloud.nix</code>, default 991) — change it there and both the service user UID and the mount option update together.
         </div>
       </section>
 
@@ -79,7 +79,10 @@
         <h2><span class="idx">02</span> Repository layout</h2>
         <pre><code>flake.nix                    <span class="cmt">— single nixosConfigurations.homeserver</span>
 hosts/homeserver/            <span class="cmt">— hardware config + per-host settings</span>
-modules/                     <span class="cmt">— NixOS modules (all loaded by every build)</span>
+modules/nginx.nix            <span class="cmt">— nginx vhosts and ACME config</span>
+modules/native/              <span class="cmt">— NixOS native modules (nextcloud, vaultwarden, mumble, databases)</span>
+modules/containers-podman/   <span class="cmt">— Podman container definitions (emby, audiobookshelf, pihole)</span>
+modules/services/            <span class="cmt">— Custom systemd services (lan-apps, minecraft, mjh-proxy)</span>
 pkgs/                        <span class="cmt">— custom packages (brave-origin-nightly)</span>
 apps/                        <span class="cmt">— source for custom LAN apps (canonical copy)</span></code></pre>
       </section>
@@ -121,7 +124,7 @@ sudo nixos-rebuild switch --flake /etc/nixos#homeserver</code></pre>
             <tr><td>math-tutor</td><td class="mono">3001</td><td><a href="http://homeserver:3001">homeserver:3001</a></td><td class="wrap">Node/Express</td></tr>
             <tr><td>lan-pastebin</td><td class="mono">5001</td><td><a href="http://homeserver:5001">homeserver:5001</a></td><td class="wrap">Flask/waitress</td></tr>
             <tr><td>music-info-library</td><td class="mono">5010</td><td><a href="http://homeserver:5010">homeserver:5010</a></td><td class="wrap">Flask/waitress</td></tr>
-            <tr><td>Emby</td><td class="mono">8096 / 8920</td><td><a href="https://intrentaka.com">intrentaka.com</a></td><td class="wrap">Podman container</td></tr>
+            <tr><td>Emby</td><td class="mono">8096 / 8920</td><td><a href="https://intrentaka.com">intrentaka.com</a></td><td class="wrap">Podman container; PUID=980 PGID=125 (uid 980 pinned in <code>modules/containers-podman/emby.nix</code>)</td></tr>
             <tr><td>Nextcloud</td><td class="mono">443</td><td><a href="https://cloud.intrentaka.com">cloud.intrentaka.com</a></td><td class="wrap">Native NixOS service</td></tr>
             <tr><td>Pi-hole</td><td class="mono">8083</td><td><a href="http://homeserver:8083/admin">homeserver:8083/admin</a></td><td class="wrap">Podman container; internal port pinned to 8080 via <code>FTLCONF_webserver_port</code> (Teleporter restores would otherwise flip it back to 80). Router DHCP hands out <code>192.168.0.120</code> as primary DNS so all LAN clients use Pi-hole automatically.</td></tr>
             <tr><td>mc-control</td><td class="mono">5020</td><td>LAN only</td><td class="wrap">Flask/waitress; start/stop Minecraft via HTTP</td></tr>
@@ -169,7 +172,7 @@ domain=WORKGROUP</code></pre>
 EMBY_API_KEY=&lt;your Emby API key&gt;
 EMBY_BASE_URL=http://localhost:8096
 EMBY_EXTERNAL_URL=https://intrentaka.com</code></pre>
-          <p class="dim" style="margin:8px 0 0;"><code>MUSIC_PATH</code> is set in the systemd unit in <code>modules/lan-apps.nix</code>, not here.</p>
+          <p class="dim" style="margin:8px 0 0;"><code>MUSIC_PATH</code> is set in the systemd unit in <code>modules/services/lan-apps.nix</code>, not here.</p>
         </div>
 
         <div class="secret-card">
