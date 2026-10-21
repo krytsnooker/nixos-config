@@ -43,7 +43,6 @@
 
         ./modules/services/lan-apps.nix
         ./modules/services/minecraft.nix
-        ./modules/services/mjh-proxy.nix
         nix-minecraft.nixosModules.minecraft-servers
       ];
     };
