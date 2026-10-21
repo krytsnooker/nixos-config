@@ -83,15 +83,13 @@
       after    = [ "var-lib-nextcloud-data.mount" ];
       requires = [ "var-lib-nextcloud-data.mount" ];
       serviceConfig = {
-        NoNewPrivileges      = true;
-        PrivateTmp           = true;
+        NoNewPrivileges       = true;
+        PrivateTmp            = true;
         ProtectKernelTunables = true;
-        ProtectKernelModules = true;
-        ProtectControlGroups = true;
-        RestrictNamespaces   = true;
-        RestrictSUIDSGID     = true;
-        LockPersonality      = true;
-        CapabilityBoundingSet = "";
+        ProtectKernelModules  = true;
+        ProtectControlGroups  = true;
+        RestrictSUIDSGID      = true;
+        LockPersonality       = true;
       };
     };
 
