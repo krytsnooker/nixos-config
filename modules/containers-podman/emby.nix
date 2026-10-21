@@ -1,6 +1,17 @@
 { config, pkgs, lib, ... }:
 
+let
+  embyUid = 980; # pinned — must match PUID in the container and config dir ownership
+in
 {
+  users.groups.emby = { gid = embyUid; };
+  users.users.emby = {
+    isSystemUser = true;
+    uid         = embyUid;
+    group       = "emby";
+    extraGroups = [ "video" "sambashare" ];
+  };
+
   virtualisation.podman.enable = true;
   virtualisation.oci-containers.backend = "podman";
 
@@ -12,8 +23,8 @@
       "/mnt/server-pc/Media:/media"
     ];
     environment = {
-      PUID = "0";
-      PGID = "125";
+      PUID = toString embyUid;
+      PGID = "125"; # sambashare — media read access
     };
     extraOptions = [
       "--device=/dev/dri:/dev/dri"
@@ -21,7 +32,7 @@
   };
 
   systemd.tmpfiles.rules = [
-    "d /var/lib/emby/config 0755 root root -"
+    "d /var/lib/emby/config 0755 emby emby -"
   ];
 
   networking.firewall.allowedTCPPorts = [ 8096 8920 ];
