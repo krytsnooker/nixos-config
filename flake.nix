@@ -30,17 +30,20 @@
         ./hardware-configuration.nix
         ./configuration.nix
 
-        ./modules/lan-apps.nix
-        ./modules/minecraft.nix
-        ./modules/databases.nix
         ./modules/nginx.nix
-        ./modules/emby.nix
-        ./modules/nextcloud.nix
-        ./modules/pihole-container.nix
-        ./modules/audiobookshelf.nix
-        ./modules/mumble.nix
-        ./modules/mjh-proxy.nix
-        ./modules/vaultwarden.nix
+
+        ./modules/native/databases.nix
+        ./modules/native/nextcloud.nix
+        ./modules/native/mumble.nix
+        ./modules/native/vaultwarden.nix
+
+        ./modules/containers-podman/emby.nix
+        ./modules/containers-podman/audiobookshelf.nix
+        ./modules/containers-podman/pihole.nix
+
+        ./modules/services/lan-apps.nix
+        ./modules/services/minecraft.nix
+        ./modules/services/mjh-proxy.nix
         nix-minecraft.nixosModules.minecraft-servers
       ];
     };

@@ -65,55 +65,12 @@ let
     exec ${pkgs.bash}/bin/bash ./run.sh
   '';
 
-  # One-time installer: downloads and runs the NeoForge 1.20.1 installer into the data dir
-  neoforge1201SetupScript = pkgs.writeShellScript "neoforge-1201-setup" ''
-    set -euo pipefail
-    MARKER="${mcDataDir}/.neoforge-${neoforgeVersion}-installed"
-    [ -f "$MARKER" ] && exit 0
-
-    echo "Downloading NeoForge ${neoforgeVersion} installer..."
-    TMPDIR=$(${pkgs.coreutils}/bin/mktemp -d)
-    trap '${pkgs.coreutils}/bin/rm -rf "$TMPDIR"' EXIT
-
-    ${pkgs.curl}/bin/curl -fL \
-      "https://maven.neoforged.net/releases/net/neoforged/forge/${neoforgeVersion}/forge-${neoforgeVersion}-installer.jar" \
-      -o "$TMPDIR/installer.jar"
-
-    echo "Installing NeoForge server to ${mcDataDir}..."
-    cd "${mcDataDir}"
-    ${pkgs.jdk21}/bin/java -jar "$TMPDIR/installer.jar" --installServer "${mcDataDir}"
-
-    chmod +x "${mcDataDir}/run.sh"
-    touch "$MARKER"
-    echo "NeoForge ${neoforgeVersion} installation complete"
-  '';
-
-  backupScript = pkgs.writeShellScript "mc-backup" ''
-    set -euo pipefail
-
-    src="/var/lib/minecraft/${mcServerName}/"
-    dst="/mnt/server-pc/Backups/minecraft"
-
-    # Skip silently if the DAS isn't mounted
-    if ! ${pkgs.util-linux}/bin/mountpoint -q /mnt/server-pc; then
-      echo "mc-backup: /mnt/server-pc not mounted, skipping" >&2
-      exit 0
-    fi
-
-    today=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
-    ${pkgs.coreutils}/bin/mkdir -p "$dst/$today"
-    ${pkgs.rsync}/bin/rsync -a --copy-links --delete "$src" "$dst/$today/"
-
-    # Retain the 7 most recent daily backups; remove the rest
-    ${pkgs.findutils}/bin/find "$dst" -maxdepth 1 -type d -name '????-??-??' \
-      | ${pkgs.coreutils}/bin/sort \
-      | ${pkgs.coreutils}/bin/head -n -7 \
-      | ${pkgs.findutils}/bin/xargs -r ${pkgs.coreutils}/bin/rm -rf
-
-    echo "mc-backup: done ($today)"
-  '';
 in
 {
+  # ---------------------------------------------------------------------------
+  # Minecraft server (port 25565)
+  # ---------------------------------------------------------------------------
+
   services.minecraft-servers = {
     enable = true;
     eula = true;
@@ -135,7 +92,10 @@ in
     };
   };
 
-  # --- mc-control: web UI for starting/stopping and configuring the server ---
+  # ---------------------------------------------------------------------------
+  # mc-control (web UI, port 5020)
+  # ---------------------------------------------------------------------------
+
   users.groups.mcctl = { };
   users.groups.mcmods = { };
   users.users.mcctl = {
@@ -149,7 +109,29 @@ in
   ];
 
   # Runs once to download and install NeoForge 1.20.1 into the data dir
-  systemd.services.neoforge-1201-setup = {
+  systemd.services.neoforge-1201-setup = let
+    neoforge1201SetupScript = pkgs.writeShellScript "neoforge-1201-setup" ''
+      set -euo pipefail
+      MARKER="${mcDataDir}/.neoforge-${neoforgeVersion}-installed"
+      [ -f "$MARKER" ] && exit 0
+
+      echo "Downloading NeoForge ${neoforgeVersion} installer..."
+      TMPDIR=$(${pkgs.coreutils}/bin/mktemp -d)
+      trap '${pkgs.coreutils}/bin/rm -rf "$TMPDIR"' EXIT
+
+      ${pkgs.curl}/bin/curl -fL \
+        "https://maven.neoforged.net/releases/net/neoforged/forge/${neoforgeVersion}/forge-${neoforgeVersion}-installer.jar" \
+        -o "$TMPDIR/installer.jar"
+
+      echo "Installing NeoForge server to ${mcDataDir}..."
+      cd "${mcDataDir}"
+      ${pkgs.jdk21}/bin/java -jar "$TMPDIR/installer.jar" --installServer "${mcDataDir}"
+
+      chmod +x "${mcDataDir}/run.sh"
+      touch "$MARKER"
+      echo "NeoForge ${neoforgeVersion} installation complete"
+    '';
+  in {
     description = "Install NeoForge ${neoforgeVersion} server";
     wantedBy = [ mcUnit ];
     before   = [ mcUnit ];
@@ -195,16 +177,44 @@ in
         "MC_STATE_DIR=/var/lib/mc-control"
         "MC_CONTROL_PORT=5020"
       ];
-      ExecStart = "${pythonEnv}/bin/python3 ${../apps/mc-control}/app.py";
+      ExecStart = "${pythonEnv}/bin/python3 ${../../apps/mc-control}/app.py";
       Restart = "on-failure";
     };
   };
 
-  # --- mc-backup: daily world backup to the DAS ---
-  systemd.services.mc-backup = {
+  # ---------------------------------------------------------------------------
+  # mc-backup (daily world backup to DAS)
+  # ---------------------------------------------------------------------------
+
+  systemd.services.mc-backup = let
+    backupScript = pkgs.writeShellScript "mc-backup" ''
+      set -euo pipefail
+
+      src="/var/lib/minecraft/${mcServerName}/"
+      dst="/mnt/server-pc/Backups/minecraft"
+
+      # Skip silently if the DAS isn't mounted
+      if ! ${pkgs.util-linux}/bin/mountpoint -q /mnt/server-pc; then
+        echo "mc-backup: /mnt/server-pc not mounted, skipping" >&2
+        exit 0
+      fi
+
+      today=$(${pkgs.coreutils}/bin/date +%Y-%m-%d)
+      ${pkgs.coreutils}/bin/mkdir -p "$dst/$today"
+      ${pkgs.rsync}/bin/rsync -a --copy-links --delete "$src" "$dst/$today/"
+
+      # Retain the 7 most recent daily backups; remove the rest
+      ${pkgs.findutils}/bin/find "$dst" -maxdepth 1 -type d -name '????-??-??' \
+        | ${pkgs.coreutils}/bin/sort \
+        | ${pkgs.coreutils}/bin/head -n -7 \
+        | ${pkgs.findutils}/bin/xargs -r ${pkgs.coreutils}/bin/rm -rf
+
+      echo "mc-backup: done ($today)"
+    '';
+  in {
     description = "Minecraft world backup to DAS";
     serviceConfig = {
-      Type = "oneshot";
+      Type      = "oneshot";
       ExecStart = "${backupScript}";
     };
   };

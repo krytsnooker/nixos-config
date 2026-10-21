@@ -6,10 +6,18 @@ let
   npmInstallOnce = pkg: stateDir: "${pkgs.bash}/bin/bash -c 'test -d ${stateDir}/node_modules/${pkg} || ${nodeEnv}/bin/npm install --prefix ${stateDir} ${pkg}'";
 in
 {
+  # ---------------------------------------------------------------------------
+  # Homepage (static site, port 5000)
+  # ---------------------------------------------------------------------------
+
   services.nginx.virtualHosts."homepage-lan" = {
     listen = [{ addr = "0.0.0.0"; port = 5000; }];
-    root = ../apps/homepage;
+    root = ../../apps/homepage;
   };
+
+  # ---------------------------------------------------------------------------
+  # LAN Pastebin (port 5001)
+  # ---------------------------------------------------------------------------
 
   systemd.services.lan-pastebin = {
     description = "LAN Pastebin";
@@ -18,15 +26,19 @@ in
     serviceConfig = {
       DynamicUser = true;
       StateDirectory = "lan-pastebin";
-      WorkingDirectory = "${../apps/lan_pastebin}";
+      WorkingDirectory = "${../../apps/lan_pastebin}";
       Environment = [
         "PASTEBIN_DB_PATH=/var/lib/lan-pastebin/pastes.db"
         "PASTEBIN_PORT=5001"
       ];
-      ExecStart = "${pythonEnv}/bin/python3 ${../apps/lan_pastebin}/app.py";
+      ExecStart = "${pythonEnv}/bin/python3 ${../../apps/lan_pastebin}/app.py";
       Restart = "on-failure";
     };
   };
+
+  # ---------------------------------------------------------------------------
+  # Math Tutor (port 3001)
+  # ---------------------------------------------------------------------------
 
   systemd.services.math-tutor = {
     description = "Math Tutor";
@@ -42,10 +54,14 @@ in
         "HOME=/var/lib/math-tutor"
       ];
       ExecStartPre = npmInstallOnce "express" "/var/lib/math-tutor";
-      ExecStart = "${nodeEnv}/bin/node ${../apps/math-tutor}/server.js";
+      ExecStart = "${nodeEnv}/bin/node ${../../apps/math-tutor}/server.js";
       Restart = "on-failure";
     };
   };
+
+  # ---------------------------------------------------------------------------
+  # Typing Tutor (port 3000)
+  # ---------------------------------------------------------------------------
 
   systemd.services.typing-tutor = {
     description = "Typing Tutor";
@@ -61,10 +77,14 @@ in
         "HOME=/var/lib/typing-tutor"
       ];
       ExecStartPre = npmInstallOnce "express" "/var/lib/typing-tutor";
-      ExecStart = "${nodeEnv}/bin/node ${../apps/typing-tutor}/server.js";
+      ExecStart = "${nodeEnv}/bin/node ${../../apps/typing-tutor}/server.js";
       Restart = "on-failure";
     };
   };
+
+  # ---------------------------------------------------------------------------
+  # Music Info (port 5010) + Music Scanner (manual trigger)
+  # ---------------------------------------------------------------------------
 
   users.groups.music-info = { };
   users.users.music-info = {
@@ -86,7 +106,7 @@ in
         "MUSIC_INFO_PORT=5010"
       ];
       EnvironmentFile = "/var/lib/music-info/secrets.env";
-      ExecStart = "${pythonEnv}/bin/python3 ${../apps/music-info-project}/app.py";
+      ExecStart = "${pythonEnv}/bin/python3 ${../../apps/music-info-project}/app.py";
       Restart = "on-failure";
     };
   };
@@ -100,10 +120,14 @@ in
       StateDirectory = "music-info";
       Environment = [ "MUSIC_DB_PATH=/var/lib/music-info/music.db" "MUSIC_PATH=/mnt/server-pc/Media/Albums" ];
       EnvironmentFile = "/var/lib/music-info/secrets.env";
-      WorkingDirectory = "${../apps/music-info-project}";
-      ExecStart = "${pythonEnv}/bin/python3 -u ${../apps/music-info-project}/music_scanner.py";
+      WorkingDirectory = "${../../apps/music-info-project}";
+      ExecStart = "${pythonEnv}/bin/python3 -u ${../../apps/music-info-project}/music_scanner.py";
     };
   };
+
+  # ---------------------------------------------------------------------------
+  # ROM Transfer (port 5035)
+  # ---------------------------------------------------------------------------
 
   users.groups.rom-transfer = { };
   users.users.rom-transfer = {
@@ -120,7 +144,7 @@ in
       pkg = pkgs.buildGoModule {
         pname = "rom-transfer";
         version = "0.1.0";
-        src = ../apps/rom-transfer;
+        src = ../../apps/rom-transfer;
         subPackages = [ "cmd/server" ];
         vendorHash = null;
       };
@@ -129,7 +153,7 @@ in
       Group = "rom-transfer";
       StateDirectory = "rom-transfer";
       EnvironmentFile = "-/var/lib/rom-transfer/secrets.env";
-      ExecStartPre = "${pkgs.bash}/bin/bash -c 'rm -rf /var/lib/rom-transfer/web && cp -r ${../apps/rom-transfer/web} /var/lib/rom-transfer/web && chmod -R u+w /var/lib/rom-transfer/web'";
+      ExecStartPre = "${pkgs.bash}/bin/bash -c 'rm -rf /var/lib/rom-transfer/web && cp -r ${../../apps/rom-transfer/web} /var/lib/rom-transfer/web && chmod -R u+w /var/lib/rom-transfer/web'";
       ExecStart = "${pkg}/bin/server -addr 0.0.0.0:5035 -config /var/lib/rom-transfer/hostconfig.json -web /var/lib/rom-transfer/web";
       Restart = "on-failure";
     };
