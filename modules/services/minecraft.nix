@@ -68,7 +68,7 @@ let
 in
 {
   # ---------------------------------------------------------------------------
-  # Minecraft server (port 25565)
+  # Minecraft server
   # ---------------------------------------------------------------------------
 
   services.minecraft-servers = {
@@ -87,28 +87,11 @@ in
         # /var/lib/mc-control/settings.json and are applied by mc-control
         # on every start.
         online-mode = false;
-        server-port = 25565;
+        server-port = config.homeserver.ports.minecraft;
       };
     };
   };
 
-  # ---------------------------------------------------------------------------
-  # mc-control (web UI, port 5020)
-  # ---------------------------------------------------------------------------
-
-  users.groups.mcctl = { };
-  users.groups.mcmods = { };
-  users.users.mcctl = {
-    isSystemUser = true;
-    group = "mcctl";
-    extraGroups = [ "mcmods" "minecraft" ];
-  };
-
-  systemd.tmpfiles.rules = [
-    "d /var/lib/minecraft/${mcServerName}/mods 0775 minecraft mcmods -"
-  ];
-
-  # Runs once to download and install NeoForge 1.20.1 into the data dir
   systemd.services.neoforge-1201-setup = let
     neoforge1201SetupScript = pkgs.writeShellScript "neoforge-1201-setup" ''
       set -euo pipefail
@@ -144,11 +127,26 @@ in
     };
   };
 
-  # Ensure the server service waits for the installer to finish
   systemd.services."minecraft-server-${mcServerName}" = {
     after    = [ "neoforge-1201-setup.service" ];
     requires = [ "neoforge-1201-setup.service" ];
   };
+
+  # ---------------------------------------------------------------------------
+  # mc-control
+  # ---------------------------------------------------------------------------
+
+  users.groups.mcctl = { };
+  users.groups.mcmods = { };
+  users.users.mcctl = {
+    isSystemUser = true;
+    group = "mcctl";
+    extraGroups = [ "mcmods" "minecraft" ];
+  };
+
+  systemd.tmpfiles.rules = [
+    "d /var/lib/minecraft/${mcServerName}/mods 0775 minecraft mcmods -"
+  ];
 
   security.sudo.extraRules = [
     {
@@ -174,12 +172,12 @@ in
       Environment = [
         "MC_UNIT=${mcUnit}"
         "MC_DATA_DIR=${mcDataDir}"
-        "MC_STATE_DIR=/var/lib/mc-control"
-        "MC_CONTROL_PORT=5020"
+        "MC_STATE_DIR=${mcStateDir}"
+        "MC_CONTROL_PORT=${toString config.homeserver.ports.mcControl}"
       ];
       ExecStart = "${pythonEnv}/bin/python3 ${../../apps/mc-control}/app.py";
-      Restart = "on-failure";
-    };
+      Restart   = "on-failure";
+    } // config.homeserver.sandbox;
   };
 
   # ---------------------------------------------------------------------------
@@ -190,8 +188,8 @@ in
     backupScript = pkgs.writeShellScript "mc-backup" ''
       set -euo pipefail
 
-      src="/var/lib/minecraft/${mcServerName}/"
-      dst="/mnt/server-pc/Backups/minecraft"
+      src="${mcDataDir}/"
+      dst="${config.homeserver.paths.backups}/minecraft"
 
       # Skip silently if the DAS isn't mounted
       if ! ${pkgs.util-linux}/bin/mountpoint -q /mnt/server-pc; then
@@ -215,16 +213,8 @@ in
     description = "Minecraft world backup to DAS";
     serviceConfig = {
       Type      = "oneshot";
-      ExecStart = "${backupScript}";
-
-      NoNewPrivileges       = true;
-      PrivateTmp            = true;
-      ProtectKernelTunables = true;
-      ProtectKernelModules  = true;
-      ProtectControlGroups  = true;
-      RestrictSUIDSGID      = true;
-      LockPersonality       = true;
-    };
+      ExecStart = backupScript;
+    } // config.homeserver.sandbox;
   };
 
   systemd.timers.mc-backup = {
@@ -237,5 +227,5 @@ in
     };
   };
 
-  networking.firewall.allowedTCPPorts = [ 25565 5020 ];
+  networking.firewall.allowedTCPPorts = with config.homeserver.ports; [ minecraft mcControl ];
 }

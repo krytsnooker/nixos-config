@@ -1,39 +1,48 @@
 { config, pkgs, lib, ... }:
 
 let
-  embyUid = 980; # pinned — must match PUID in the container and config dir ownership
+  stateDir = "/var/lib/emby";
+  image    = "emby/embyserver@sha256:3aafff933d3f28d23ed0bc201022abe71c0aa80deb17177566c726b9bbc686c6";
 in
 {
-  users.groups.emby = { gid = embyUid; };
-  users.users.emby = {
-    isSystemUser = true;
-    uid         = embyUid;
-    group       = "emby";
-    extraGroups = [ "video" "sambashare" ];
-  };
+  # ---------------------------------------------------------------------------
+  # User
+  # ---------------------------------------------------------------------------
 
-  virtualisation.podman.enable = true;
-  virtualisation.oci-containers.backend = "podman";
+  users.users.emby.extraGroups = [ "video" "sambashare" ];
+
+  # ---------------------------------------------------------------------------
+  # Container
+  # ---------------------------------------------------------------------------
 
   virtualisation.oci-containers.containers.emby = {
-    image = "emby/embyserver@sha256:3aafff933d3f28d23ed0bc201022abe71c0aa80deb17177566c726b9bbc686c6";
-    ports = [ "8096:8096/tcp" "8920:8920/tcp" ];
+    inherit image;
+    ports = [
+      "${toString config.homeserver.ports.emby}:${toString config.homeserver.ports.emby}/tcp"
+      "${toString config.homeserver.ports.embyHttps}:${toString config.homeserver.ports.embyHttps}/tcp"
+    ];
     volumes = [
-      "/var/lib/emby/config:/config"
-      "/mnt/server-pc/Media:/media"
+      "${stateDir}/config:/config"
+      "${config.homeserver.paths.media}:/media"
     ];
     environment = {
-      PUID = toString embyUid;
-      PGID = "125"; # sambashare — media read access
+      PUID = toString config.homeserver.uids.podman.emby;
+      PGID = toString config.homeserver.gids.sambashare;
     };
-    extraOptions = [
-      "--device=/dev/dri:/dev/dri"
-    ];
+    extraOptions = [ "--device=/dev/dri:/dev/dri" ];
   };
 
+  # ---------------------------------------------------------------------------
+  # Storage
+  # ---------------------------------------------------------------------------
+
   systemd.tmpfiles.rules = [
-    "d /var/lib/emby/config 0755 emby emby -"
+    "d ${stateDir}/config ${config.homeserver.podman.tmpfiles.mode} emby emby ${config.homeserver.podman.tmpfiles.age}"
   ];
 
-  networking.firewall.allowedTCPPorts = [ 8096 8920 ];
+  # ---------------------------------------------------------------------------
+  # Firewall
+  # ---------------------------------------------------------------------------
+
+  networking.firewall.allowedTCPPorts = with config.homeserver.ports; [ emby embyHttps ];
 }

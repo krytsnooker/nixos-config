@@ -27,13 +27,13 @@
     isNormalUser = true;
     uid = 1000;
     description = "kryt";
-    extraGroups = [ "wheel" "networkmanager" "video" "audio" "render" "sambashare" ];
+    extraGroups = [ "wheel" "networkmanager" "video" "audio" "render" "sambashare" "systemd-journal" ];
   };
   users.groups.kryt.gid = 1000;
 
   # GID 125 pinned — CIFS mounts, Emby (PGID=125), and music-info all depend
-  # on this value. Change here and everything else breaks.
-  users.groups.sambashare.gid = 125;
+  # on this value. Change the default in config-values.nix and run a chown pass.
+  users.groups.sambashare.gid = config.homeserver.gids.sambashare;
 
   # ── Nix ───────────────────────────────────────────────────────────────────
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -73,32 +73,6 @@
     pulse.enable = true;
   };
 
-  environment.systemPackages = with pkgs; [
-    brave-origin-nightly
-    firefox
-    vscode
-    (python3.withPackages (ps: [ ps.pyqt6 ]))
-    vim
-    git
-    wget
-    curl
-    htop
-    ripgrep
-    claude-code
-    go
-    cifs-utils
-    neofetch
-  ];
-
-  # chrome-sandbox must be setuid root for Chromium-based browsers to use
-  # the kernel namespace sandbox (seccomp/namespaces).
-  security.wrappers.brave-origin-nightly-sandbox = {
-    source = "${pkgs.brave-origin-nightly}/opt/brave.com/brave-origin-nightly/chrome-sandbox";
-    owner = "root";
-    group = "root";
-    setuid = true;
-  };
-
   # ── KWallet ───────────────────────────────────────────────────────────────
   environment.etc."xdg/kwalletrc".text = ''
     [Wallet]
@@ -106,6 +80,9 @@
   '';
 
   # ── Remote desktop ────────────────────────────────────────────────────────
+  environment.systemPackages = with pkgs; [
+    (python3.withPackages (ps: [ ps.pyqt6 ]))
+  ];
   # XRDP has no hardware GL — kwin compositing crashes the window manager,
   # which leaves the lock screen displayed but unresponsive. Disable both.
   services.xrdp = {
@@ -143,7 +120,7 @@
     fsType = "cifs";
     options = [
       "credentials=/home/kryt/.smbcredentials"
-      "gid=125"
+      "gid=${toString config.homeserver.gids.sambashare}"
       "file_mode=0770"
       "dir_mode=0770"
       "iocharset=utf8"
@@ -153,14 +130,13 @@
     ];
   };
 
-  # uid= kept in sync with homeserver.nextcloudUid declared in nextcloud.nix.
   fileSystems."/var/lib/nextcloud/data" = {
     device = "//192.168.0.110/hsas01/Nextcloud/data";
     fsType = "cifs";
     options = [
       "credentials=/home/kryt/.smbcredentials"
-      "uid=${toString config.homeserver.nextcloudUid}"
-      "gid=125"
+      "uid=${toString config.homeserver.uids.unstable.nextcloud}"
+      "gid=${toString config.homeserver.gids.sambashare}"
       "file_mode=0660"
       "dir_mode=0770"
       "iocharset=utf8"

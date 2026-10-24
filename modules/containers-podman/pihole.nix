@@ -1,44 +1,47 @@
 { config, pkgs, lib, ... }:
 
+let
+  stateDir = "/var/lib/pihole";
+  image    = "pihole/pihole@sha256:7c96327ecfb96dbc74b0a47d073dbef7d60526e0aa87519b2a2f7a0007cb5c88";
+in
 {
-  virtualisation.podman = {
-    enable = true;
-    dockerCompat = true;
-  };
+  # ---------------------------------------------------------------------------
+  # Container
+  # ---------------------------------------------------------------------------
 
-  virtualisation.oci-containers.backend = "podman";
   virtualisation.oci-containers.containers.pihole = {
-    image = "pihole/pihole:2026.07.2";
+    inherit image;
     ports = [
-      "53:53/tcp"
-      "53:53/udp"
-      # web UI on 8083 to avoid clashing with nginx on 80. NOTE: container's
-      # internal webserver port came back as 8080 (not the image's usual 80)
-      # after a Teleporter restore imported the old box's general settings,
-      # which had it configured that way — mapping matches that.
-      "8083:8080/tcp"
+      "${toString config.homeserver.ports.dns}:${toString config.homeserver.ports.dns}/tcp"
+      "${toString config.homeserver.ports.dns}:${toString config.homeserver.ports.dns}/udp"
+      "${toString config.homeserver.ports.pihole}:${toString config.homeserver.ports.piholeInternal}/tcp"
+    ];
+    volumes = [
+      "${stateDir}/etc-pihole:/etc/pihole"
+      "${stateDir}/etc-dnsmasq.d:/etc/dnsmasq.d"
     ];
     environment = {
       TZ = config.time.timeZone;
       FTLCONF_dns_listeningMode = "ALL";
-      # Explicitly pin the internal web UI port so a Teleporter restore (which
-      # imports the old box's general settings) can't silently flip it back to
-      # 80 and break the 8083:8080 host mapping. Env vars override FTL config.
-      FTLCONF_webserver_port = "8080";
+      FTLCONF_webserver_port    = toString config.homeserver.ports.piholeInternal;
     };
-    environmentFiles = [ "/var/lib/pihole/secrets.env" ];
-    volumes = [
-      "/var/lib/pihole/etc-pihole:/etc/pihole"
-      "/var/lib/pihole/etc-dnsmasq.d:/etc/dnsmasq.d"
-    ];
-    extraOptions = [ "--cap-add=NET_ADMIN" ];
+    environmentFiles = [ "${stateDir}/secrets.env" ];
+    extraOptions     = [ "--cap-add=NET_ADMIN" ];
   };
 
-  networking.firewall.allowedTCPPorts = [ 53 8083 ];
-  networking.firewall.allowedUDPPorts = [ 53 ];
+  # ---------------------------------------------------------------------------
+  # Storage
+  # ---------------------------------------------------------------------------
 
   systemd.tmpfiles.rules = [
-    "d /var/lib/pihole/etc-pihole 0755 root root -"
-    "d /var/lib/pihole/etc-dnsmasq.d 0755 root root -"
+    "d ${stateDir}/etc-pihole    ${config.homeserver.podman.tmpfiles.mode} pihole pihole ${config.homeserver.podman.tmpfiles.age}"
+    "d ${stateDir}/etc-dnsmasq.d ${config.homeserver.podman.tmpfiles.mode} pihole pihole ${config.homeserver.podman.tmpfiles.age}"
   ];
+
+  # ---------------------------------------------------------------------------
+  # Firewall
+  # ---------------------------------------------------------------------------
+
+  networking.firewall.allowedTCPPorts = with config.homeserver.ports; [ dns pihole ];
+  networking.firewall.allowedUDPPorts = [ config.homeserver.ports.dns ];
 }

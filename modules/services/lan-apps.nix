@@ -7,16 +7,16 @@ let
 in
 {
   # ---------------------------------------------------------------------------
-  # Homepage (static site, port 5000)
+  # Homepage
   # ---------------------------------------------------------------------------
 
   services.nginx.virtualHosts."homepage-lan" = {
-    listen = [{ addr = "0.0.0.0"; port = 5000; }];
+    listen = [{ addr = "0.0.0.0"; port = config.homeserver.ports.homepage; }];
     root = ../../apps/homepage;
   };
 
   # ---------------------------------------------------------------------------
-  # LAN Pastebin (port 5001)
+  # LAN Pastebin
   # ---------------------------------------------------------------------------
 
   systemd.services.lan-pastebin = {
@@ -29,23 +29,15 @@ in
       WorkingDirectory = "${../../apps/lan_pastebin}";
       Environment = [
         "PASTEBIN_DB_PATH=/var/lib/lan-pastebin/pastes.db"
-        "PASTEBIN_PORT=5001"
+        "PASTEBIN_PORT=${toString config.homeserver.ports.lanPastebin}"
       ];
       ExecStart = "${pythonEnv}/bin/python3 ${../../apps/lan_pastebin}/app.py";
       Restart   = "on-failure";
-
-      NoNewPrivileges       = true;
-      PrivateTmp            = true;
-      ProtectKernelTunables = true;
-      ProtectKernelModules  = true;
-      ProtectControlGroups  = true;
-      RestrictSUIDSGID      = true;
-      LockPersonality       = true;
-    };
+    } // config.homeserver.sandbox;
   };
 
   # ---------------------------------------------------------------------------
-  # Math Tutor (port 3001)
+  # Math Tutor
   # ---------------------------------------------------------------------------
 
   systemd.services.math-tutor = {
@@ -56,7 +48,7 @@ in
       DynamicUser    = true;
       StateDirectory = "math-tutor";
       Environment = [
-        "MATH_TUTOR_PORT=3001"
+        "MATH_TUTOR_PORT=${toString config.homeserver.ports.mathTutor}"
         "MATH_TUTOR_LOGS_FILE=/var/lib/math-tutor/logs.json"
         "NODE_PATH=/var/lib/math-tutor/node_modules"
         "HOME=/var/lib/math-tutor"
@@ -64,19 +56,11 @@ in
       ExecStartPre = npmInstallOnce "express" "/var/lib/math-tutor";
       ExecStart    = "${nodeEnv}/bin/node ${../../apps/math-tutor}/server.js";
       Restart      = "on-failure";
-
-      NoNewPrivileges       = true;
-      PrivateTmp            = true;
-      ProtectKernelTunables = true;
-      ProtectKernelModules  = true;
-      ProtectControlGroups  = true;
-      RestrictSUIDSGID      = true;
-      LockPersonality       = true;
-    };
+    } // config.homeserver.sandbox;
   };
 
   # ---------------------------------------------------------------------------
-  # Typing Tutor (port 3000)
+  # Typing Tutor
   # ---------------------------------------------------------------------------
 
   systemd.services.typing-tutor = {
@@ -87,7 +71,7 @@ in
       DynamicUser    = true;
       StateDirectory = "typing-tutor";
       Environment = [
-        "TYPING_TUTOR_PORT=3000"
+        "TYPING_TUTOR_PORT=${toString config.homeserver.ports.typingTutor}"
         "TYPING_TUTOR_LOGS_FILE=/var/lib/typing-tutor/logs.json"
         "NODE_PATH=/var/lib/typing-tutor/node_modules"
         "HOME=/var/lib/typing-tutor"
@@ -95,19 +79,11 @@ in
       ExecStartPre = npmInstallOnce "express" "/var/lib/typing-tutor";
       ExecStart    = "${nodeEnv}/bin/node ${../../apps/typing-tutor}/server.js";
       Restart      = "on-failure";
-
-      NoNewPrivileges       = true;
-      PrivateTmp            = true;
-      ProtectKernelTunables = true;
-      ProtectKernelModules  = true;
-      ProtectControlGroups  = true;
-      RestrictSUIDSGID      = true;
-      LockPersonality       = true;
-    };
+    } // config.homeserver.sandbox;
   };
 
   # ---------------------------------------------------------------------------
-  # Music Info (port 5010) + Music Scanner (manual trigger)
+  # Music Info + Music Scanner
   # ---------------------------------------------------------------------------
 
   users.groups.music-info = { };
@@ -127,20 +103,12 @@ in
       StateDirectory = "music-info";
       Environment = [
         "MUSIC_DB_PATH=/var/lib/music-info/music.db"
-        "MUSIC_INFO_PORT=5010"
+        "MUSIC_INFO_PORT=${toString config.homeserver.ports.musicInfo}"
       ];
       EnvironmentFile = "/var/lib/music-info/secrets.env";
       ExecStart       = "${pythonEnv}/bin/python3 ${../../apps/music-info-project}/app.py";
       Restart         = "on-failure";
-
-      NoNewPrivileges       = true;
-      PrivateTmp            = true;
-      ProtectKernelTunables = true;
-      ProtectKernelModules  = true;
-      ProtectControlGroups  = true;
-      RestrictSUIDSGID      = true;
-      LockPersonality       = true;
-    };
+    } // config.homeserver.sandbox;
   };
 
   systemd.services.music-scanner = {
@@ -150,15 +118,18 @@ in
       User = "music-info";
       Group = "music-info";
       StateDirectory = "music-info";
-      Environment = [ "MUSIC_DB_PATH=/var/lib/music-info/music.db" "MUSIC_PATH=/mnt/server-pc/Media/Albums" ];
-      EnvironmentFile = "/var/lib/music-info/secrets.env";
-      WorkingDirectory = "${../../apps/music-info-project}";
+      Environment = [
+        "MUSIC_DB_PATH=/var/lib/music-info/music.db"
+        "MUSIC_PATH=${config.homeserver.paths.media}/Albums"
+      ];
+      EnvironmentFile  = "/var/lib/music-info/secrets.env";
+      WorkingDirectory = ../../apps/music-info-project;
       ExecStart = "${pythonEnv}/bin/python3 -u ${../../apps/music-info-project}/music_scanner.py";
     };
   };
 
   # ---------------------------------------------------------------------------
-  # ROM Transfer (port 5035)
+  # ROM Transfer
   # ---------------------------------------------------------------------------
 
   users.groups.rom-transfer = { };
@@ -186,18 +157,10 @@ in
       StateDirectory = "rom-transfer";
       EnvironmentFile = "-/var/lib/rom-transfer/secrets.env";
       ExecStartPre   = "${pkgs.bash}/bin/bash -c 'rm -rf /var/lib/rom-transfer/web && cp -r ${../../apps/rom-transfer/web} /var/lib/rom-transfer/web && chmod -R u+w /var/lib/rom-transfer/web'";
-      ExecStart      = "${pkg}/bin/server -addr 0.0.0.0:5035 -config /var/lib/rom-transfer/hostconfig.json -web /var/lib/rom-transfer/web";
+      ExecStart      = "${pkg}/bin/server -addr 0.0.0.0:${toString config.homeserver.ports.romTransfer} -config /var/lib/rom-transfer/hostconfig.json -web /var/lib/rom-transfer/web";
       Restart        = "on-failure";
-
-      NoNewPrivileges       = true;
-      PrivateTmp            = true;
-      ProtectKernelTunables = true;
-      ProtectKernelModules  = true;
-      ProtectControlGroups  = true;
-      RestrictSUIDSGID      = true;
-      LockPersonality       = true;
-    };
+    } // config.homeserver.sandbox;
   };
 
-  networking.firewall.allowedTCPPorts = [ 3000 3001 5000 5001 5010 5035 ];
+  networking.firewall.allowedTCPPorts = with config.homeserver.ports; [ typingTutor mathTutor homepage lanPastebin musicInfo romTransfer ];
 }

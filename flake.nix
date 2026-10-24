@@ -30,20 +30,26 @@
         ./hardware-configuration.nix
         ./configuration.nix
 
+        ./modules/config-values.nix
         ./modules/nginx.nix
 
-        ./modules/native/databases.nix
-        ./modules/native/nextcloud.nix
-        ./modules/native/mumble.nix
-        ./modules/native/vaultwarden.nix
+        ./modules/pkgs/brave-origin-nightly.nix
 
+        ./modules/nixos-stable/databases.nix
+        ./modules/nixos-stable/mumble.nix
+        ./modules/nixos-stable/systempackages.nix
+
+        ./modules/nixos-unstable/nextcloud.nix
+        ./modules/nixos-unstable/vaultwarden.nix
+
+        ./modules/containers-podman/podman.nix
         ./modules/containers-podman/emby.nix
         ./modules/containers-podman/audiobookshelf.nix
         ./modules/containers-podman/pihole.nix
 
         ./modules/services/lan-apps.nix
-        ./modules/services/minecraft.nix
         nix-minecraft.nixosModules.minecraft-servers
+        ./modules/services/minecraft.nix
       ];
     };
   };
