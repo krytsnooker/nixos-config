@@ -18,8 +18,7 @@
           nixpkgs.overlays = [
             (final: prev: {
               brave-origin-nightly = final.callPackage ./pkgs/brave-origin-nightly.nix {};
-              nextcloud34 = nixpkgs-unstable.legacyPackages.x86_64-linux.nextcloud34;
-              vaultwarden = nixpkgs-unstable.legacyPackages.x86_64-linux.vaultwarden;
+              inherit (nixpkgs-unstable.legacyPackages.x86_64-linux) nextcloud34 vaultwarden;
               vaultwarden-webvault = nixpkgs-unstable.legacyPackages.x86_64-linux.vaultwarden.webvault;
             })
             nix-minecraft.overlays.default

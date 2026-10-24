@@ -36,13 +36,17 @@
   users.groups.sambashare.gid = config.homeserver.gids.sambashare;
 
   # ── Nix ───────────────────────────────────────────────────────────────────
-  nix.settings.experimental-features = [ "nix-command" "flakes" ];
-  nix.settings.cores = 2;        # limit per-build parallelism; Rust source builds OOM at 4 cores on 8 GiB
-  nix.settings.max-jobs = 1;     # one build at a time to cap peak RAM usage
-  nix.gc = {
-    automatic = true;
-    dates = "weekly";
-    options = "--delete-older-than 14d";
+  nix = {
+    settings = {
+      experimental-features = [ "nix-command" "flakes" ];
+      cores = 2;      # limit per-build parallelism; Rust source builds OOM at 4 cores on 8 GiB
+      max-jobs = 1;   # one build at a time to cap peak RAM usage
+    };
+    gc = {
+      automatic = true;
+      dates = "weekly";
+      options = "--delete-older-than 14d";
+    };
   };
 
   # ── System services ───────────────────────────────────────────────────────
