@@ -53,7 +53,7 @@ in
       };
 
       locations."~ ^/(emby/)?Users/AuthenticateByName$" = {
-        proxyPass       = "http://127.0.0.1:${toString config.homeserver.ports.emby}";
+        proxyPass       = "http://${config.homeserver.localhost}:${toString config.homeserver.ports.emby}";
         proxyWebsockets = true;
         extraConfig = ''
           limit_req zone=emby_auth burst=10 nodelay;
@@ -64,7 +64,7 @@ in
       };
 
       locations."/" = {
-        proxyPass       = "http://127.0.0.1:${toString config.homeserver.ports.emby}";
+        proxyPass       = "http://${config.homeserver.localhost}:${toString config.homeserver.ports.emby}";
         proxyWebsockets = true;
         extraConfig = ''
           ${securityHeaders}

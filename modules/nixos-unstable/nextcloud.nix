@@ -27,7 +27,7 @@
       };
 
       settings = {
-        trusted_proxies          = [ "127.0.0.1" ];
+        trusted_proxies          = [ config.homeserver.localhost ];
         "overwrite.cli.url"      = "https://${config.services.nextcloud.hostName}";
         overwriteprotocol        = "https";
         maintenance_window_start = 1;

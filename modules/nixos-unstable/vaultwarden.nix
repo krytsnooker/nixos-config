@@ -18,7 +18,7 @@ in
     config = {
       DOMAIN             = "https://${domain}";
       SIGNUPS_ALLOWED    = false;
-      ROCKET_ADDRESS     = "127.0.0.1";
+      ROCKET_ADDRESS     = config.homeserver.localhost;
       ROCKET_PORT        = rocketPort;
       SHOW_PASSWORD_HINT = false;
     };
@@ -32,7 +32,7 @@ in
     forceSSL   = true;
     enableACME = true;
     locations."/" = {
-      proxyPass       = "http://127.0.0.1:${toString rocketPort}";
+      proxyPass       = "http://${config.homeserver.localhost}:${toString rocketPort}";
       proxyWebsockets = true;
     };
   };

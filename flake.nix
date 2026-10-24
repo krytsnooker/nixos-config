@@ -35,7 +35,11 @@
         ./modules/pkgs/brave-origin-nightly.nix
 
         ./modules/nixos-stable/databases.nix
+        ./modules/nixos-stable/fail2ban.nix
+        ./modules/nixos-stable/grafana.nix
+        ./modules/nixos-stable/loki.nix
         ./modules/nixos-stable/mumble.nix
+        ./modules/nixos-stable/promtail.nix
         ./modules/nixos-stable/systempackages.nix
 
         ./modules/nixos-unstable/nextcloud.nix
