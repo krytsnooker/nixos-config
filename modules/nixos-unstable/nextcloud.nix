@@ -38,6 +38,8 @@
         mail_smtpport            = 587;
         mail_smtpauth            = true;
         mail_smtpname            = "krytsnooker@gmail.com";
+        preview_max_x            = 256;
+        preview_max_y            = 256;
       };
     };
 
