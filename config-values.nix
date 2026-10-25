@@ -84,6 +84,11 @@
       default = "127.0.0.1";
     };
 
+    lanSubnet = lib.mkOption {
+      type    = lib.types.str;
+      default = "192.168.0.0/24";
+    };
+
     # -------------------------------------------------------------------------
     # Ports
     # -------------------------------------------------------------------------
@@ -105,9 +110,11 @@
       piholeInternal = 8080;
       dns            = 53;
       minecraft      = 25565;
-      grafana        = 3010;
-      loki           = 3100;
-      promtail       = 9080;
+      grafana            = 3010;
+      loki               = 3100;
+      promtail           = 9080;
+      qbittorrent        = 8090;
+      qbittorrentTorrent = 6881;
     };
 
   };
