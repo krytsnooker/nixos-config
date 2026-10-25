@@ -29,7 +29,7 @@
         ./hardware-configuration.nix
         ./configuration.nix
 
-        ./modules/config-values.nix
+        ./config-values.nix
         ./modules/nginx.nix
 
         ./modules/pkgs/brave-origin-nightly.nix
