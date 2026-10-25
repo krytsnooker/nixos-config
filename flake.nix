@@ -11,7 +11,7 @@
   outputs = { self, nixpkgs, nixpkgs-unstable, nix-minecraft }: {
     nixosConfigurations.homeserver = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
-      specialArgs = { inherit self; };
+      specialArgs = { inherit self nix-minecraft; };
 
       modules = [
         {
@@ -51,7 +51,6 @@
         ./modules/containers-podman/pihole.nix
 
         ./modules/services/lan-apps.nix
-        nix-minecraft.nixosModules.minecraft-servers
         ./modules/services/minecraft.nix
       ];
     };

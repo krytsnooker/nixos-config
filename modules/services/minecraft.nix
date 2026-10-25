@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, nix-minecraft, ... }:
 
 let
   mcServerName    = "survival";
@@ -67,6 +67,8 @@ let
 
 in
 {
+  imports = [ nix-minecraft.nixosModules.minecraft-servers ];
+
   # ---------------------------------------------------------------------------
   # Minecraft server
   # ---------------------------------------------------------------------------
