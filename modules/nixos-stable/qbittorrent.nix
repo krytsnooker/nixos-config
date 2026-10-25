@@ -15,11 +15,6 @@
     };
   };
 
-  vpnNamespaces.wg.portMappings = [{
-    from = config.homeserver.ports.qbittorrent;
-    to   = config.homeserver.ports.qbittorrent;
-  }];
-
   vpnNamespaces.wg.openVPNPorts = [{
     port     = config.homeserver.ports.qbittorrentTorrent;
     protocol = "both";
@@ -34,5 +29,5 @@
   systemd.services.qbittorrent.serviceConfig =
     builtins.removeAttrs config.homeserver.sandbox [ "PrivateTmp" ];
 
-  networking.firewall.allowedTCPPorts = with config.homeserver.ports; [ qbittorrent ];
+  users.users.qbittorrent.extraGroups = [ "sambashare" ];
 }

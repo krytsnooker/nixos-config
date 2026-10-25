@@ -6,14 +6,17 @@
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     nix-minecraft.url = "github:Infinidoge/nix-minecraft";
     nix-minecraft.inputs.nixpkgs.follows = "nixpkgs";
+    vpn-confinement.url = "github:Maroka-chan/VPN-Confinement";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-unstable, nix-minecraft }: {
+  outputs = { self, nixpkgs, nixpkgs-unstable, nix-minecraft, vpn-confinement }: {
     nixosConfigurations.homeserver = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
       specialArgs = { inherit self nix-minecraft; };
 
       modules = [
+        vpn-confinement.nixosModules.default
+
         {
           nixpkgs.overlays = [
             (final: prev: {
@@ -36,11 +39,14 @@
 
         ./modules/nixos-stable/databases.nix
         ./modules/nixos-stable/fail2ban.nix
+        ./modules/nixos-stable/flood.nix
         ./modules/nixos-stable/grafana.nix
         ./modules/nixos-stable/loki.nix
         ./modules/nixos-stable/mumble.nix
         ./modules/nixos-stable/promtail.nix
+        ./modules/nixos-stable/qbittorrent.nix
         ./modules/nixos-stable/systempackages.nix
+        ./modules/nixos-stable/vpn-namespace.nix
 
         ./modules/nixos-unstable/nextcloud.nix
         ./modules/nixos-unstable/vaultwarden.nix

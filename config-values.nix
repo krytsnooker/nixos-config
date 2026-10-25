@@ -113,6 +113,7 @@
       grafana            = 3010;
       loki               = 3100;
       promtail           = 9080;
+      flood              = 8091;
       qbittorrent        = 8090;
       qbittorrentTorrent = 6881;
     };
