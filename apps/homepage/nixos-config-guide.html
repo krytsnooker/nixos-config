@@ -1,0 +1,504 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NixOS Config Guide — homeserver</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="shell">
+
+  <header class="top">
+    <div class="host-id">
+      <a href="documentation.html" style="font-family:'IBM Plex Mono',monospace;font-size:0.75rem;color:var(--accent);text-decoration:none;display:inline-block;margin-bottom:8px;">← documentation</a>
+      <span class="eyebrow">homeserver // NixOS config guide</span>
+      <h1>NixOS Config Guide</h1>
+      <p>System specs, config architecture, patterns, module management, logging, and upgrades</p>
+    </div>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle colour theme">theme: auto</button>
+  </header>
+
+  <div class="stat-row">
+    <div class="stat"><span class="label">CPU</span><span class="value">i5-7500T</span></div>
+    <div class="stat"><span class="label">Memory</span><span class="value">16 GB</span></div>
+    <div class="stat"><span class="label">Boot disk</span><span class="value">238 GB NVMe</span></div>
+    <div class="stat"><span class="label">NixOS</span><span class="value">25.11 (stable)</span></div>
+  </div>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Sections">
+      <a href="#system">System</a>
+      <a href="#architecture">Config architecture</a>
+      <a href="#patterns">Config patterns</a>
+      <a href="#modules">Module management</a>
+      <a href="#logging">Logging</a>
+      <a href="#upgrades">Patching &amp; upgrades</a>
+    </nav>
+
+    <main>
+
+      <!-- ── 1. System ───────────────────────────────────────────────────── -->
+      <section id="system">
+        <h2><span class="idx">01</span> System</h2>
+
+        <h3>Hardware</h3>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Component</th><th>Details</th></tr></thead>
+          <tbody>
+            <tr><td>Machine</td><td class="wrap">HP ProDesk 800 G4</td></tr>
+            <tr><td>CPU</td><td class="wrap">Intel Core i5-7500T @ 2.70 GHz (4 cores)</td></tr>
+            <tr><td>Memory</td><td class="wrap">16 GB</td></tr>
+            <tr><td>Boot disk</td><td class="wrap">238.5 GB Toshiba NVMe (KXG50ZNV256G)</td></tr>
+            <tr><td>Network</td><td class="wrap"><code>eno1</code> at 192.168.0.120/24 (wired)</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>Disk layout</h3>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Partition</th><th>Size</th><th>Filesystem</th><th>Mount</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">nvme0n1p1</td><td>512 MB</td><td>vfat (ESP)</td><td><code>/boot</code></td></tr>
+            <tr><td class="mono">nvme0n1p2</td><td>190 GB</td><td>btrfs</td><td><code>/</code></td></tr>
+            <tr><td class="mono">nvme0n1p3</td><td>47 GB</td><td>btrfs</td><td><code>/home</code></td></tr>
+            <tr><td>swapfile</td><td>4 GB</td><td>—</td><td><code>/swapfile</code></td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>Network</h3>
+        <p class="dim">Static LAN IP <code>192.168.0.120</code>. Podman creates a bridge network at <code>10.88.0.0/16</code> for containers. The DAS (direct-attached storage server) lives at <code>192.168.0.110</code> and is mounted via CIFS at <code>/mnt/server-pc</code>.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Mount point</th><th>Remote</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">/mnt/server-pc</td><td class="mono">//192.168.0.110/hsas01</td><td class="wrap">General share — media, backups, music. <code>gid=sambashare</code></td></tr>
+            <tr><td class="mono">/var/lib/nextcloud/data</td><td class="mono">//192.168.0.110/hsas01/Nextcloud/data</td><td class="wrap"><code>uid=nextcloud</code>, <code>gid=sambashare</code> — both read from <code>config-values.nix</code></td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>Desktop</h3>
+        <p class="dim">KDE Plasma 6 on X11 via SDDM. Pipewire audio, Bluetooth, CUPS printing, polkit, colord, udisks2. XRDP enabled for remote desktop — compositing disabled and screen lock suppressed in the session wrapper to prevent unresponsive lock screens over RDP.</p>
+
+        <h3>Build constraints</h3>
+        <p class="dim"><code>nix.settings.cores = 2</code> and <code>max-jobs = 1</code> cap peak RAM during builds. Rust source builds (vaultwarden in particular) OOM the machine at 4 cores. Vaultwarden is taken from the unstable overlay as a pre-built binary specifically to avoid compiling it locally.</p>
+      </section>
+
+      <!-- ── 2. Config architecture ──────────────────────────────────────── -->
+      <section id="architecture">
+        <h2><span class="idx">02</span> Config architecture</h2>
+
+        <p class="dim">Single-host flake. Every module is loaded unconditionally — there are no feature flags or per-host conditionals. The flake produces exactly one system: <code>nixosConfigurations.homeserver</code>.</p>
+
+        <h3>Repo layout</h3>
+        <pre><code>/etc/nixos/
+  flake.nix                    entry point — inputs, overlays, module list
+  flake.lock                   pinned input revisions
+  config-values.nix            all ports, UIDs, GIDs, paths, sandbox options
+  configuration.nix            machine identity — users, mounts, desktop, boot
+  hardware-configuration.nix   generated — partition UUIDs, kernel modules
+  modules/
+    nginx.nix                  reverse proxy + ACME
+    pkgs/                      custom package definitions
+    nixos-stable/              NixOS native modules (stable channel)
+    nixos-unstable/            NixOS native modules (unstable overlay pkgs)
+    containers-podman/         Podman container definitions
+    services/                  custom systemd services (LAN apps, Minecraft)
+  apps/                        source for custom LAN apps
+  docs/                        working guides (add-new-module.md)
+  pkgs/                        custom Nix packages</code></pre>
+
+        <h3>Flake inputs</h3>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Input</th><th>Channel</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">nixpkgs</td><td class="mono">nixos-25.11</td><td class="wrap">Main package set</td></tr>
+            <tr><td class="mono">nixpkgs-unstable</td><td class="mono">nixos-unstable</td><td class="wrap">Selected packages injected via overlay — newer versions not yet in stable, or pre-built binaries that must not be compiled locally</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>Unstable overlay</h3>
+        <p class="dim">Declared inline in <code>flake.nix</code>. Injects selected packages from <code>nixpkgs-unstable</code> into the main pkgs set so any module can reference them without needing <code>specialArgs</code>. A package goes through the overlay when the required version isn't available in the stable channel, or when it must be taken as a pre-built binary to avoid a source compile that would exhaust RAM. Custom packages not in nixpkgs at all are defined in <code>pkgs/</code> and added to the overlay the same way.</p>
+
+        <h3>Module groups</h3>
+        <p class="dim">The flake module list contains only local file paths — all external module dependencies are encapsulated inside the module that needs them. Modules are loaded in this order; the grouping determines which pkgs channel a module expects and where new modules should be inserted.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Group</th><th>Channel</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">modules/nginx.nix</td><td>stable</td><td class="wrap">Reverse proxy and ACME — loaded first as other services bind to it</td></tr>
+            <tr><td class="mono">modules/nixos-stable/</td><td>stable</td><td class="wrap">NixOS managed services from the stable channel</td></tr>
+            <tr><td class="mono">modules/nixos-unstable/</td><td>unstable overlay</td><td class="wrap">NixOS managed services requiring packages from the unstable overlay</td></tr>
+            <tr><td class="mono">modules/containers-podman/</td><td>stable (podman)</td><td class="wrap">Podman container definitions — one file per container</td></tr>
+            <tr><td class="mono">modules/services/</td><td>stable</td><td class="wrap">Custom systemd services built from source in <code>apps/</code></td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>File reference</h3>
+        <p class="dim">Detailed documentation for each config file — how it works, what it controls, and how it relates to other files.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>File</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><a href="docs/files/flake.md" class="mono">flake.nix</a></td><td class="wrap">Entry point — inputs, overlays, specialArgs, module list</td></tr>
+            <tr><td><a href="docs/files/config-values.md" class="mono">config-values.nix</a></td><td class="wrap">All shared constants: UIDs, GIDs, ports, paths, sandbox flags</td></tr>
+            <tr><td><a href="docs/files/configuration.md" class="mono">configuration.nix</a></td><td class="wrap">Machine identity, boot, users, desktop, CIFS mounts</td></tr>
+            <tr><td><a href="docs/files/hardware-configuration.md" class="mono">hardware-configuration.nix</a></td><td class="wrap">Auto-generated — partition UUIDs, kernel modules</td></tr>
+            <tr><td><a href="docs/files/modules/nginx.md" class="mono">modules/nginx.nix</a></td><td class="wrap">Reverse proxy, ACME, security headers, rate limiting</td></tr>
+            <tr><td><a href="docs/files/modules/nixos-stable/databases.md" class="mono">modules/nixos-stable/databases.nix</a></td><td class="wrap">MariaDB + PostgreSQL</td></tr>
+            <tr><td><a href="docs/files/modules/nixos-stable/fail2ban.md" class="mono">modules/nixos-stable/fail2ban.nix</a></td><td class="wrap">nginx brute-force and scan protection</td></tr>
+            <tr><td><a href="docs/files/modules/nixos-stable/grafana.md" class="mono">modules/nixos-stable/grafana.nix</a></td><td class="wrap">Dashboards-as-code, Loki datasource provisioning</td></tr>
+            <tr><td><a href="docs/files/modules/nixos-stable/loki.md" class="mono">modules/nixos-stable/loki.nix</a></td><td class="wrap">Log storage, tiered retention, TSDB backend</td></tr>
+            <tr><td><a href="docs/files/modules/nixos-stable/mumble.md" class="mono">modules/nixos-stable/mumble.nix</a></td><td class="wrap">Murmur voice server</td></tr>
+            <tr><td><a href="docs/files/modules/nixos-stable/promtail.md" class="mono">modules/nixos-stable/promtail.nix</a></td><td class="wrap">journald scraper, full label relabeling ruleset</td></tr>
+            <tr><td><a href="docs/files/modules/nixos-stable/systempackages.md" class="mono">modules/nixos-stable/systempackages.nix</a></td><td class="wrap">Desktop and developer tools</td></tr>
+            <tr><td><a href="docs/files/modules/nixos-unstable/nextcloud.md" class="mono">modules/nixos-unstable/nextcloud.nix</a></td><td class="wrap">Nextcloud — CIFS data mount, preview gen, PHP hardening</td></tr>
+            <tr><td><a href="docs/files/modules/nixos-unstable/vaultwarden.md" class="mono">modules/nixos-unstable/vaultwarden.nix</a></td><td class="wrap">Vaultwarden — SQLite, nginx proxy, daily backup</td></tr>
+            <tr><td><a href="docs/files/modules/containers-podman/podman.md" class="mono">modules/containers-podman/podman.nix</a></td><td class="wrap">Podman setup, shared user creation loop</td></tr>
+            <tr><td><a href="docs/files/modules/containers-podman/emby.md" class="mono">modules/containers-podman/emby.nix</a></td><td class="wrap">Emby media server — hardware transcoding, DAS volumes</td></tr>
+            <tr><td><a href="docs/files/modules/containers-podman/audiobookshelf.md" class="mono">modules/containers-podman/audiobookshelf.nix</a></td><td class="wrap">Audiobookshelf — audiobooks and podcasts</td></tr>
+            <tr><td><a href="docs/files/modules/containers-podman/pihole.md" class="mono">modules/containers-podman/pihole.nix</a></td><td class="wrap">Pi-hole DNS — port pinning, split-horizon DNS note</td></tr>
+            <tr><td><a href="docs/files/modules/services/lan-apps.md" class="mono">modules/services/lan-apps.nix</a></td><td class="wrap">All LAN apps: homepage, pastebin, tutors, music-info, rom-transfer</td></tr>
+            <tr><td><a href="docs/files/modules/services/minecraft.md" class="mono">modules/services/minecraft.nix</a></td><td class="wrap">NeoForge server, mc-control UI, daily world backup</td></tr>
+            <tr><td><a href="docs/files/modules/pkgs/brave-origin-nightly.md" class="mono">modules/pkgs/brave-origin-nightly.nix</a></td><td class="wrap">Brave browser, setuid sandbox wrapper</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <div class="callout info">
+          <span class="tag">Flake tracking</span>
+          Flakes only see git-tracked files. Always <code>sudo git -C /etc/nixos add &lt;file&gt;</code> before rebuilding — a new module that isn't staged will silently be missing from the build.
+        </div>
+      </section>
+
+      <!-- ── 3. Config patterns ──────────────────────────────────────────── -->
+      <section id="patterns">
+        <h2><span class="idx">03</span> Config patterns</h2>
+
+        <h3>config-values.nix</h3>
+        <p class="dim">NixOS options module at the repo root. Defines the <code>homeserver</code> namespace — single source of truth for all ports, UIDs, GIDs, shared paths, sandbox options, and the localhost address.</p>
+
+        <h3>uids</h3>
+        <p class="dim">System user IDs, grouped by service category. Services declared via <code>services.X.enable</code> in <code>nixos-stable/</code> are not represented here — their users are created internally by the NixOS module system with no UID we need to pin. Only users we declare ourselves are pinned.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Group</th><th>Example references</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">uids.podman</td><td class="wrap"><code>containers-podman/podman.nix</code>, <code>emby.nix</code></td></tr>
+            <tr><td class="mono">uids.unstable</td><td class="wrap"><code>nixos-unstable/nextcloud.nix</code>, <code>configuration.nix</code></td></tr>
+            <tr><td class="mono">uids.services</td><td class="wrap"><code>services/lan-apps.nix</code>, <code>services/minecraft.nix</code></td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>gids</h3>
+        <p class="dim">System group IDs. <code>sambashare</code> is shared across CIFS mounts and containers; the rest are service-local.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Group</th><th>Example references</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">gids.sambashare</td><td class="wrap"><code>configuration.nix</code>, <code>emby.nix</code></td></tr>
+            <tr><td class="mono">gids.musicInfo, gids.romTransfer</td><td class="wrap"><code>services/lan-apps.nix</code></td></tr>
+            <tr><td class="mono">gids.mcctl, gids.mcmods</td><td class="wrap"><code>services/minecraft.nix</code></td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>shared paths / paths</h3>
+        <p class="dim">Shared filesystem paths for CIFS-mounted storage.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Key</th><th>Value</th><th>Example references</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">paths.media</td><td class="mono">/mnt/server-pc/Media</td><td class="wrap"><code>emby.nix</code>, <code>audiobookshelf.nix</code>, <code>services/lan-apps.nix</code></td></tr>
+            <tr><td class="mono">paths.backups</td><td class="mono">/mnt/server-pc/Backups</td><td class="wrap"><code>services/minecraft.nix</code></td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>sandbox</h3>
+        <p class="dim">Attrset of systemd hardening flags merged into <code>serviceConfig</code> for all services.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Flag</th><th>Value</th><th>Exceptions</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">NoNewPrivileges</td><td class="mono">true</td><td></td></tr>
+            <tr><td class="mono">PrivateTmp</td><td class="mono">true</td><td></td></tr>
+            <tr><td class="mono">ProtectKernelTunables</td><td class="mono">true</td><td></td></tr>
+            <tr><td class="mono">ProtectKernelModules</td><td class="mono">true</td><td></td></tr>
+            <tr><td class="mono">ProtectControlGroups</td><td class="mono">true</td><td></td></tr>
+            <tr><td class="mono">RestrictSUIDSGID</td><td class="mono">true</td><td></td></tr>
+            <tr><td class="mono">LockPersonality</td><td class="mono">true</td><td></td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>addresses / localhost</h3>
+        <p class="dim">Loopback address <code>127.0.0.1</code>. Used by all modules that bind a service to localhost or proxy to a localhost target — referenced in <code>nginx.nix</code> and every module in <code>nixos-stable/</code>, <code>nixos-unstable/</code>.</p>
+
+        <h3>ports</h3>
+        <p class="dim">All service port numbers — no port is ever hardcoded in a module. Includes internal-only ports that are never opened in the firewall. Every module reads from this namespace: to set the port a service listens on, to tell nginx where to proxy, and to declare which ports the firewall should open.</p>
+        <pre><code>networking.firewall.allowedTCPPorts = with config.homeserver.ports; [ portA portB ];</code></pre>
+      </section>
+
+      <!-- ── 4. Module management ────────────────────────────────────────── -->
+      <section id="modules">
+        <h2><span class="idx">04</span> Module management</h2>
+
+        <h3>One service per file</h3>
+        <p class="dim">Each file is fully self-contained: users, systemd unit, firewall rules, state directories, and secrets injection all live in the same file. Never group unrelated services together — it makes each service independently patchable and upgradeable.</p>
+
+        <h3>Internal structure</h3>
+        <p class="dim">Follow this order within a module file:</p>
+        <pre><code>{ config, pkgs, lib, ... }:
+{
+  # User/group (custom services only)
+  users.groups.myapp = { };
+  users.users.myapp  = { isSystemUser = true; group = "myapp"; };
+
+  # Service declaration
+  services.myapp = { ... };
+
+  # Systemd overrides (sandbox, EnvironmentFile)
+  systemd.services.myapp.serviceConfig = ...;
+
+  # Firewall
+  networking.firewall.allowedTCPPorts = with config.homeserver.ports; [ myapp ];
+}</code></pre>
+
+        <h3>Adding a new module — checklist</h3>
+        <p class="dim">Before writing a single line, answer these questions. The full checklist is at <code>docs/add-new-module.md</code>.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Step</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td>Port</td><td class="wrap">Add to <code>config-values.nix</code> ports. Internal-only ports still go there — no hardcoding.</td></tr>
+            <tr><td>Channel</td><td class="wrap">Package in the current stable channel? → <code>nixos-stable/</code>. Needs unstable? → add to overlay in <code>flake.nix</code>, put module in <code>nixos-unstable/</code>.</td></tr>
+            <tr><td>Users</td><td class="wrap">NixOS native services manage their own user. Custom services declare <code>users.groups</code> and <code>users.users</code> explicitly.</td></tr>
+            <tr><td>Hardening</td><td class="wrap">Apply <code>config.homeserver.sandbox</code>. Required — do not skip.</td></tr>
+            <tr><td>Secrets</td><td class="wrap">Add check to <code>check-secrets.sh</code>. Add row to secrets table in reference.</td></tr>
+            <tr><td>flake.nix</td><td class="wrap">Insert in the correct group. <code>sudo git add</code> the new file before rebuilding.</td></tr>
+            <tr><td>Promtail</td><td class="wrap">Add unit name to the correct <code>rulesXxx</code> group in <code>modules/nixos-stable/promtail.nix</code>.</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>flake.nix insertion order</h3>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Module folder</th><th>Insert after</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">nixos-stable/</td><td class="mono">databases.nix</td></tr>
+            <tr><td class="mono">nixos-unstable/</td><td class="mono">vaultwarden.nix</td></tr>
+            <tr><td class="mono">containers-podman/</td><td class="mono">podman.nix</td></tr>
+            <tr><td class="mono">services/</td><td class="mono">lan-apps.nix</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>External flake dependencies</h3>
+        <p class="dim">Some services depend on a third-party flake input rather than a nixpkgs package. These are declared in <code>flake.nix</code> as inputs and passed via <code>specialArgs</code> — the module then self-imports the external NixOS module. This keeps the flake module list as purely local file paths.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Input</th><th>Used by</th><th>How</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">nix-minecraft</td><td class="mono">modules/services/minecraft.nix</td><td class="wrap"><code>imports = [ nix-minecraft.nixosModules.minecraft-servers ];</code> inside the module</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </section>
+
+      <!-- ── 5. Logging ─────────────────────────────────────────────────── -->
+      <section id="logging">
+        <h2><span class="idx">05</span> Logging</h2>
+
+        <h3>Pipeline</h3>
+        <p class="dim">All logging is localhost-only. No external log shipping.</p>
+        <pre><code>journald  →  Promtail (9080)  →  Loki (3100)  →  Grafana (3010)</code></pre>
+        <p class="dim">Promtail reads from <code>__journal__</code> (the systemd journal socket), enriches each entry with labels, and pushes to Loki. Grafana queries Loki and renders dashboards. Loki and Promtail ports are not opened in the firewall — they are unreachable outside localhost.</p>
+
+        <h3>Label taxonomy</h3>
+        <p class="dim">Every log entry carries these labels. Grafana dashboards cascade-filter on them.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Label</th><th>Example values</th><th>Source</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">host</td><td class="mono">homeserver</td><td class="wrap">Static — set at scrape config level</td></tr>
+            <tr><td class="mono">category</td><td class="mono">system, nixos-sys, nixos-modules</td><td class="wrap">Assigned by Promtail relabel rules</td></tr>
+            <tr><td class="mono">module</td><td class="mono">kernel, nixos-stable, services</td><td class="wrap">Assigned by Promtail relabel rules</td></tr>
+            <tr><td class="mono">service</td><td class="mono">grafana, nextcloud, pihole</td><td class="wrap">Unit name with <code>.service</code> stripped; overridden for renamed units</td></tr>
+            <tr><td class="mono">level</td><td class="mono">info, warning, err, crit</td><td class="wrap">From <code>__journal_priority_keyword</code></td></tr>
+            <tr><td class="mono">unit</td><td class="mono">phpfpm-nextcloud.service</td><td class="wrap">Raw systemd unit name (passthrough)</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>Category / module hierarchy</h3>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Category</th><th>Module</th><th>Covers</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">system</td><td class="mono">kernel</td><td class="wrap">journald, logind, udevd, timesyncd, coredump, fsck, user sessions</td></tr>
+            <tr><td class="mono">system</td><td class="mono">hardware</td><td class="wrap">ModemManager, bluetooth, fwupd, irqbalance, thermald, udisks2, fstrim</td></tr>
+            <tr><td class="mono">system</td><td class="mono">networking</td><td class="wrap">NetworkManager, wpa_supplicant, avahi, samba-wsdd</td></tr>
+            <tr><td class="mono">system</td><td class="mono">desktop</td><td class="wrap">dbus, cups, display-manager, polkit, rtkit, drkonqi</td></tr>
+            <tr><td class="mono">nixos-sys</td><td class="mono">acme</td><td class="wrap">Let's Encrypt cert renewal for all domains</td></tr>
+            <tr><td class="mono">nixos-sys</td><td class="mono">nix</td><td class="wrap">nix-daemon, nixos-rebuild</td></tr>
+            <tr><td class="mono">nixos-sys</td><td class="mono">system</td><td class="wrap">cron, logrotate, nscd</td></tr>
+            <tr><td class="mono">nixos-sys</td><td class="mono">remote</td><td class="wrap">xrdp, xrdp-sesman</td></tr>
+            <tr><td class="mono">nixos-modules</td><td class="mono">nixos-stable</td><td class="wrap">fail2ban, grafana, loki, promtail, murmur, mysql, postgresql</td></tr>
+            <tr><td class="mono">nixos-modules</td><td class="mono">nixos-unstable</td><td class="wrap">vaultwarden, nextcloud (phpfpm-nextcloud → nextcloud), redis-nextcloud</td></tr>
+            <tr><td class="mono">nixos-modules</td><td class="mono">containers-podman</td><td class="wrap">All <code>podman-*.service</code> units — emby, audiobookshelf, pihole</td></tr>
+            <tr><td class="mono">nixos-modules</td><td class="mono">services</td><td class="wrap">math-tutor, typing-tutor, music-info, rom-transfer, mc-control, minecraft, lan-pastebin, nginx</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>Retention policy</h3>
+        <p class="dim">Loki applies tiered retention. Lower-noise entries are kept for shorter periods; errors and warnings are kept longest.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Selector</th><th>Retention</th></tr></thead>
+          <tbody>
+            <tr><td><code>level=info, category=system</code></td><td>1 day</td></tr>
+            <tr><td><code>level=info, service=&lt;high-volume&gt;</code></td><td>2 days</td></tr>
+            <tr><td><code>level=info</code></td><td>7 days</td></tr>
+            <tr><td><code>level=notice</code></td><td>7 days</td></tr>
+            <tr><td><code>level=warning</code></td><td>14 days</td></tr>
+            <tr><td>all other (err, crit, emerg, alert)</td><td>30 days</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <p class="dim">Compactor runs with a 2-hour delete delay. Retention is enforced at the stream level — selectors are evaluated in priority order; the highest matching priority wins.</p>
+
+        <h3>Dashboards</h3>
+        <p class="dim">Both dashboards are provisioned as code from <code>modules/nixos-stable/grafana.nix</code> — no manual Grafana configuration needed after a rebuild.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Dashboard</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>Homeserver Logs</td><td class="wrap">Full log stream. Cascade variable filters: Category → Module → Service → Level. Refreshes every 30 s. Default window: last 1 h.</td></tr>
+            <tr><td>Homeserver Alerts</td><td class="wrap">Table of error/critical counts by category, module, and service over the selected range. Each row links directly to the Logs dashboard filtered to that service and error levels.</td></tr>
+          </tbody>
+        </table>
+        </div>
+
+        <h3>Adding a new service to Promtail</h3>
+        <p class="dim">When a new module is added, its systemd unit must be registered in <code>modules/nixos-stable/promtail.nix</code> so it gets the correct <code>category</code> and <code>module</code> labels. Without this it falls back to <code>category=system, module=unknown</code>.</p>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>Module folder</th><th>Rules group</th><th>What to add</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">nixos-stable/</td><td class="mono">rulesNixosStable</td><td class="wrap">Add service name to the alternation regex</td></tr>
+            <tr><td class="mono">nixos-unstable/</td><td class="mono">rulesNixosUnstable</td><td class="wrap">Add service name to the alternation regex</td></tr>
+            <tr><td class="mono">containers-podman/</td><td class="mono">rulesContainers</td><td class="wrap">Only needed if unit does not follow <code>podman-&lt;name&gt;.service</code> pattern</td></tr>
+            <tr><td class="mono">services/</td><td class="mono">rulesServices</td><td class="wrap">Add service name to the alternation regex</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <p class="dim">If the unit name needs a clean service label (e.g. <code>phpfpm-nextcloud</code> → <code>nextcloud</code>), add an explicit override rule in the same group following the existing pattern.</p>
+      </section>
+
+      <!-- ── 6. Patching & upgrades ─────────────────────────────────────── -->
+      <section id="upgrades">
+        <h2><span class="idx">06</span> Patching &amp; upgrades</h2>
+
+        <h3>Edit and validate workflow</h3>
+        <p class="dim">The live config at <code>/etc/nixos/</code> is root-owned. All edits go through the mirror first:</p>
+        <ol class="steps">
+          <li>Verify mirror is in sync with live config: <code>rsync -a --exclude='.git' --exclude='apps/' /etc/nixos/ /home/kryt/nixos-mirror/</code></li>
+          <li>Edit files in <code>/home/kryt/nixos-mirror/</code></li>
+          <li>Build from the mirror to catch all eval and build errors without touching the live system: <code>nixos-rebuild build --flake /home/kryt/nixos-mirror#homeserver</code></li>
+          <li>Copy changed files to <code>/etc/nixos/</code></li>
+          <li>Activate for testing (no boot default change): <code>sudo nixos-rebuild test --flake /etc/nixos#homeserver</code></li>
+          <li>If test looks good, make permanent: <code>sudo nixos-rebuild switch --flake /etc/nixos#homeserver</code></li>
+          <li>Commit and optionally tag: <code>git tag working-YYYY-MM-DD</code></li>
+        </ol>
+
+        <h3>Flake lock updates</h3>
+        <p class="dim">Bumps all inputs — stable channel rolls forward, unstable overlay picks up new package versions:</p>
+        <pre><code>sudo nix flake update /etc/nixos</code></pre>
+        <p class="dim">After updating the lock, always follow the full edit/validate workflow above. Pay attention to packages in the unstable overlay — they may require data migrations or config changes between versions.</p>
+
+        <div class="callout warn">
+          <span class="tag">Nextcloud upgrades</span>
+          Nextcloud only supports single-version upgrades. If the lock update skips a major version, the service will fail to start with a migration error. Restore from backup and upgrade incrementally.
+        </div>
+
+        <h3>Podman container digests</h3>
+        <p class="dim">Podman containers are pinned by digest in their module files — they never auto-update. To upgrade:</p>
+        <ol class="steps">
+          <li>Pull the new image: <code>podman pull &lt;image&gt;:&lt;tag&gt;</code></li>
+          <li>Get the digest: <code>podman inspect --format '{{.Digest}}' &lt;image&gt;:&lt;tag&gt;</code></li>
+          <li>Update the digest in the module file in <code>nixos-mirror/</code></li>
+          <li>Build, test, and switch</li>
+        </ol>
+
+        <h3>Rolling back</h3>
+        <p class="dim">Roll back to the previous generation without touching git:</p>
+        <pre><code>sudo nixos-rebuild switch --rollback</code></pre>
+        <p class="dim">Roll back to a tagged stable state:</p>
+        <pre><code>sudo git -C /etc/nixos checkout &lt;tag&gt;
+sudo nixos-rebuild switch --flake /etc/nixos#homeserver</code></pre>
+
+        <h3>Nix garbage collection</h3>
+        <p class="dim">Automatic weekly GC deletes generations older than 14 days. To run manually:</p>
+        <pre><code>sudo nix-collect-garbage --delete-older-than 14d</code></pre>
+        <p class="dim">Check store size: <code>du -sh /nix/store</code>. Each generation pinned by a tag or a git ref keeps its closure alive until the ref is removed.</p>
+      </section>
+
+    </main>
+  </div>
+
+  <footer>
+    <span>homeserver &middot; NixOS config guide</span>
+    <span id="genDate"></span>
+  </footer>
+
+</div>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById('themeToggle');
+    var stored = null;
+    try { stored = localStorage.getItem('hs-theme'); } catch (e) {}
+    if (stored === 'dark' || stored === 'light') {
+      root.setAttribute('data-theme', stored);
+    }
+    function label() {
+      var mode = root.getAttribute('data-theme');
+      btn.textContent = 'theme: ' + (mode ? mode : 'auto');
+    }
+    label();
+    btn.addEventListener('click', function () {
+      var current = root.getAttribute('data-theme');
+      var next = current === 'dark' ? 'light' : (current === 'light' ? null : 'dark');
+      if (next) {
+        root.setAttribute('data-theme', next);
+        try { localStorage.setItem('hs-theme', next); } catch (e) {}
+      } else {
+        root.removeAttribute('data-theme');
+        try { localStorage.removeItem('hs-theme'); } catch (e) {}
+      }
+      label();
+    });
+
+    var d = new Date();
+    document.getElementById('genDate').textContent =
+      'generated ' + d.toISOString().slice(0, 10);
+  })();
+</script>
+
+</body>
+</html>
