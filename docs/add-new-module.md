@@ -8,7 +8,7 @@ Do not write a single line of a new module until you have completed Steps 1 and 
 
 ## Step 1 — Read these files first
 
-- `modules/config-values.nix` — all declared ports, UIDs, GIDs, paths, sandbox options
+- `config-values.nix` — all declared ports, UIDs, GIDs, paths, sandbox options
 - The closest existing module to what you are adding (see reference table below)
 - `flake.nix` — to confirm the correct group and ordering for the new module
 
@@ -24,7 +24,7 @@ Do not write a single line of a new module until you have completed Steps 1 and 
 ## Step 2 — Answer every question before writing
 
 **Port**
-- Does the service need a port? Add it to `ports` in `modules/config-values.nix`.
+- Does the service need a port? Add it to `ports` in `config-values.nix`.
 - If the service has an internal-only port (e.g. Loki, Promtail) it still goes in config-values — no hardcoding.
 
 **Secrets**
