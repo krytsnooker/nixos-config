@@ -138,10 +138,11 @@ in
   # mc-control
   # ---------------------------------------------------------------------------
 
-  users.groups.mcctl = { };
-  users.groups.mcmods = { };
+  users.groups.mcctl  = { gid = config.homeserver.gids.mcctl; };
+  users.groups.mcmods = { gid = config.homeserver.gids.mcmods; };
   users.users.mcctl = {
     isSystemUser = true;
+    uid   = config.homeserver.uids.services.mcctl;
     group = "mcctl";
     extraGroups = [ "mcmods" "minecraft" ];
   };

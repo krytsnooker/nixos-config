@@ -86,9 +86,10 @@ in
   # Music Info + Music Scanner
   # ---------------------------------------------------------------------------
 
-  users.groups.music-info = { };
+  users.groups.music-info = { gid = config.homeserver.gids.musicInfo; };
   users.users.music-info = {
     isSystemUser = true;
+    uid   = config.homeserver.uids.services.musicInfo;
     group = "music-info";
     extraGroups = [ "sambashare" ];
   };
@@ -132,9 +133,10 @@ in
   # ROM Transfer
   # ---------------------------------------------------------------------------
 
-  users.groups.rom-transfer = { };
+  users.groups.rom-transfer = { gid = config.homeserver.gids.romTransfer; };
   users.users.rom-transfer = {
     isSystemUser = true;
+    uid   = config.homeserver.uids.services.romTransfer;
     group = "rom-transfer";
     extraGroups = [ "sambashare" ];
   };

@@ -23,6 +23,14 @@
         nextcloud = 991;
       };
 
+      services = lib.mapAttrs (name: default:
+        lib.mkOption { type = lib.types.int; inherit default; }
+      ) {
+        musicInfo   = 992;
+        romTransfer = 985;
+        mcctl       = 994;
+      };
+
     };
 
     # -------------------------------------------------------------------------
@@ -32,7 +40,11 @@
     gids = lib.mapAttrs (name: default:
       lib.mkOption { type = lib.types.int; inherit default; }
     ) {
-      sambashare = 125;
+      sambashare  = 125;
+      musicInfo   = 991;
+      romTransfer = 979;
+      mcctl       = 993;
+      mcmods      = 980;
     };
 
     # -------------------------------------------------------------------------
