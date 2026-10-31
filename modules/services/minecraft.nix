@@ -126,7 +126,7 @@ in
       User             = "minecraft";
       WorkingDirectory = mcDataDir;
       ExecStart        = neoforge1201SetupScript;
-    };
+    } // config.homeserver.sandbox;
   };
 
   systemd.services."minecraft-server-${mcServerName}" = {

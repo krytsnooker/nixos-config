@@ -126,7 +126,7 @@ in
       EnvironmentFile  = "/var/lib/music-info/secrets.env";
       WorkingDirectory = ../../apps/music-info-project;
       ExecStart = "${pythonEnv}/bin/python3 -u ${../../apps/music-info-project}/music_scanner.py";
-    };
+    } // config.homeserver.sandbox;
   };
 
   # ---------------------------------------------------------------------------
