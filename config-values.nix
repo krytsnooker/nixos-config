@@ -14,7 +14,6 @@
       ) {
         emby           = 980;
         audiobookshelf = 979;
-        pihole         = 978;
       };
 
       unstable = lib.mapAttrs (name: default:
@@ -85,6 +84,12 @@
     localhost = lib.mkOption {
       type    = lib.types.str;
       default = "127.0.0.1";
+    };
+
+    ispIp = lib.mkOption {
+      type        = lib.types.str;
+      default     = "119.17.142.110";
+      description = "Admin's home ISP IP; fail2ban allowlist. Update if it changes.";
     };
 
     lanSubnet = lib.mkOption {

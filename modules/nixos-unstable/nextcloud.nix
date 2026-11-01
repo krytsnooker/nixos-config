@@ -57,9 +57,13 @@
     # ---------------------------------------------------------------------------
 
     systemd.services.nextcloud-setup = {
-      after    = [ "var-lib-nextcloud-data.mount" ];
-      requires = [ "var-lib-nextcloud-data.mount" ];
+      after         = [ "var-lib-nextcloud-data.mount" ];
+      requires      = [ "var-lib-nextcloud-data.mount" ];
+      serviceConfig = config.homeserver.sandbox;
     };
+
+    systemd.services.nextcloud-update-db.serviceConfig = config.homeserver.sandbox;
+    systemd.services.nextcloud-cron.serviceConfig      = config.homeserver.sandbox;
 
     # ---------------------------------------------------------------------------
     # Security hardening
@@ -102,7 +106,7 @@
       description = "Generate Nextcloud previews";
       after    = [ "phpfpm-nextcloud.service" "var-lib-nextcloud-data.mount" ];
       requires = [ "var-lib-nextcloud-data.mount" ];
-      serviceConfig = {
+      serviceConfig = config.homeserver.sandbox // {
         Type           = "oneshot";
         User           = "nextcloud";
         ExecStart      = previewScript;
@@ -111,6 +115,7 @@
     };
 
     systemd.timers.nextcloud-preview-gen = {
+      enable      = false;
       wantedBy    = [ "timers.target" ];
       timerConfig = {
         OnCalendar = "*:0/15";

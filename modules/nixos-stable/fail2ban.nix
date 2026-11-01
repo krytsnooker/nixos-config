@@ -43,8 +43,8 @@
     bantime   = "24h";
     ignoreIP  = [
       "127.0.0.1/8"
-      "192.168.0.0/24"
-      "119.17.142.110"   # ISP IP — update if it changes
+      config.homeserver.lanSubnet
+      config.homeserver.ispIp
     ];
 
     bantime-increment = {
