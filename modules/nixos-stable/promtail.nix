@@ -115,7 +115,7 @@ let
   # -- nixos-modules / nixos-stable ------------------------------------------
 
   rulesNixosStable =
-    mkGroup "(fail2ban|flood|grafana|loki|promtail|murmur|mysql|postgresql|qbittorrent)\\.service" "nixos-modules" "nixos-stable";
+    mkGroup "(fail2ban|grafana|loki|promtail|murmur|mysql|postgresql|wireguard-wgsrv)\\.service" "nixos-modules" "nixos-stable";
 
   # -- nixos-modules / nixos-unstable ----------------------------------------
 

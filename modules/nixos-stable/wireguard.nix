@@ -4,9 +4,12 @@
   # ---------------------------------------------------------------------------
   # WireGuard — remote access VPN server (10.100.0.0/24)
   # Server: 10.100.0.1  LAN: 192.168.0.0/24  UDP port 51820
+  # Interface named wgsrv (not wg0) — vpn-confinement's qbittorrent netns
+  # also creates a transient wg0 in the root namespace before moving it
+  # into its own netns, and collides with a persistent wg0 here.
   # ---------------------------------------------------------------------------
 
-  networking.wireguard.interfaces.wg0 = {
+  networking.wireguard.interfaces.wgsrv = {
     ips        = [ "10.100.0.1/24" ];
     listenPort = config.homeserver.ports.wireguard;
 

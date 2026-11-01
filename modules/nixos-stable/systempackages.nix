@@ -27,7 +27,8 @@
     curl
     htop
     ripgrep
-    neofetch
+    fastfetch
+    nix-search-cli
 
     # -------------------------------------------------------------------------
     # System / Network

@@ -143,6 +143,7 @@ in
         http_port = config.homeserver.ports.grafana;
       };
       analytics.reporting_enabled = false;
+      security.secret_key = "$__file{/var/lib/grafana/secret_key}";
     };
     provision = {
       enable = true;

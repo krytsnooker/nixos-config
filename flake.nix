@@ -2,7 +2,7 @@
   description = "homeserver NixOS configuration";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     nix-minecraft.url = "github:Infinidoge/nix-minecraft";
     nix-minecraft.inputs.nixpkgs.follows = "nixpkgs";
@@ -20,8 +20,7 @@
         {
           nixpkgs.overlays = [
             (final: prev: {
-              brave-origin-nightly = final.callPackage ./pkgs/brave-origin-nightly.nix {};
-              inherit (nixpkgs-unstable.legacyPackages.x86_64-linux) nextcloud34 vaultwarden;
+              inherit (nixpkgs-unstable.legacyPackages.x86_64-linux) nextcloud34 vaultwarden brave-origin;
               vaultwarden-webvault = nixpkgs-unstable.legacyPackages.x86_64-linux.vaultwarden.webvault;
             })
             nix-minecraft.overlays.default
@@ -35,21 +34,20 @@
         ./config-values.nix
         ./modules/nginx.nix
 
-        ./modules/pkgs/brave-origin-nightly.nix
-
         ./modules/nixos-stable/databases.nix
         ./modules/nixos-stable/fail2ban.nix
-        ./modules/nixos-stable/flood.nix
         ./modules/nixos-stable/grafana.nix
         ./modules/nixos-stable/loki.nix
         ./modules/nixos-stable/mumble.nix
-        ./modules/nixos-stable/promtail.nix
+        ./modules/nixos-stable/alloy.nix
         ./modules/nixos-stable/qbittorrent.nix
         ./modules/nixos-stable/systempackages.nix
         ./modules/nixos-stable/vpn-namespace.nix
+        ./modules/nixos-stable/wireguard.nix
 
         ./modules/nixos-unstable/nextcloud.nix
         ./modules/nixos-unstable/vaultwarden.nix
+        ./modules/nixos-unstable/brave-origin.nix
 
         ./modules/containers-podman/podman.nix
         ./modules/containers-podman/emby.nix

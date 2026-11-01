@@ -112,10 +112,10 @@
       minecraft      = 25565;
       grafana            = 3010;
       loki               = 3100;
-      promtail           = 9080;
-      flood              = 8091;
+      alloy              = 12345;
       qbittorrent        = 8090;
       qbittorrentTorrent = 6881;
+      wireguard          = 51820;
     };
 
   };

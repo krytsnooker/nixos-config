@@ -62,20 +62,6 @@
     };
 
     # ---------------------------------------------------------------------------
-    # Nginx
-    # ---------------------------------------------------------------------------
-
-    # TEMPORARY — CVE-2026-109618/109619 PHP RCE; remove extraConfig once nixpkgs has patched PHP.
-    services.nginx.virtualHosts.${config.services.nextcloud.hostName} = {
-      forceSSL    = true;
-      enableACME  = true;
-      extraConfig = "return 503;";
-      locations."= /status.php" = {
-        extraConfig = "return 404;";
-      };
-    };
-
-    # ---------------------------------------------------------------------------
     # Security hardening
     # ---------------------------------------------------------------------------
 

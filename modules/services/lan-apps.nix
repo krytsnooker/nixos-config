@@ -2,7 +2,7 @@
 
 let
   pythonEnv = pkgs.python3.withPackages (ps: with ps; [ flask waitress requests mutagen ]);
-  nodeEnv = pkgs.nodejs_20;
+  nodeEnv = pkgs.nodejs_22;
   npmInstallOnce = pkg: stateDir: "${pkgs.bash}/bin/bash -c 'test -d ${stateDir}/node_modules/${pkg} || ${nodeEnv}/bin/npm install --prefix ${stateDir} ${pkg}'";
 in
 {
