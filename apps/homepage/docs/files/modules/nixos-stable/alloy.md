@@ -1,0 +1,57 @@
+# modules/nixos-stable/alloy.nix
+
+Ships all journald entries to Loki and attaches structured labels to every log line. Replaced Promtail (deprecated by Grafana Labs); the relabeling logic was ported rule-for-rule from Promtail's YAML `relabel_configs` into Alloy's River config language. The relabeling logic is the most complex part of this module.
+
+## Transport
+
+- Scrapes journald directly (`loki.source.journal` with `max_age = "12h"`)
+- Pushes to `http://127.0.0.1:3100/loki/api/v1/push`
+- HTTP listen address: `config.homeserver.ports.alloy` (12345) — Alloy's own UI/health endpoint
+
+## Labels
+
+Every log entry receives five labels:
+
+| Label | Source | Example |
+|---|---|---|
+| `host` | Static | `homeserver` |
+| `unit` | `__journal__systemd_unit` verbatim | `nginx.service` |
+| `level` | `__journal_priority_keyword` | `info`, `err`, `crit` |
+| `category` | Relabel rules | `system`, `nixos-modules`, `nixos-sys` |
+| `module` | Relabel rules | `kernel`, `nixos-stable`, `services` |
+| `service` | Relabel rules | Unit name with `.service`/`.scope` stripped, or overridden |
+
+## Relabeling strategy
+
+Rules are applied in order; later rules override earlier ones. This means defaults are set first, then progressively overridden by more specific patterns.
+
+**Passthrough** — copies `unit` and `level` labels verbatim.
+
+**Defaults** — sets `service` to the unit name minus `.service`/`.scope` suffix; sets `category=system`, `module=unknown` for everything.
+
+Then specific groups override `category` and `module`:
+
+| category | module | Matched units |
+|---|---|---|
+| `system` | `kernel` | systemd-journald, systemd-logind, systemd-udevd, coredump, fsck, user sessions |
+| `system` | `hardware` | ModemManager, bluetooth, fwupd, irqbalance, thermald, udisks2 |
+| `system` | `networking` | NetworkManager, wpa_supplicant, avahi, samba-wsdd |
+| `system` | `desktop` | accounts-daemon, cups, dbus, display-manager, polkit, rtkit, drkonqi |
+| `nixos-sys` | `acme` | `acme-*.service` (Let's Encrypt) |
+| `nixos-sys` | `nix` | nix-daemon, nixos-rebuild |
+| `nixos-sys` | `system` | cron, logrotate, nscd |
+| `nixos-sys` | `remote` | xrdp, xrdp-sesman |
+| `nixos-modules` | `nixos-stable` | fail2ban, grafana, loki, alloy, murmur, mysql, postgresql, wireguard-wgsrv |
+| `nixos-modules` | `nixos-unstable` | vaultwarden, phpfpm-nextcloud, redis-nextcloud, nextcloud-* |
+| `nixos-modules` | `containers-podman` | `podman-*.service` (service name extracted from unit name) |
+| `nixos-modules` | `services` | math-tutor, typing-tutor, music-info, rom-transfer, mc-control, minecraft, nginx, lan-pastebin |
+
+Anything not matched by a specific group stays at `category=system`, `module=unknown`.
+
+## Hardening
+
+`systemd.services.alloy.serviceConfig = config.homeserver.sandbox` applies the standard sandbox flags.
+
+## Adding a new service
+
+When a new module is added, its systemd unit must be registered in `modules/nixos-stable/alloy.nix` so it gets the correct `category` and `module` labels. Without this it falls back to `category=system, module=unknown`.

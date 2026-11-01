@@ -65,7 +65,8 @@ Applied to all services. Exceptions:
 
 | Name | Value | Referenced by |
 |---|---|---|
-| `localhost` | `127.0.0.1` | Vaultwarden `ROCKET_ADDRESS`, Grafana → Loki URL, Promtail push URL, Nextcloud `trusted_proxies` |
+| `localhost` | `127.0.0.1` | Vaultwarden `ROCKET_ADDRESS`, Grafana → Loki URL, Alloy push URL, Nextcloud `trusted_proxies` |
+| `lanSubnet` | `192.168.0.0/24` | vpn-confinement `accessibleFrom` — allows LAN hosts to reach the `wg` namespace via the host veth |
 
 ### ports
 
@@ -89,4 +90,5 @@ All service listen ports. Referenced in module `ExecStart` arguments, nginx `pro
 | `minecraft` | 25565 | Minecraft server |
 | `grafana` | 3010 | Grafana |
 | `loki` | 3100 | Loki |
-| `promtail` | 9080 | Promtail |
+| `qbittorrent` | 8090 | qBittorrent web UI, VueTorrent alternative UI enabled (VPN namespace, exposed to LAN via `portMappings`) |
+| `qbittorrentTorrent` | 6881 | qBittorrent torrent port (opened in VPN namespace via `openVPNPorts`) |

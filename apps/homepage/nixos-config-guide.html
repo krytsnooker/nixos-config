@@ -160,7 +160,7 @@
             <tr><td><a href="docs/files/modules/nixos-stable/grafana.md" class="mono">modules/nixos-stable/grafana.nix</a></td><td class="wrap">Dashboards-as-code, Loki datasource provisioning</td></tr>
             <tr><td><a href="docs/files/modules/nixos-stable/loki.md" class="mono">modules/nixos-stable/loki.nix</a></td><td class="wrap">Log storage, tiered retention, TSDB backend</td></tr>
             <tr><td><a href="docs/files/modules/nixos-stable/mumble.md" class="mono">modules/nixos-stable/mumble.nix</a></td><td class="wrap">Murmur voice server</td></tr>
-            <tr><td><a href="docs/files/modules/nixos-stable/promtail.md" class="mono">modules/nixos-stable/promtail.nix</a></td><td class="wrap">journald scraper, full label relabeling ruleset</td></tr>
+            <tr><td><a href="docs/files/modules/nixos-stable/alloy.md" class="mono">modules/nixos-stable/alloy.nix</a></td><td class="wrap">journald scraper, full label relabeling ruleset</td></tr>
             <tr><td><a href="docs/files/modules/nixos-stable/systempackages.md" class="mono">modules/nixos-stable/systempackages.nix</a></td><td class="wrap">Desktop and developer tools</td></tr>
             <tr><td><a href="docs/files/modules/nixos-unstable/nextcloud.md" class="mono">modules/nixos-unstable/nextcloud.nix</a></td><td class="wrap">Nextcloud — CIFS data mount, preview gen, PHP hardening</td></tr>
             <tr><td><a href="docs/files/modules/nixos-unstable/vaultwarden.md" class="mono">modules/nixos-unstable/vaultwarden.nix</a></td><td class="wrap">Vaultwarden — SQLite, nginx proxy, daily backup</td></tr>
@@ -288,7 +288,7 @@
             <tr><td>Hardening</td><td class="wrap">Apply <code>config.homeserver.sandbox</code>. Required — do not skip.</td></tr>
             <tr><td>Secrets</td><td class="wrap">Add check to <code>check-secrets.sh</code>. Add row to secrets table in reference.</td></tr>
             <tr><td>flake.nix</td><td class="wrap">Insert in the correct group. <code>sudo git add</code> the new file before rebuilding.</td></tr>
-            <tr><td>Promtail</td><td class="wrap">Add unit name to the correct <code>rulesXxx</code> group in <code>modules/nixos-stable/promtail.nix</code>.</td></tr>
+            <tr><td>Alloy</td><td class="wrap">Add unit name to the correct <code>rulesXxx</code> group in <code>modules/nixos-stable/alloy.nix</code>.</td></tr>
           </tbody>
         </table>
         </div>
@@ -324,8 +324,8 @@
 
         <h3>Pipeline</h3>
         <p class="dim">All logging is localhost-only. No external log shipping.</p>
-        <pre><code>journald  →  Promtail (9080)  →  Loki (3100)  →  Grafana (3010)</code></pre>
-        <p class="dim">Promtail reads from <code>__journal__</code> (the systemd journal socket), enriches each entry with labels, and pushes to Loki. Grafana queries Loki and renders dashboards. Loki and Promtail ports are not opened in the firewall — they are unreachable outside localhost.</p>
+        <pre><code>journald  →  Alloy (12345)  →  Loki (3100)  →  Grafana (3010)</code></pre>
+        <p class="dim">Alloy reads from <code>__journal__</code> (the systemd journal socket), enriches each entry with labels, and pushes to Loki. Grafana queries Loki and renders dashboards. Loki and Alloy ports are not opened in the firewall — they are unreachable outside localhost.</p>
 
         <h3>Label taxonomy</h3>
         <p class="dim">Every log entry carries these labels. Grafana dashboards cascade-filter on them.</p>
@@ -334,8 +334,8 @@
           <thead><tr><th>Label</th><th>Example values</th><th>Source</th></tr></thead>
           <tbody>
             <tr><td class="mono">host</td><td class="mono">homeserver</td><td class="wrap">Static — set at scrape config level</td></tr>
-            <tr><td class="mono">category</td><td class="mono">system, nixos-sys, nixos-modules</td><td class="wrap">Assigned by Promtail relabel rules</td></tr>
-            <tr><td class="mono">module</td><td class="mono">kernel, nixos-stable, services</td><td class="wrap">Assigned by Promtail relabel rules</td></tr>
+            <tr><td class="mono">category</td><td class="mono">system, nixos-sys, nixos-modules</td><td class="wrap">Assigned by Alloy relabel rules</td></tr>
+            <tr><td class="mono">module</td><td class="mono">kernel, nixos-stable, services</td><td class="wrap">Assigned by Alloy relabel rules</td></tr>
             <tr><td class="mono">service</td><td class="mono">grafana, nextcloud, pihole</td><td class="wrap">Unit name with <code>.service</code> stripped; overridden for renamed units</td></tr>
             <tr><td class="mono">level</td><td class="mono">info, warning, err, crit</td><td class="wrap">From <code>__journal_priority_keyword</code></td></tr>
             <tr><td class="mono">unit</td><td class="mono">phpfpm-nextcloud.service</td><td class="wrap">Raw systemd unit name (passthrough)</td></tr>
@@ -356,7 +356,7 @@
             <tr><td class="mono">nixos-sys</td><td class="mono">nix</td><td class="wrap">nix-daemon, nixos-rebuild</td></tr>
             <tr><td class="mono">nixos-sys</td><td class="mono">system</td><td class="wrap">cron, logrotate, nscd</td></tr>
             <tr><td class="mono">nixos-sys</td><td class="mono">remote</td><td class="wrap">xrdp, xrdp-sesman</td></tr>
-            <tr><td class="mono">nixos-modules</td><td class="mono">nixos-stable</td><td class="wrap">fail2ban, grafana, loki, promtail, murmur, mysql, postgresql</td></tr>
+            <tr><td class="mono">nixos-modules</td><td class="mono">nixos-stable</td><td class="wrap">fail2ban, grafana, loki, alloy, murmur, mysql, postgresql, qbittorrent</td></tr>
             <tr><td class="mono">nixos-modules</td><td class="mono">nixos-unstable</td><td class="wrap">vaultwarden, nextcloud (phpfpm-nextcloud → nextcloud), redis-nextcloud</td></tr>
             <tr><td class="mono">nixos-modules</td><td class="mono">containers-podman</td><td class="wrap">All <code>podman-*.service</code> units — emby, audiobookshelf, pihole</td></tr>
             <tr><td class="mono">nixos-modules</td><td class="mono">services</td><td class="wrap">math-tutor, typing-tutor, music-info, rom-transfer, mc-control, minecraft, lan-pastebin, nginx</td></tr>
@@ -393,8 +393,8 @@
         </table>
         </div>
 
-        <h3>Adding a new service to Promtail</h3>
-        <p class="dim">When a new module is added, its systemd unit must be registered in <code>modules/nixos-stable/promtail.nix</code> so it gets the correct <code>category</code> and <code>module</code> labels. Without this it falls back to <code>category=system, module=unknown</code>.</p>
+        <h3>Adding a new service to Alloy</h3>
+        <p class="dim">When a new module is added, its systemd unit must be registered in <code>modules/nixos-stable/alloy.nix</code> so it gets the correct <code>category</code> and <code>module</code> labels. Without this it falls back to <code>category=system, module=unknown</code>.</p>
         <div class="table-wrap">
         <table>
           <thead><tr><th>Module folder</th><th>Rules group</th><th>What to add</th></tr></thead>

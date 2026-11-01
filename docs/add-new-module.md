@@ -25,7 +25,7 @@ Do not write a single line of a new module until you have completed Steps 1 and 
 
 **Port**
 - Does the service need a port? Add it to `ports` in `config-values.nix`.
-- If the service has an internal-only port (e.g. Loki, Promtail) it still goes in config-values — no hardcoding.
+- If the service has an internal-only port (e.g. Loki, Alloy) it still goes in config-values — no hardcoding.
 
 **Secrets**
 - Does the service need secrets? The file is always `/var/lib/<service>/secrets.env`, mode 600, owned by `<service>:<service>`.
@@ -52,7 +52,7 @@ Do not write a single line of a new module until you have completed Steps 1 and 
 **Firewall**
 - Only open ports that LAN clients need to reach directly.
 - Always use: `networking.firewall.allowedTCPPorts = with config.homeserver.ports; [ name1 name2 ];`
-- Internal-only ports (e.g. Loki, Promtail) do not get a firewall entry.
+- Internal-only ports (e.g. Loki, Alloy) do not get a firewall entry.
 
 ---
 
@@ -108,7 +108,7 @@ Section headers use this exact format:
 
 4. Update `check-secrets.sh` if the service has a secrets file.
 
-5. Update `modules/nixos-stable/promtail.nix` — add the systemd unit name to the regex in the matching rules group:
+5. Update `modules/nixos-stable/alloy.nix` — add the systemd unit name to the regex in the matching rules group:
 
    | Module folder | Rules group | What to update |
    |---|---|---|

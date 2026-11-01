@@ -1,6 +1,6 @@
 # modules/nixos-stable/loki.nix
 
-Configures Loki as the log storage backend. Loki listens on localhost only; it is not exposed to the network. Promtail pushes logs to it; Grafana reads from it.
+Configures Loki as the log storage backend. Loki listens on localhost only; it is not exposed to the network. Alloy pushes logs to it; Grafana reads from it.
 
 ## Storage
 
@@ -37,6 +37,6 @@ Retention deletion is deferred by 2 hours (`retention_delete_delay`) to allow in
 
 ## Notes
 
-- `auth_enabled = false` — single-tenant; no authentication required between Promtail and Loki
+- `auth_enabled = false` — single-tenant; no authentication required between Alloy and Loki
 - `replication_factor = 1` — single-node setup; no HA
 - `reject_old_samples_max_age = "168h"` (7 days) — rejects log entries older than a week to prevent accidental backfill

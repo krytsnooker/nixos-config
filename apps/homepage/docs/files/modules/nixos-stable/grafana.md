@@ -42,4 +42,4 @@ Both dashboards are defined entirely in Nix and compiled to JSON by `pkgs.runCom
 
 ## Label taxonomy
 
-Dashboards rely on Promtail assigning `host`, `category`, `module`, `service`, and `level` labels to every log stream. See `modules/nixos-stable/promtail.md` for the full relabeling ruleset.
+Dashboards rely on Alloy assigning `host`, `category`, `module`, `service`, and `level` labels to every log stream. See `modules/nixos-stable/alloy.md` for the full relabeling ruleset.
