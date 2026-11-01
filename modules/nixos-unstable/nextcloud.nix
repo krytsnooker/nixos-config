@@ -44,6 +44,18 @@
     };
 
     # ---------------------------------------------------------------------------
+    # Nginx TLS/ACME
+    # ---------------------------------------------------------------------------
+    # services.nextcloud's https=true only affects URL generation inside the
+    # app; the actual nginx vhost's TLS/ACME must be declared explicitly, or
+    # nginx serves this vhost with no real certificate at all.
+
+    services.nginx.virtualHosts.${config.services.nextcloud.hostName} = {
+      forceSSL   = true;
+      enableACME = true;
+    };
+
+    # ---------------------------------------------------------------------------
     # Users
     # ---------------------------------------------------------------------------
 
