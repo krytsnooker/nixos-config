@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Host Filepaths</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #15161a;
+    color: #e4e6eb;
+    margin: 0;
+    padding: 2rem;
+  }
+  h1 { font-size: 1.25rem; margin-bottom: 0.25rem; }
+  p.sub { color: #9aa0ad; margin-top: 0; margin-bottom: 1.5rem; }
+  .panel {
+    background: #1c1e24;
+    border: 1px solid #2a2d35;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .breadcrumb {
+    font-family: monospace;
+    color: #9aa0ad;
+    margin-bottom: 0.75rem;
+    word-break: break-all;
+  }
+  .browse-list { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow-y: auto; }
+  .browse-list li { margin-bottom: 2px; }
+  .browse-list button {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    color: #e4e6eb;
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  .browse-list button:hover { background: #2a2d35; }
+  .browse-list .file { color: #6b7280; cursor: default; }
+  .browse-list .file:hover { background: none; }
+  .row { display: flex; gap: 0.5rem; align-items: center; margin-top: 0.75rem; flex-wrap: wrap; }
+  input[type=text] {
+    background: #15161a;
+    border: 1px solid #2a2d35;
+    color: #e4e6eb;
+    padding: 0.5rem 0.6rem;
+    border-radius: 4px;
+    flex: 1;
+    min-width: 160px;
+  }
+  button.primary {
+    background: #3b6fe0;
+    border: none;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  button.primary:hover { background: #2f5bc2; }
+  button.primary:disabled { background: #2a2d35; color: #6b7280; cursor: not-allowed; }
+  .row > button:not(.primary) {
+    background: #2a2d35;
+    border: 1px solid #3a3d47;
+    color: #e4e6eb;
+    padding: 0.5rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .row > button:not(.primary):hover { background: #343841; }
+  table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+  td, th { text-align: left; padding: 0.3rem 0.5rem; border-bottom: 1px solid #2a2d35; font-size: 0.9rem; }
+  .status { margin-top: 0.75rem; font-size: 0.9rem; min-height: 1.2em; }
+  .status.ok { color: #4caf7d; }
+  .status.err { color: #e05a5a; }
+</style>
+</head>
+<body>
+
+<h1>Host Filepaths</h1>
+<p class="sub">Browse the media tree, pick a folder, push it into a qBittorrent category.</p>
+
+<div class="panel">
+  <div class="breadcrumb" id="breadcrumb">/</div>
+  <ul class="browse-list" id="browse-list"></ul>
+</div>
+
+<div class="panel">
+  <div class="row">
+    <input type="text" id="category-name" placeholder="Category name (e.g. TV, Movies)">
+    <button id="use-folder-name-btn">Use folder name</button>
+    <button class="primary" id="set-category-btn">Set selected folder as this category's path</button>
+  </div>
+  <div class="status" id="status"></div>
+</div>
+
+<div class="panel">
+  <strong>Existing categories</strong>
+  <table id="categories-table">
+    <thead><tr><th>Category</th><th>Save path</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<script>
+let currentPath = '/';
+
+async function browseTo(path) {
+  const res = await fetch('/api/browse?path=' + encodeURIComponent(path));
+  if (!res.ok) { setStatus('Failed to browse ' + path, true); return; }
+  const data = await res.json();
+  currentPath = data.path;
+  document.getElementById('breadcrumb').textContent = data.path;
+
+  const list = document.getElementById('browse-list');
+  list.innerHTML = '';
+
+  if (data.parent !== undefined && data.parent !== '' && data.path !== '/') {
+    list.appendChild(makeRow('.. (up)', () => browseTo(data.parent)));
+  }
+  for (const d of data.dirs) {
+    const childPath = (data.path === '/' ? '' : data.path) + '/' + d.name;
+    list.appendChild(makeRow('\u{1F4C1} ' + d.name, () => browseTo(childPath)));
+  }
+  for (const f of data.files) {
+    const li = document.createElement('li');
+    const span = document.createElement('div');
+    span.className = 'file';
+    span.textContent = '\u{1F4C4} ' + f.name;
+    span.style.padding = '0.4rem 0.6rem';
+    li.appendChild(span);
+    list.appendChild(li);
+  }
+}
+
+function makeRow(label, onClick) {
+  const li = document.createElement('li');
+  const btn = document.createElement('button');
+  btn.textContent = label;
+  btn.onclick = onClick;
+  li.appendChild(btn);
+  return li;
+}
+
+function setStatus(msg, isErr) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status ' + (isErr ? 'err' : 'ok');
+}
+
+async function loadCategories() {
+  const res = await fetch('/api/categories');
+  const tbody = document.querySelector('#categories-table tbody');
+  tbody.innerHTML = '';
+  if (!res.ok) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td colspan="2">qBittorrent not reachable / not configured</td>';
+    tbody.appendChild(tr);
+    return;
+  }
+  const cats = await res.json();
+  for (const name in cats) {
+    const tr = document.createElement('tr');
+    const tdName = document.createElement('td');
+    tdName.textContent = name;
+    const tdPath = document.createElement('td');
+    tdPath.textContent = cats[name].savePath;
+    const tdActions = document.createElement('td');
+    const delBtn = document.createElement('button');
+    delBtn.textContent = 'Delete';
+    delBtn.onclick = () => deleteCategory(name);
+    tdActions.appendChild(delBtn);
+    tr.appendChild(tdName);
+    tr.appendChild(tdPath);
+    tr.appendChild(tdActions);
+    tbody.appendChild(tr);
+  }
+}
+
+async function deleteCategory(name) {
+  if (!confirm('Delete category "' + name + '"? This does not touch any files.')) return;
+  const res = await fetch('/api/categories', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category: name })
+  });
+  if (res.ok) {
+    setStatus('Deleted category "' + name + '"', false);
+    loadCategories();
+  } else {
+    const err = await res.json().catch(() => ({}));
+    setStatus('Failed to delete: ' + (err.error || res.statusText), true);
+  }
+}
+
+document.getElementById('use-folder-name-btn').onclick = () => {
+  const name = currentPath.split('/').filter(Boolean).pop() || '';
+  if (!name) { setStatus('At the media root — browse into a folder first', true); return; }
+  document.getElementById('category-name').value = name;
+};
+
+document.getElementById('set-category-btn').onclick = async () => {
+  const category = document.getElementById('category-name').value.trim();
+  if (!category) { setStatus('Enter a category name first', true); return; }
+  const res = await fetch('/api/categories', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category, path: currentPath })
+  });
+  if (res.ok) {
+    setStatus('Category "' + category + '" set to ' + currentPath, false);
+    document.getElementById('category-name').value = '';
+    loadCategories();
+  } else {
+    const err = await res.json().catch(() => ({}));
+    setStatus('Failed: ' + (err.error || res.statusText), true);
+  }
+};
+
+browseTo('/');
+loadCategories();
+</script>
+
+</body>
+</html>

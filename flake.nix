@@ -55,6 +55,7 @@
         ./modules/containers-podman/pihole.nix
 
         ./modules/services/lan-apps.nix
+        ./modules/services/host-filepaths.nix
         ./modules/services/minecraft.nix
       ];
     };

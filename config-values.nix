@@ -28,6 +28,7 @@
         musicInfo   = 992;
         romTransfer = 985;
         mcctl       = 994;
+        hostFilepaths = 986;
       };
 
     };
@@ -44,6 +45,7 @@
       romTransfer = 979;
       mcctl       = 993;
       mcmods      = 980;
+      hostFilepaths = 986;
     };
 
     # -------------------------------------------------------------------------
@@ -124,6 +126,7 @@
       qbittorrent        = 8090;
       qbittorrentTorrent = 6881;
       wireguard          = 51820;
+      hostFilepaths      = 5011;
     };
 
   };

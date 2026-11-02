@@ -107,7 +107,7 @@ let
     (mkSet "podman-(.+)\\.service" "service" "$1");
 
   rulesServices =
-    (mkGroup "(math-tutor|typing-tutor|music-info|music-scanner|rom-transfer|mc-control|minecraft-server-.+|mjh-proxy|nginx|lan-pastebin)\\.service" "nixos-modules" "services") +
+    (mkGroup "(math-tutor|typing-tutor|music-info|music-scanner|rom-transfer|mc-control|host-filepaths|minecraft-server-.+|mjh-proxy|nginx|lan-pastebin)\\.service" "nixos-modules" "services") +
     (mkSet "minecraft-server-.+\\.service" "service" "minecraft");
 
   allRules =

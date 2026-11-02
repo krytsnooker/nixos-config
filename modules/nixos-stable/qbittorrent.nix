@@ -14,7 +14,7 @@
       LegalNotice.Accepted = true;
       Preferences.WebUI = {
         Username             = "admin";
-        Password_PBKDF2      = "@ByteArray(9bpuuvQJ+CnrzcjzZFLmjg==:G0Lp4pKwSmQyNZUKAgMM/np2tYTa3m01wQjjIghs+dyFQCAonL+0rDOKbrvHY43Cx+i6DJ5EUXd6dafWbfvOFA==)";
+        Password_PBKDF2      = "@ByteArray(/d4TjCIUkZ4aFKCH/l8F9g==:BL61WqK3KkiawdC4KtFaf2iZwDya2oGQWgINZ5ucXx323LePgsCR4EaS/+Ycg52z5DBGejp6Wyhku2fGgMh8Mg==)";
         AlternativeUIEnabled = true;
         RootFolder           = "${pkgs.vuetorrent}/share/vuetorrent";
       };
