@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, pkgsUnstable, lib, ... }:
 
 let
   rocketPort = 8222;
@@ -11,10 +11,11 @@ in
 
   services.vaultwarden = {
     enable          = true;
+    package         = pkgsUnstable.vaultwarden;
     dbBackend       = "sqlite";
     backupDir       = "/var/backup/vaultwarden";
     environmentFile = "/var/lib/vaultwarden/secrets.env";
-    webVaultPackage = pkgs.vaultwarden-webvault;
+    webVaultPackage = pkgsUnstable.vaultwarden.webvault;
     config = {
       DOMAIN             = "https://${domain}";
       SIGNUPS_ALLOWED    = false;

@@ -1,14 +1,14 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, pkgsUnstable, lib, ... }:
 
 {
   # Real nixpkgs brave-origin package, pulled from nixpkgs-unstable (see
-  # flake.nix overlay) — added alongside the existing custom
+  # flake.nix _module.args.pkgsUnstable) — added alongside the existing custom
   # brave-origin-nightly derivation (modules/pkgs/brave-origin-nightly.nix)
   # for comparison before deciding whether to replace it.
-  environment.systemPackages = [ pkgs.brave-origin ];
+  environment.systemPackages = [ pkgsUnstable.brave-origin ];
 
   security.wrappers.brave-origin-sandbox = {
-    source = "${pkgs.brave-origin}/opt/brave.com/brave-origin/chrome-sandbox";
+    source = "${pkgsUnstable.brave-origin}/opt/brave.com/brave-origin/chrome-sandbox";
     owner  = "root";
     group  = "root";
     setuid = true;

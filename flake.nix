@@ -18,14 +18,9 @@
         vpn-confinement.nixosModules.default
 
         {
-          nixpkgs.overlays = [
-            (final: prev: {
-              inherit (nixpkgs-unstable.legacyPackages.x86_64-linux) nextcloud34 vaultwarden brave-origin;
-              vaultwarden-webvault = nixpkgs-unstable.legacyPackages.x86_64-linux.vaultwarden.webvault;
-            })
-            nix-minecraft.overlays.default
-          ];
+          nixpkgs.overlays = [ nix-minecraft.overlays.default ];
           nixpkgs.config.allowUnfree = true;
+          _module.args.pkgsUnstable = nixpkgs-unstable.legacyPackages.x86_64-linux;
         }
 
         ./hardware-configuration.nix

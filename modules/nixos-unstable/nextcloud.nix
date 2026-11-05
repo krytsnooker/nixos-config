@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, pkgsUnstable, lib, ... }:
 
 {
   config = let
@@ -13,7 +13,7 @@
 
     services.nextcloud = {
       enable                 = true;
-      package                = pkgs.nextcloud34;
+      package                = pkgsUnstable.nextcloud34;
       hostName               = "cloud.intrentaka.com";
       https                  = true;
       database.createLocally = true;
