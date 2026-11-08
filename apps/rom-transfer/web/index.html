@@ -607,6 +607,7 @@ button.action.primary:hover { background: rgba(95,214,196,0.08); border-color: v
       </div>
       <div class="panel-section">
         <label class="panel-label">Agent</label>
+        <div id="log-agent-active" style="display:none;font-family:monospace;font-size:0.78rem;color:#4caf7d;margin-bottom:0.4rem"></div>
         <div id="log-agent" style="font-family:monospace;font-size:0.78rem;background:var(--bg2,#1a1a1a);border:1px solid var(--border,#333);border-radius:4px;padding:0.6rem;max-height:300px;overflow-y:auto"></div>
       </div>
       <div class="panel-actions">
@@ -864,6 +865,22 @@ async function init() {
   }
   await Promise.all([loadConsoles(), loadFileTypes()]);
   checkAgentVersion();
+  resumeStatusPollIfActive();
+}
+
+// A page load/refresh loses all JS state, including the setInterval driving
+// the live transfer status line — startStatusPoll() is otherwise only ever
+// called at the moment a transfer is kicked off. Without this, an
+// already-running transfer (started before this page load) shows no live
+// progress until the user starts a new one.
+async function resumeStatusPollIfActive() {
+  try {
+    const r = await fetch(AGENT + '/transfer/status');
+    const data = await r.json();
+    if (data.active) startStatusPoll();
+  } catch (e) {
+    // agent unreachable — already reported by the /health check above
+  }
 }
 
 async function loadConsoles() {
@@ -1597,7 +1614,32 @@ async function loadLogs() {
   await Promise.all([
     fetchAndRenderLogs('/api/logs', 'log-server'),
     fetchAndRenderLogs(AGENT + '/logs', 'log-agent'),
+    renderAgentActiveTransfer(),
   ]);
+}
+
+// Surfaces live /transfer/status progress above the agent log, since the
+// log itself only ever records start/fail/complete — a slow-but-healthy
+// multi-gigabyte transfer can otherwise look identical to a stuck one.
+async function renderAgentActiveTransfer() {
+  const el = document.getElementById('log-agent-active');
+  try {
+    const res = await fetch(AGENT + '/transfer/status');
+    const data = await res.json();
+    const a = data.active;
+    if (!a) {
+      el.style.display = 'none';
+      return;
+    }
+    const label = a.kind === 'pc' ? a.item : a.file;
+    const pct = a.total > 0
+      ? Math.round(a.percent || 0) + '%  (' + fmt(a.bytes) + ' / ' + fmt(a.total) + ')'
+      : (a.bytes > 0 ? fmt(a.bytes) + ' received…' : 'starting…');
+    el.textContent = '● live: transferring ' + label + ' — ' + pct;
+    el.style.display = '';
+  } catch (e) {
+    el.style.display = 'none';
+  }
 }
 
 async function fetchAndRenderLogs(url, elId) {
