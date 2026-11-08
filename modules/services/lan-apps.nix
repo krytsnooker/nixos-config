@@ -164,5 +164,32 @@ in
     } // config.homeserver.sandbox;
   };
 
-  networking.firewall.allowedTCPPorts = with config.homeserver.ports; [ typingTutor mathTutor homepage lanPastebin musicInfo romTransfer ];
+  # ---------------------------------------------------------------------------
+  # Codebreakers — LAN Mastermind-style code-guessing game
+  # ---------------------------------------------------------------------------
+
+  systemd.services.codebreakers = {
+    description = "Codebreakers";
+    after = [ "network.target" ];
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = let
+      pkg = pkgs.buildGoModule {
+        pname = "codebreakers";
+        version = "0.1.0";
+        src = ../../apps/codebreakers;
+        subPackages = [ "cmd/server" ];
+        vendorHash = null;
+      };
+    in {
+      DynamicUser = true;
+      Environment = [
+        "CODEBREAKERS_ADDR=0.0.0.0:${toString config.homeserver.ports.codebreakers}"
+        "CODEBREAKERS_WEB_DIR=${../../apps/codebreakers/web}"
+      ];
+      ExecStart = "${pkg}/bin/server";
+      Restart   = "on-failure";
+    } // config.homeserver.sandbox;
+  };
+
+  networking.firewall.allowedTCPPorts = with config.homeserver.ports; [ typingTutor mathTutor homepage lanPastebin musicInfo romTransfer codebreakers ];
 }

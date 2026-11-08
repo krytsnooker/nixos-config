@@ -7,6 +7,7 @@
 
   services.qbittorrent = {
     enable         = true;
+    package        = pkgs.qbittorrent-nox;
     webuiPort      = config.homeserver.ports.qbittorrent;
     torrentingPort = config.homeserver.ports.qbittorrentTorrent;
     openFirewall   = false;
@@ -17,6 +18,7 @@
         Password_PBKDF2      = "@ByteArray(/d4TjCIUkZ4aFKCH/l8F9g==:BL61WqK3KkiawdC4KtFaf2iZwDya2oGQWgINZ5ucXx323LePgsCR4EaS/+Ycg52z5DBGejp6Wyhku2fGgMh8Mg==)";
         AlternativeUIEnabled = true;
         RootFolder           = "${pkgs.vuetorrent}/share/vuetorrent";
+        HostHeaderValidation = false;
       };
     };
   };

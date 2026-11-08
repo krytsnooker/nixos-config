@@ -112,6 +112,7 @@
       mathTutor      = 3001;
       musicInfo      = 5010;
       romTransfer    = 5035;
+      codebreakers   = 5040;
       mcControl      = 5020;
       emby           = 8096;
       embyHttps      = 8920;

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codebreakers</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Codebreakers</h1>
+  <div id="role-badge" class="badge hidden"></div>
+</header>
+
+<main>
+  <section id="lobby" class="panel">
+    <h2>Start or join a game</h2>
+    <label>Your name <input id="name-input" type="text" maxlength="24" placeholder="Alice"></label>
+
+    <div class="lobby-actions">
+      <button id="create-btn">Create new game</button>
+    </div>
+    <p id="lobby-error" class="error hidden"></p>
+
+    <h3>Games in session</h3>
+    <div id="game-list" class="game-list"></div>
+  </section>
+
+  <section id="game" class="panel hidden">
+    <div class="game-header">
+      <span>Game code: <strong id="game-id-label"></strong></span>
+      <span id="status-label"></span>
+      <button id="leave-btn" class="secondary-btn">Leave game</button>
+    </div>
+
+    <div id="code-setup" class="hidden">
+      <h3>Set the secret code</h3>
+      <p>Pick 4 colors. The codebreakers can't see this.</p>
+      <div id="code-pegs" class="peg-row"></div>
+      <button id="submit-code-btn">Lock in code</button>
+    </div>
+
+    <div id="code-reveal" class="hidden">
+      <h3>Your secret code</h3>
+      <div id="code-reveal-pegs" class="peg-row"></div>
+    </div>
+
+    <div id="board-wrap" class="hidden">
+      <h3>Guesses</h3>
+      <div id="board"></div>
+
+      <div id="guess-setup" class="hidden">
+        <div id="guess-positions" class="guess-positions"></div>
+        <button id="submit-guess-btn">Submit guess</button>
+      </div>
+    </div>
+
+    <div id="players"></div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
