@@ -1,11 +1,13 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"sort"
 
-	"github.com/gorilla/websocket"
+	"github.com/coder/websocket"
+	"github.com/coder/websocket/wsjson"
 
 	"codebreakers/internal/game"
 	"codebreakers/internal/storage"
@@ -18,10 +20,6 @@ type Handler struct {
 
 func NewHandler(store *storage.GameStore, hub *Hub) *Handler {
 	return &Handler{store: store, hub: hub}
-}
-
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
 type stateView struct {
@@ -288,23 +286,24 @@ func (h *Handler) ServeWS(w http.ResponseWriter, r *http.Request, gameID string)
 		return
 	}
 
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
 	if err != nil {
 		return
 	}
 
 	h.hub.Subscribe(gameID, conn, playerID)
-	conn.WriteJSON(initial)
+
+	// The client never sends messages over this socket; CloseRead just keeps
+	// ping/pong/close frames flowing and cancels the returned context once
+	// the connection goes away, so we know when to unsubscribe. r.Context()
+	// must not be used here — it's cancelled when this handler returns, but
+	// the connection outlives the handler (see http.Hijacker caveat in the
+	// coder/websocket docs).
+	ctx := conn.CloseRead(context.Background())
+	wsjson.Write(ctx, conn, initial)
 
 	go func() {
-		defer func() {
-			h.hub.Unsubscribe(gameID, conn)
-			conn.Close()
-		}()
-		for {
-			if _, _, err := conn.ReadMessage(); err != nil {
-				return
-			}
-		}
+		<-ctx.Done()
+		h.hub.Unsubscribe(gameID, conn)
 	}()
 }

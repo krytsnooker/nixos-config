@@ -1,10 +1,11 @@
 package httpapi
 
 import (
-	"encoding/json"
+	"context"
 	"sync"
 
-	"github.com/gorilla/websocket"
+	"github.com/coder/websocket"
+	"github.com/coder/websocket/wsjson"
 )
 
 type Hub struct {
@@ -49,13 +50,9 @@ func (h *Hub) BroadcastPerPlayer(gameID string, viewsByPlayer map[string]any, de
 		if !ok {
 			view = defaultView
 		}
-		data, err := json.Marshal(view)
-		if err != nil {
-			continue
-		}
-		if err := c.WriteMessage(websocket.TextMessage, data); err != nil {
+		if err := wsjson.Write(context.Background(), c, view); err != nil {
 			h.Unsubscribe(gameID, c)
-			c.Close()
+			c.CloseNow()
 		}
 	}
 }
@@ -68,9 +65,8 @@ func (h *Hub) Terminate(gameID string) {
 	delete(h.subs, gameID)
 	h.mu.Unlock()
 
-	data, _ := json.Marshal(map[string]bool{"terminated": true})
 	for c := range conns {
-		c.WriteMessage(websocket.TextMessage, data)
-		c.Close()
+		wsjson.Write(context.Background(), c, map[string]bool{"terminated": true})
+		c.Close(websocket.StatusNormalClosure, "game terminated")
 	}
 }
